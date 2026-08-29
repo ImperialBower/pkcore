@@ -7,7 +7,7 @@ use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
 use crate::util::Util;
-use crate::{Card, PKError, Pile, Plurable, TheNuts};
+use crate::{Card, PKError, Pile, Plurable, TheNuts, Unumable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -159,6 +159,26 @@ impl Plurable for Four {
     }
 }
 
+impl Unumable for Four {
+    /// `Qs7s5c3h` — four cards back to back.
+    ///
+    /// Note that [`From<[Card; 4]>`](Four::from) sorts high-to-low, so a
+    /// `Four` renders in its normalized order, not the order it was parsed
+    /// from. Use [`Four::from_turn`] when insertion order matters.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(Four::from_pluribus("Qs7s5c3h").unwrap().to_pluribus(), "Qs7s5c3h");
+    /// // Parsing normalizes: the input order is not preserved.
+    /// assert_eq!(Four::from_pluribus("3h7s5cQs").unwrap().to_pluribus(), "Qs7s5c3h");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        self.0.iter().map(Card::to_pluribus).collect()
+    }
+}
 impl Pile for Four {
     fn add<P: Pile>(&self, _other: P) -> Self
     where
@@ -411,5 +431,16 @@ mod arrays__four_tests {
         let the_nuts = four.the_nuts();
         // 31 distinct HandRankClass values achievable on this turn board
         assert_eq!(31, the_nuts.len());
+    }
+
+    #[test]
+    fn four_renders_four_cards_back_to_back() {
+        assert_eq!(Four::from_pluribus("Qs7s5c3h").unwrap().to_pluribus(), "Qs7s5c3h");
+    }
+
+    #[test]
+    fn four_normalizes_high_to_low() {
+        // `From<[Card; 4]>` sorts, so the render is canonical, not logged.
+        assert_eq!(Four::from_pluribus("3h7s5cQs").unwrap().to_pluribus(), "Qs7s5c3h");
     }
 }

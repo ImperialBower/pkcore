@@ -11,7 +11,7 @@ use crate::cards::Cards;
 use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
 use crate::util::Util;
-use crate::{PKError, Pile, Plurable, TheNuts};
+use crate::{PKError, Pile, Plurable, TheNuts, Unumable};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -291,6 +291,20 @@ impl Plurable for Five {
     }
 }
 
+impl Unumable for Five {
+    /// `3h7s5cQs6c` — a complete board, five cards back to back.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(Five::from_pluribus("3h7s5cQs6c").unwrap().to_pluribus(), "3h7s5cQs6c");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        self.0.iter().map(Card::to_pluribus).collect()
+    }
+}
 impl Pile for Five {
     fn add<P: Pile>(&self, _other: P) -> Self
     where
@@ -2698,5 +2712,17 @@ mod arrays__five_tests {
 
         // 35 distinct HandRankClass values achievable on this river board
         assert_eq!(35, the_nuts.len());
+    }
+
+    #[test]
+    fn five_renders_five_cards_back_to_back() {
+        assert_eq!(Five::from_pluribus("3h7s5cQs6c").unwrap().to_pluribus(), "3h7s5cQs6c");
+    }
+
+    #[test]
+    fn five_round_trips_a_complete_board() {
+        for board in ["3h7s5cQs6c", "AsKsQsJsTs", "2c3d4h5s7c"] {
+            assert_eq!(Five::from_pluribus(board).unwrap().to_pluribus(), board);
+        }
     }
 }

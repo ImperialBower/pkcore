@@ -33,8 +33,16 @@ for a different job than this EPIC.
 No **Node.js** binding exists in this repo or its known siblings today. The
 only mentions are this doc's own first draft and
 `docs/epics/EPIC-08_Web.md`, which predates it and is about a Rust web
-*service*, not a language binding. `../pkwasm` is an unrelated December-2025
-`wasm-bindgen` hello-world with no pkcore in it (`pkwasm/Cargo.toml:1-9`).
+*service*, not a language binding. `../pkwasm` was, when this was written, an
+unrelated December-2025 `wasm-bindgen` hello-world with no pkcore in it.
+
+> **Superseded 2026-08-29.** `../pkwasm` is now the browser binding, specified
+> by [EPIC-86](EPIC-86_Browser_Bindings.md) and rewired onto `pkcore 0.9.1` at
+> `pkwasm` @ `f5c029a`. That does not change this EPIC's reasoning — EPIC-86
+> targets `wasm32` in a sandbox (no threads, no SQLite, `usize` is 32-bit),
+> which is why the Node binding here is a **native** N-API addon instead. The
+> two are complements, not alternatives; EPIC-86's Context explains the split
+> and its Design section treats this EPIC's `index.d.ts` as its specification.
 
 pkcore.py itself just finished migrating onto `pkcore` 0.8.0
 (pkcore.py commit `7365950`, "Migrate to pkcore 0.8.0 (Table cell-type removal)",

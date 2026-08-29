@@ -1,10 +1,13 @@
+use crate::arrays::two::Two;
+use crate::casino::action::TableAction;
 use crate::games::GamePhase;
+use crate::games::GameType;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::prelude::{BoxedCards, Card, Cards, ForcedBets, Seats, Table};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
-use crate::{PKError, Pile, Plurable};
+use crate::{PKError, Pile, Plurable, Unumable};
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
@@ -457,6 +460,233 @@ impl TryFrom<&Pluribus> for Table {
     }
 }
 
+/// Everything [`TryFrom<&Table> for Pluribus`] has to dig out of
+/// [`Table::event_log`]: the betting actions with their amounts already
+/// converted to the log's cumulative totals, plus the cards, which a finished
+/// table no longer holds.
+struct Harvest {
+    events: VecDeque<PluribusEvent>,
+    dealt: Vec<Vec<Card>>,
+    board_cards: Vec<Card>,
+}
+
+impl From<&Table> for Harvest {
+    fn from(table: &Table) -> Self {
+        let size = Pluribus::TABLE_SIZE as usize;
+        // What each seat put in on *earlier* streets, and what it has in on
+        // this one. Their sum is the cumulative total the log writes.
+        let mut earlier = vec![0usize; size];
+        let mut street = vec![0usize; size];
+        let mut events = VecDeque::new();
+
+        // `end_hand` mucks every hand and resets the table, so a finished
+        // `Table` no longer holds the cards it was played with. The event log
+        // does, and it is the only place a completed hand survives — hence
+        // rebuilding both from it rather than from `table.seats`/`table.board`.
+        //
+        // One thing the log cannot give back: `DealtFlop` carries a single
+        // [`Bard`], which is a bitset, so the *order* of the three flop cards
+        // is gone. The turn and the river are one card each and survive
+        // exactly, as do the hole cards, which are logged one `Dealt` per
+        // card. A re-exported flop therefore comes back in canonical order,
+        // not dealt order.
+        let mut dealt: Vec<Vec<Card>> = vec![Vec::new(); size];
+        let mut board_cards: Vec<Card> = Vec::new();
+
+        let commit = |seat: u8, amount: usize, street: &mut Vec<usize>| {
+            if let Some(slot) = street.get_mut(seat as usize) {
+                *slot = amount;
+            }
+        };
+
+        for action in &table.event_log {
+            match action {
+                TableAction::ForcedBetSmallBlind(seat, amount) | TableAction::ForcedBetBigBlind(seat, amount) => {
+                    commit(*seat, *amount, &mut street);
+                }
+                TableAction::Dealt(seat, bard) | TableAction::ForceDealt(seat, bard) => {
+                    if let Some(hand) = dealt.get_mut(*seat as usize) {
+                        hand.extend(Cards::from(*bard).iter().copied());
+                    }
+                }
+                TableAction::Fold(_) => events.push_back(PluribusEvent::Fold),
+                TableAction::Check(_) => events.push_back(PluribusEvent::Call),
+                TableAction::Call(seat, added) => {
+                    // `Call` logs the delta added, not a target, so it
+                    // accumulates rather than replaces.
+                    if let Some(slot) = street.get_mut(*seat as usize) {
+                        *slot = slot.saturating_add(*added);
+                    }
+                    events.push_back(PluribusEvent::Call);
+                }
+                TableAction::Bet(seat, amount)
+                | TableAction::Raise(seat, amount)
+                | TableAction::AllIn(seat, amount) => {
+                    commit(*seat, *amount, &mut street);
+                    let carried = earlier.get(*seat as usize).copied().unwrap_or_default();
+                    events.push_back(PluribusEvent::Raise(carried.saturating_add(*amount)));
+                }
+                // A street was dealt: this street's bets become earlier-street
+                // bets, and the next `r` is measured from the larger total.
+                TableAction::DealtFlop(bard) | TableAction::DealtTurn(bard) | TableAction::DealtRiver(bard) => {
+                    board_cards.extend(Cards::from(*bard).iter().copied());
+                    for seat in 0..size {
+                        earlier[seat] = earlier[seat].saturating_add(street[seat]);
+                        street[seat] = 0;
+                    }
+                }
+                // Explicitly nothing: the format cannot express any of these.
+                TableAction::Pause
+                | TableAction::TableOpen(_)
+                | TableAction::PlayerSeated(_, _)
+                | TableAction::NewHand
+                | TableAction::ShuffleDeck
+                | TableAction::SetButton(_)
+                | TableAction::MoveButton(_)
+                | TableAction::ForcedBets
+                | TableAction::ForcedBet(_, _)
+                | TableAction::BetAnteForced(_, _)
+                | TableAction::StudBringInPost(_, _)
+                | TableAction::DealingXCards(_)
+                | TableAction::DealtPlayers
+                | TableAction::BringItIn(_)
+                | TableAction::ActionTo(_)
+                | TableAction::PotSize(_)
+                | TableAction::SplitPots()
+                | TableAction::MainPot(_)
+                | TableAction::SidePot(_)
+                | TableAction::SplitPot(_, _)
+                | TableAction::MuckCards(_)
+                | TableAction::MuckPlayerCards(_, _)
+                | TableAction::TakePlayerCards(_, _)
+                | TableAction::TakeBoardCards(_)
+                | TableAction::ClosesTheAction(_)
+                | TableAction::CloseItOut(_)
+                | TableAction::EndHand
+                | TableAction::HandAborted(_)
+                | TableAction::ResetTable
+                | TableAction::Showdown(_)
+                | TableAction::PlayerMucksCards(_)
+                | TableAction::AllFoldedTo(_)
+                | TableAction::PlayerWinsSidePot(_, _)
+                | TableAction::PlayerWinsMainPot(_, _)
+                | TableAction::PlayerLosesSidePot(_, _)
+                | TableAction::PlayerLosesMainPot(_, _)
+                | TableAction::PlayerWins(_, _, _, _, _)
+                | TableAction::PlayerLoses(_, _, _, _)
+                | TableAction::InvalidAction
+                | TableAction::InvalidPlayerAction(_, _)
+                | TableAction::NotEnoughCards
+                | TableAction::TooManyCards
+                | TableAction::InvalidSeatNumber
+                | TableAction::DeckPassesAudit
+                | TableAction::ChipAuditFailed(_, _) => {} // Deliberately no `_` arm. `TableAction` is
+                                                           // `#[non_exhaustive]`, but that only binds other crates —
+                                                           // in here the match must name every variant, so adding one
+                                                           // upstream breaks this build instead of going quietly missing
+                                                           // from an exported hand. A wildcard would buy nothing and cost
+                                                           // exactly the guarantee this conversion needs.
+            }
+        }
+
+        Harvest {
+            events,
+            dealt,
+            board_cards,
+        }
+    }
+}
+
+/// Rebuilds the log line a finished hand would have produced — the mirror of
+/// [`TryFrom<&Pluribus> for Table`].
+///
+/// The source of truth is [`Table::event_log`]. The conversion is
+/// `Nubificus::street_bet_target` run backwards: that function *subtracts*
+/// what earlier streets took to turn a logged cumulative total into a street
+/// target, so this *adds* it back. `DEFECT_021` was that arithmetic going the
+/// wrong way once already.
+///
+/// Every [`TableAction`] variant that the format can express is enumerated
+/// below; everything else — dealing, pot, showdown, audit — has no
+/// representation in a Pluribus line and is skipped *by name*. There is no
+/// `_` arm: `TableAction` is `#[non_exhaustive]`, but that only binds other
+/// crates, so in here the match must name every variant and a variant added
+/// upstream breaks this build rather than going quietly missing from an
+/// exported hand.
+///
+/// | `TableAction` | Pluribus |
+/// |---|---|
+/// | `Fold(seat)` | `f` |
+/// | `Check(seat)` | `c` — the format has no separate check token |
+/// | `Call(seat, _)` | `c` |
+/// | `Bet(seat, n)` / `Raise(seat, n)` | `r<cumulative>` |
+/// | `AllIn(seat, n)` | `r<cumulative>` — indistinguishable from a raise |
+/// | `ForcedBetSmallBlind` / `ForcedBetBigBlind` | *(nothing)* — implied |
+/// | everything else | *(nothing)* |
+///
+/// [`Pluribus::index`] comes back as `0`: a hand number is a property of the
+/// log file a hand was written into, not of the hand, and a [`Table`] has
+/// never heard of one. [`Pluribus::write_log`] does not renumber either —
+/// set it yourself if the index matters.
+impl TryFrom<&Table> for Pluribus {
+    type Error = PKError;
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex` if `table` is not the one shape the
+    /// format can express: a six-handed no-limit hold'em hand. The format has
+    /// no vocabulary for other seat counts, other variants, antes or
+    /// straddles, so anything else is an error rather than a best-effort
+    /// render.
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        if table.game != GameType::NoLimitHoldem || table.seats.size() != Pluribus::TABLE_SIZE {
+            return Err(PKError::InvalidPluribusIndex);
+        }
+
+        let size = Pluribus::TABLE_SIZE as usize;
+        let Harvest {
+            events,
+            dealt,
+            board_cards,
+        } = Harvest::from(table);
+
+        let mut players = Vec::with_capacity(size);
+        let mut winnings = Vec::with_capacity(size);
+
+        for seat in table.seats.iter() {
+            players.push(seat.player.handle.clone());
+            // Net for the hand: what the seat has left against the fixed stack
+            // every Pluribus seat starts each hand with.
+            let ending = isize::try_from(seat.player.chips).unwrap_or(isize::MAX);
+            let staked = isize::try_from(Pluribus::STARTING_STACK).unwrap_or(isize::MAX);
+            winnings.push(ending - staked);
+        }
+
+        let mut hole_cards = HoleCards::default();
+        for seat in 0..size {
+            let two = dealt
+                .get(seat)
+                .map_or(Ok(Two::default()), |cards| Two::try_from(Cards::from(cards.clone())))?;
+            hole_cards.push(two);
+        }
+
+        let board = Board::try_from(Cards::from(board_cards.clone())).unwrap_or_default();
+        let mut pluribus = Pluribus {
+            index: 0,
+            rounds: Vec::new(),
+            actions: events,
+            hole_cards,
+            board,
+            winnings,
+            players,
+            raw: String::new(),
+        };
+        pluribus.raw = pluribus.to_pluribus();
+
+        Ok(pluribus)
+    }
+}
+
 impl TryFrom<Pluribus> for Nubificus {
     type Error = PKError;
 
@@ -510,6 +740,15 @@ impl Pluribus {
     /// Every seat in the Pluribus experiment started each hand with a fixed
     /// 10,000-chip stack, so a rebuilt table stakes everyone to the same.
     pub const STARTING_STACK: usize = 10_000;
+    /// Hold'em has four betting rounds, so a full hand carries at most three
+    /// dividers — one after every round but the river.
+    const LAST_BETTING_ROUND: usize = 3;
+    /// The format is six-max only: its positional player order (index 0 is the
+    /// small blind, the button is last) has no vocabulary for another seat
+    /// count.
+    pub const TABLE_SIZE: u8 = 6;
+    /// The ACPC game definition every corpus log names in its header line.
+    pub const GAME_DEFINITION: &'static str = "../lib/python-client/acpc_infrastructure/holdem.nolimit.6p.game";
 
     fn parse_isizes(s: &str) -> Vec<isize> {
         s.split('|')
@@ -525,8 +764,28 @@ impl Pluribus {
             .collect()
     }
 
-    /// I have a theory that the divider between rounds isn't needed. That we can just take
-    /// a vector of all the actions, and they pause when the round is over.
+    /// Flattens the pre-split round substrings into one action queue.
+    ///
+    /// # The divider theory, settled
+    ///
+    /// This used to carry a note reading:
+    ///
+    /// > *"I have a theory that the divider between rounds isn't needed. That
+    /// > we can just take a vector of all the actions, and they pause when the
+    /// > round is over."*
+    ///
+    /// EPIC-87 tested it. [`Pluribus::divider_hypothesis`] reconstructs the
+    /// dividers from the flat action sequence and the player count alone — no
+    /// cards, no table, no replay — and it **agrees with the re-simulation on
+    /// all 10,000 corpus hands**, `divider_hypothesis_matches_the_replay` in
+    /// `tests/heavy_tests.rs`.
+    ///
+    /// The theory holds. The dividers are redundant: the actions do pause when
+    /// the round is over, with one wrinkle the original note did not
+    /// anticipate — an all-in run-out terminates its remaining rounds with no
+    /// action in them at all, so `r10000c///` is a real line, and the
+    /// reconstruction has to add those trailing dividers from the fact that
+    /// two players are still live when the actions run out.
     #[must_use]
     pub fn parse_all_rounds(rounds: &Vec<String>) -> VecDeque<PluribusEvent> {
         let mut events = Vec::new();
@@ -733,6 +992,302 @@ impl Pluribus {
         result
     }
 
+    /// How many betting rounds a board of `cards` cards has moved past: 0
+    /// pre-flop, 1 on the flop, 2 on the turn, 3 on the river.
+    ///
+    /// This is also the hand's divider count, because the log terminates every
+    /// round but the last — including the actionless rounds of an all-in
+    /// run-out.
+    fn street_index(cards: usize) -> usize {
+        match cards {
+            0..=2 => 0,
+            3 => 1,
+            4 => 2,
+            _ => 3,
+        }
+    }
+
+    /// Renders the action field: every event joined, with `/` inserted
+    /// wherever a betting round closed.
+    ///
+    /// The dividers are **derived, not remembered**. They are not recoverable
+    /// from [`PluribusEvent`] alone — a `c` that closes a street and a `c`
+    /// that continues one are the same token — so this replays the events
+    /// through a [`Table`] and emits a `/` wherever the board grew. Rendering
+    /// from [`Pluribus::rounds`] instead would reproduce the input by
+    /// remembering it, and a round-trip test built on that asserts nothing.
+    ///
+    /// A divider is emitted only when more actions follow, so a hand never
+    /// ends on a trailing `/`.
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`Nubificus::do_action`] rejects the replay with — the
+    /// dividers cannot be placed for an event sequence that is not a legal
+    /// hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::nubibus::Pluribus;
+    /// use std::str::FromStr;
+    ///
+    /// let line = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:KsQc|3c6s|Ah9c|9d9h|7sKc|8c3s/4s7d4d/4c/As:3850|-100|0|-3750|0|0:MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
+    /// let hand = Pluribus::from_str(line).unwrap();
+    ///
+    /// assert_eq!(hand.actions_to_pluribus().unwrap(), "fr250ffr1150fc/r2050c/r3750c/r6250f");
+    /// ```
+    pub fn actions_to_pluribus(&self) -> Result<String, PKError> {
+        let mut nubificus = Nubificus::try_from(self)?;
+
+        // Same priming as `Nubificus::play_hand`: the blinds go in before the
+        // first logged action, and the log never writes them.
+        if !nubificus.table.seats.are_dealt() {
+            nubificus.table.deal_cards_to_seats()?;
+        }
+        nubificus.table.act()?;
+
+        let events: Vec<PluribusEvent> = self.actions.iter().copied().collect();
+        let mut rendered = String::new();
+
+        // The board says how many betting rounds the hand had, and therefore
+        // how many dividers the line carries — a complete board means four
+        // rounds and three `/`, even if the last three saw no action because
+        // everyone was already all-in.
+        let dividers = Pluribus::street_index(self.board.cards().len());
+        let mut placed = 0;
+
+        for event in &events {
+            rendered.push_str(&event.to_pluribus());
+
+            // One `/` per street the replay crossed. A single action can cross
+            // more than one when a call puts the last player all-in.
+            let before = Pluribus::street_index(nubificus.table.board.len());
+            nubificus.do_action(event, false)?;
+            let after = Pluribus::street_index(nubificus.table.board.len());
+
+            for _ in before..after.min(dividers) {
+                rendered.push('/');
+                placed += 1;
+            }
+        }
+
+        // Whatever the replay did not reach, the run-out did: an all-in hand
+        // ends its remaining rounds without another logged action.
+        for _ in placed..dividers {
+            rendered.push('/');
+        }
+
+        Ok(rendered)
+    }
+
+    /// The cheap divider placement: where the round boundaries fall using
+    /// nothing but the action sequence and the player count.
+    ///
+    /// This is the hypothesis stated at the head of
+    /// [`Pluribus::parse_all_rounds`] — that the dividers are redundant
+    /// because the actions "pause when the round is over". It tracks who is
+    /// still live, who has acted this round, and what the standing cumulative
+    /// bet is; a round closes when every live player has acted and every live
+    /// player has matched the bet.
+    ///
+    /// Returns `None` when the sequence runs out of live players before the
+    /// actions run out, which means the input was not a legal hand.
+    ///
+    /// Used by tests to check the hypothesis against
+    /// [`Pluribus::actions_to_pluribus`]. The writer itself uses the
+    /// re-simulation, which is correct by construction.
+    #[must_use]
+    pub fn divider_hypothesis(events: &[PluribusEvent], player_count: usize) -> Option<String> {
+        if player_count < 2 {
+            return None;
+        }
+
+        // The blinds are already in before the first logged action, and the
+        // log never writes them.
+        let mut committed: Vec<usize> = vec![0; player_count];
+        committed[0] = Pluribus::SMALL_BLIND;
+        committed[1] = Pluribus::BIG_BLIND;
+
+        let mut folded = vec![false; player_count];
+        let mut acted = vec![false; player_count];
+        let mut standing = Pluribus::BIG_BLIND;
+        // Pre-flop action opens under the gun, which is seat 2 six-handed.
+        let mut seat = 2 % player_count;
+        let mut rounds_closed = 0usize;
+        let mut rendered = String::new();
+
+        for event in events {
+            let mut guard = 0;
+            while folded[seat] {
+                seat = (seat + 1) % player_count;
+                guard += 1;
+                if guard > player_count {
+                    return None;
+                }
+            }
+
+            rendered.push_str(&event.to_pluribus());
+            acted[seat] = true;
+            match event {
+                PluribusEvent::Fold => folded[seat] = true,
+                PluribusEvent::Call => committed[seat] = standing.max(committed[seat]),
+                PluribusEvent::Raise(amount) => {
+                    committed[seat] = *amount;
+                    standing = *amount;
+                }
+            }
+            seat = (seat + 1) % player_count;
+
+            let live: Vec<usize> = (0..player_count).filter(|&s| !folded[s]).collect();
+            let closed = live.len() < 2 || live.iter().all(|&s| acted[s] && committed[s] >= standing);
+
+            if closed {
+                rounds_closed += 1;
+                if rounds_closed <= Self::LAST_BETTING_ROUND {
+                    rendered.push('/');
+                }
+                acted = vec![false; player_count];
+                // Post-flop action opens on the first live seat left of the
+                // button, which is seat 0 under the log's positional order.
+                seat = 0;
+            }
+        }
+
+        // A round that closed with the hand still alive and no actions left
+        // means everyone is all-in: the board runs out, and the log terminates
+        // each of those actionless rounds too.
+        let live = (0..player_count).filter(|&s| !folded[s]).count();
+        if live < 2 {
+            // The hand ended on a fold, so the round that closed it is the
+            // last one and takes no divider.
+            while rendered.ends_with('/') {
+                rendered.pop();
+            }
+        } else {
+            for _ in rounds_closed..=Self::LAST_BETTING_ROUND {
+                rendered.push('/');
+            }
+            while rendered.ends_with('/') && rendered.matches('/').count() > Self::LAST_BETTING_ROUND {
+                rendered.pop();
+            }
+        }
+
+        Some(rendered)
+    }
+
+    /// The cards field: hole cards, then the board if the hand reached a flop.
+    ///
+    /// `Qc4h|Tc9c|As8s|Qh7c|QdJc|5h5d/3h7s5c/Qs/6c`, or just the hole cards
+    /// for the 4,662 corpus hands that ended pre-flop.
+    #[must_use]
+    pub fn cards_to_pluribus(&self) -> String {
+        let board = self.board.to_pluribus();
+        if board.is_empty() {
+            self.hole_cards.to_pluribus()
+        } else {
+            format!("{}/{}", self.hole_cards.to_pluribus(), board)
+        }
+    }
+
+    /// The payoffs field: signed net amounts, `|`-separated.
+    #[must_use]
+    pub fn winnings_to_pluribus(&self) -> String {
+        self.winnings
+            .iter()
+            .map(isize::to_string)
+            .collect::<Vec<String>>()
+            .join("|")
+    }
+
+    /// The whole `STATE:` line, with the dividers derived by replaying the
+    /// hand through a [`Table`].
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`Pluribus::actions_to_pluribus`] returns when the logged
+    /// events do not replay to a legal hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::nubibus::Pluribus;
+    /// use std::str::FromStr;
+    ///
+    /// let line = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:KsQc|3c6s|Ah9c|9d9h|7sKc|8c3s/4s7d4d/4c/As:3850|-100|0|-3750|0|0:MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
+    /// let hand = Pluribus::from_str(line).unwrap();
+    ///
+    /// // Exact but for the hole-card normalization `Two` imposes — see
+    /// // [`Unumable::to_pluribus`] for the two documented divergences.
+    /// let expected = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:KsQc|6s3c|Ah9c|9h9d|Kc7s|8c3s/4s7d4d/4c/As:3850|-100|0|-3750|0|0:MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
+    /// assert_eq!(hand.try_to_pluribus().unwrap(), expected);
+    /// ```
+    pub fn try_to_pluribus(&self) -> Result<String, PKError> {
+        Ok(self.render_line(&self.actions_to_pluribus()?))
+    }
+
+    fn render_line(&self, actions: &str) -> String {
+        format!(
+            "STATE:{}:{}:{}:{}:{}",
+            self.index,
+            actions,
+            self.cards_to_pluribus(),
+            self.winnings_to_pluribus(),
+            self.players.join("|")
+        )
+    }
+
+    /// A whole Pluribus log file: the four `#` header lines, then one
+    /// `STATE:` line per hand.
+    ///
+    /// Returns a `String` and **does not touch the filesystem**.
+    /// [`Pluribus::read_in_log`] reads because reading was already there;
+    /// writing does not get to add an I/O path to the kernel. `examples/unum.rs`
+    /// owns the `fs::write`.
+    ///
+    /// `session` is the name that goes in the header — the corpus uses the
+    /// file's own stem, e.g. `sample_game_87`. The hands keep whatever
+    /// [`Pluribus::index`] they carry; this does not renumber them.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::nubibus::Pluribus;
+    /// use std::str::FromStr;
+    ///
+    /// let hand = Pluribus::from_str(
+    ///     "STATE:0:ffr225fr1050ff:JdJh|5c7d|Kc2c|4c9s|Ac8h|6hTs:325|-100|0|0|-225|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus"
+    /// ).unwrap();
+    ///
+    /// let log = Pluribus::write_log("sample_game_87", &[hand]);
+    /// let lines: Vec<&str> = log.lines().collect();
+    ///
+    /// assert_eq!(lines.len(), 5);
+    /// assert!(lines[0].starts_with("# name/game/hands/seed sample_game_87 "));
+    /// assert_eq!(lines[1], "#--t_response 600000000");
+    /// assert!(lines[4].starts_with("STATE:0:ffr225fr1050ff:"));
+    /// ```
+    #[must_use]
+    pub fn write_log(session: &str, hands: &[Pluribus]) -> String {
+        let mut log = format!(
+            "# name/game/hands/seed {} {} {} {}\n#--t_response 600000000\n#--t_hand 600000000\n#--t_per_hand 600000000\n",
+            session,
+            Pluribus::GAME_DEFINITION,
+            hands.len(),
+            session.rsplit('_').next().unwrap_or("0")
+        );
+
+        for hand in hands {
+            log.push_str(&hand.to_pluribus());
+            log.push('\n');
+        }
+
+        log
+    }
+
     /// # Errors
     ///
     /// `PKError::InvalidPluribusIndex`
@@ -758,6 +1313,55 @@ impl Display for Pluribus {
             "#{} rounds: {:?} HANDS: {} BOARD: {} WINNINGS: {:?} PLAYERS: {:?}",
             self.index, self.rounds, self.hole_cards, self.board, self.winnings, self.players,
         )
+    }
+}
+
+impl Unumable for Pluribus {
+    /// The full `STATE:` line.
+    ///
+    /// Byte-identical to [`Pluribus::raw`] for any hand parsed from a
+    /// well-formed line, with two documented exceptions, both measured against
+    /// the whole 10,000-hand corpus by `examples/unum.rs`:
+    ///
+    /// 1. **Hole-card order within a player.** [`Two`]
+    ///    normalizes its two cards high-to-low, because `As8s` and `8sAs` are
+    ///    the same hand and must compare equal. 98.4% of corpus hands log at
+    ///    least one player low-card-first, so the rendered line differs from
+    ///    the raw one there. The player *boundaries* round-trip exactly.
+    /// 2. **Half-chip split pots.** [`Pluribus::winnings`] is `Vec<isize>` and
+    ///    [`Pluribus::parse_isizes`](Pluribus) truncates `112.5` to `112`.
+    ///    Eight corpus hands split a pot to half a chip and cannot round-trip.
+    ///
+    /// Modulo those two, this is exact on **9,992 of 10,000** hands.
+    ///
+    /// The dividers come from [`Pluribus::divider_hypothesis`] — the cheap,
+    /// table-free reconstruction, which EPIC-87 confirmed against the
+    /// replay on every corpus hand. Use [`Pluribus::try_to_pluribus`] for the
+    /// re-simulated render, which is correct by construction and returns a
+    /// `Result`; this one is infallible, and falls back to an undivided action
+    /// field for a `Pluribus` that is not a legal hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::nubibus::Pluribus;
+    /// use std::str::FromStr;
+    ///
+    /// let line = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:KsQc|3c6s|Ah9c|9d9h|7sKc|8c3s/4s7d4d/4c/As:3850|-100|0|-3750|0|0:MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
+    /// let hand = Pluribus::from_str(line).unwrap();
+    ///
+    /// // The action field, the board and the payoffs are exact.
+    /// assert!(hand.to_pluribus().starts_with("STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:"));
+    /// // The hole cards come back normalized: `3c6s` was logged low-first.
+    /// assert!(hand.to_pluribus().contains("KsQc|6s3c|Ah9c|9h9d|Kc7s|8c3s/4s7d4d/4c/As"));
+    /// ```
+    fn to_pluribus(&self) -> String {
+        let events: Vec<PluribusEvent> = self.actions.iter().copied().collect();
+        let actions = Pluribus::divider_hypothesis(&events, self.players.len())
+            .unwrap_or_else(|| events.iter().map(PluribusEvent::to_pluribus).collect());
+
+        self.render_line(&actions)
     }
 }
 
@@ -828,6 +1432,35 @@ impl Display for PluribusEvent {
             PluribusEvent::Fold => write!(f, "Fold"),
             PluribusEvent::Call => write!(f, "Call"),
             PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
+        }
+    }
+}
+
+impl Unumable for PluribusEvent {
+    /// `f`, `c`, `r200` — the log tokens, deliberately *not* [`Display`],
+    /// which renders `Raise(200)` for humans and is embedded in
+    /// [`Nubificus`]'s own `Display`.
+    ///
+    /// The format has no separate check token: a check and a call are both
+    /// `c`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::nubibus::PluribusEvent;
+    ///
+    /// assert_eq!(PluribusEvent::Fold.to_pluribus(), "f");
+    /// assert_eq!(PluribusEvent::Call.to_pluribus(), "c");
+    /// assert_eq!(PluribusEvent::Raise(200).to_pluribus(), "r200");
+    /// // `Display` is a different rendering, and stays a different rendering.
+    /// assert_eq!(PluribusEvent::Raise(200).to_string(), "Raise(200)");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        match self {
+            PluribusEvent::Fold => "f".to_string(),
+            PluribusEvent::Call => "c".to_string(),
+            PluribusEvent::Raise(amount) => format!("r{amount}"),
         }
     }
 }
@@ -1252,5 +1885,237 @@ mod store_pluribus_tests {
         let pl = Pluribus::from_str(s).unwrap();
         let nub = Nubificus::try_from(pl).unwrap().play_hand_display().unwrap();
         println!("{:?}", nub);
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis__nubibus__unum_tests {
+    use super::*;
+
+    /// The `DEFECT_021` worked example: four betting rounds, three dividers,
+    /// and raise amounts that are cumulative per-hand totals rather than
+    /// per-street bets.
+    const CUMULATIVE: &str = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:KsQc|3c6s|Ah9c|9d9h|7sKc|8c3s/4s7d4d/4c/As:3850|-100|0|-3750|0|0:MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
+
+    /// A hand that ended pre-flop: no `/` anywhere, no board at all. 4,662 of
+    /// the 10,000 corpus hands have this shape.
+    const PREFLOP_ONLY: &str = "STATE:0:ffr225fr1050ff:JdJh|5c7d|Kc2c|4c9s|Ac8h|6hTs:325|-100|0|0|-225|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus";
+
+    /// An all-in run-out: the betting ends pre-flop, but the board still runs
+    /// out and the log terminates all three actionless rounds — `c///`.
+    const ALL_IN_RUN_OUT: &str = "STATE:75:fffr225fr1100r2558r6655r10000c///:4s6d|KsKh|Jh5h|9dQc|4hJs|QsQh/5dKdTh/Ac/7d:-50|10050|0|0|0|-10000:MrPink|MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite";
+
+    #[test]
+    fn pluribus_event_renders_log_token_not_display() {
+        assert_eq!(PluribusEvent::Fold.to_pluribus(), "f");
+        assert_eq!(PluribusEvent::Call.to_pluribus(), "c");
+        assert_eq!(PluribusEvent::Raise(200).to_pluribus(), "r200");
+
+        // `Display` is a separate rendering and stays a separate rendering:
+        // `Nubificus`'s own `Display` embeds it.
+        assert_eq!(PluribusEvent::Fold.to_string(), "Fold");
+        assert_eq!(PluribusEvent::Call.to_string(), "Call");
+        assert_eq!(PluribusEvent::Raise(200).to_string(), "Raise(200)");
+    }
+
+    #[test]
+    fn raise_amounts_are_cumulative_not_per_street() {
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+
+        // Read per-street the last three raises would sum to 6,950 and the
+        // table would rightly answer `InsufficientChips` — see `DEFECT_021`.
+        assert_eq!(
+            hand.actions_to_pluribus().unwrap(),
+            "fr250ffr1150fc/r2050c/r3750c/r6250f"
+        );
+    }
+
+    #[test]
+    fn dividers_are_derived_not_remembered() {
+        // Clearing `rounds` — the pre-split source substrings — must not
+        // change the rendered action field. If it did, the writer would be
+        // reproducing its input by remembering it, and the round trip would
+        // assert nothing.
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        let mut amnesiac = hand.clone();
+        amnesiac.rounds.clear();
+        amnesiac.raw.clear();
+
+        assert!(amnesiac.rounds.is_empty());
+        assert_eq!(
+            amnesiac.actions_to_pluribus().unwrap(),
+            hand.actions_to_pluribus().unwrap()
+        );
+        assert_eq!(amnesiac.to_pluribus(), hand.to_pluribus());
+    }
+
+    #[test]
+    fn preflop_only_hand_round_trips() {
+        let hand = Pluribus::from_str(PREFLOP_ONLY).unwrap();
+
+        assert_eq!(hand.actions_to_pluribus().unwrap(), "ffr225fr1050ff");
+        // No board, so no `/` in the cards field and none in the actions.
+        assert!(!hand.cards_to_pluribus().contains('/'));
+        assert!(!hand.actions_to_pluribus().unwrap().contains('/'));
+        assert_eq!(hand.board.to_pluribus(), "");
+        // Exact but for the hole-card normalization `Two` imposes — `JdJh`
+        // and `5c7d` were both logged low-first.
+        assert_eq!(
+            hand.to_pluribus(),
+            "STATE:0:ffr225fr1050ff:JhJd|7d5c|Kc2c|9s4c|Ac8h|Ts6h:325|-100|0|0|-225|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus"
+        );
+    }
+
+    #[test]
+    fn all_in_run_out_terminates_its_actionless_rounds() {
+        // The board says four betting rounds happened, so the line carries
+        // three dividers even though the last three rounds saw no action.
+        let hand = Pluribus::from_str(ALL_IN_RUN_OUT).unwrap();
+
+        assert_eq!(hand.actions_to_pluribus().unwrap(), "fffr225fr1100r2558r6655r10000c///");
+    }
+
+    #[test]
+    fn divider_hypothesis_agrees_with_the_replay() {
+        // The theory recorded at `Pluribus::parse_all_rounds`: the dividers
+        // are redundant because the actions pause when the round is over.
+        // `tests/heavy_tests.rs` runs this across all 10,000 corpus hands.
+        for line in [CUMULATIVE, PREFLOP_ONLY, ALL_IN_RUN_OUT] {
+            let hand = Pluribus::from_str(line).unwrap();
+            let events: Vec<PluribusEvent> = hand.actions.iter().copied().collect();
+
+            assert_eq!(
+                Pluribus::divider_hypothesis(&events, hand.players.len()).unwrap(),
+                hand.actions_to_pluribus().unwrap(),
+                "{line}"
+            );
+        }
+    }
+
+    #[test]
+    fn cards_field_joins_hole_cards_and_board() {
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+
+        assert_eq!(hand.cards_to_pluribus(), "KsQc|6s3c|Ah9c|9h9d|Kc7s|8c3s/4s7d4d/4c/As");
+    }
+
+    #[test]
+    fn winnings_render_signed_and_pipe_separated() {
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+
+        assert_eq!(hand.winnings_to_pluribus(), "3850|-100|0|-3750|0|0");
+    }
+
+    #[test]
+    fn split_pot_payoff_does_not_round_trip() {
+        // EPIC-87 Design option 3, taken in the open: `Pluribus.winnings` stays
+        // `Vec<isize>` in whole chips, so the eight corpus hands that split a
+        // pot to half a chip are a known, named limitation rather than a
+        // silent filter. Changing `winnings` to half-chips would fix these
+        // eight and silently change the units of a public field.
+        let split = "STATE:0:ffr225fcc/ccc/ccc/ccr562cf:2cAc|9sTc|4c6s|Ks2d|6dAd|Jh5d/Qs9c4s/As/8d:112.5|-225|0|0|112.5|0:MrBlue|MrBlonde|MrWhite|MrPink|MrBrown|Pluribus";
+        let hand = Pluribus::from_str(split).unwrap();
+
+        assert_eq!(hand.winnings_to_pluribus(), "112|-225|0|0|112|0");
+        assert!(!hand.to_pluribus().contains("112.5"));
+    }
+
+    #[test]
+    fn to_pluribus_agrees_with_the_re_simulated_render() {
+        // `to_pluribus` places dividers with the cheap hypothesis;
+        // `try_to_pluribus` replays the hand. They must not drift.
+        for line in [CUMULATIVE, PREFLOP_ONLY, ALL_IN_RUN_OUT] {
+            let hand = Pluribus::from_str(line).unwrap();
+            assert_eq!(hand.to_pluribus(), hand.try_to_pluribus().unwrap(), "{line}");
+        }
+    }
+
+    #[test]
+    fn write_log_opens_with_four_header_lines() {
+        let hand = Pluribus::from_str(PREFLOP_ONLY).unwrap();
+        let log = Pluribus::write_log("sample_game_87", &[hand.clone(), hand]);
+        let lines: Vec<&str> = log.lines().collect();
+
+        assert_eq!(lines.len(), 6);
+        assert_eq!(
+            lines[0],
+            format!(
+                "# name/game/hands/seed sample_game_87 {} 2 87",
+                Pluribus::GAME_DEFINITION
+            )
+        );
+        assert_eq!(lines[1], "#--t_response 600000000");
+        assert_eq!(lines[2], "#--t_hand 600000000");
+        assert_eq!(lines[3], "#--t_per_hand 600000000");
+        assert!(lines[4].starts_with("STATE:0:ffr225fr1050ff:"));
+        assert_eq!(lines[4], lines[5]);
+    }
+
+    #[test]
+    fn six_max_only_is_enforced() {
+        // The format's player order is positional — index 0 is the small
+        // blind, the button is last — and has no vocabulary for another seat
+        // count or another variant. Anything else is an error, not a
+        // best-effort render.
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        let mut table = Table::try_from(&hand).unwrap();
+
+        table.seats = Seats::from(vec!["A".to_string(), "B".to_string()]);
+        assert!(Pluribus::try_from(&table).is_err());
+
+        let mut table = Table::try_from(&hand).unwrap();
+        table.game = GameType::PLO;
+        assert!(Pluribus::try_from(&table).is_err());
+    }
+
+    #[test]
+    fn dealt_hand_exports_and_reimports() {
+        // Tier 3: a hand that never came from a log. Built with `Table`, run
+        // to completion, exported, and read back — the two agree on the
+        // action sequence, the payoffs, and the players.
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        let mut nubificus = Nubificus::try_from(&hand).unwrap();
+        nubificus.play_hand().unwrap();
+
+        let exported = Pluribus::try_from(&nubificus.table).unwrap();
+        let line = exported.to_pluribus();
+        let reimported = Pluribus::from_str(&line).unwrap();
+
+        assert_eq!(reimported.to_pluribus(), line);
+        assert_eq!(reimported.actions, exported.actions);
+        assert_eq!(reimported.winnings, exported.winnings);
+        assert_eq!(reimported.players, exported.players);
+        // Chip conservation: a finished hand pays out what it took in.
+        assert_eq!(exported.winnings.iter().sum::<isize>(), 0);
+    }
+
+    #[test]
+    fn exported_table_carries_the_cumulative_amounts() {
+        // `street_bet_target` run backwards. This is the single most likely
+        // place for a `DEFECT_021`-shaped bug to reappear in mirror image.
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        let mut nubificus = Nubificus::try_from(&hand).unwrap();
+        nubificus.play_hand().unwrap();
+
+        let exported = Pluribus::try_from(&nubificus.table).unwrap();
+        let raises: Vec<usize> = exported
+            .actions
+            .iter()
+            .filter_map(PluribusEvent::raise_amount)
+            .collect();
+
+        assert_eq!(raises, vec![250, 1150, 2050, 3750, 6250]);
+    }
+
+    #[test]
+    fn exported_hand_has_no_index_of_its_own() {
+        // A hand number belongs to the log file a hand was written into, not
+        // to the hand, and a `Table` has never heard of one.
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        let mut nubificus = Nubificus::try_from(&hand).unwrap();
+        nubificus.play_hand().unwrap();
+
+        assert_eq!(Pluribus::try_from(&nubificus.table).unwrap().index, 0);
     }
 }

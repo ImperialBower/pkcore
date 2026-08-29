@@ -1,10 +1,12 @@
 # EPIC-86: Browser Bindings (PKWASM)
 
 > **Provenance.** Drafted 2026-08-29 against `pkcore` `main` @ `46fa2aa`
-> (version `0.9.0`, `Cargo.toml:4`; `0.9.1` is the crates.io max). The Phase 0
-> feasibility spike described in [Context](#context) exists as **uncommitted
-> working-tree changes** in `../pkwasm` @ `6aa2875`. Nothing in this EPIC is
-> committed anywhere yet; every Status row reflects that.
+> (version `0.9.0`, `Cargo.toml:4`; `0.9.1` is the crates.io max). This doc
+> landed as `28f214d` ("Added EPIC-86_Browser_Bindings"), now on `main`. The
+> Phase 0 feasibility spike described in [Context](#context) landed separately
+> as **`pkwasm` @ `f5c029a`** ("EPIC-86 spike") on `pkwasm`'s `main` — 4 files,
+> `Cargo.toml` / `Cargo.lock` / `src/lib.rs` / `index.html`. No implementation
+> beyond that spike exists; every Status row below reflects that.
 
 ## Context
 
@@ -120,8 +122,8 @@ clean.
 
 | Component | Status |
 |---|---|
-| wasm32 feasibility: `rayon`, `getrandom`, feature set, bundle size | **Complete** — spike, uncommitted working tree, `pkwasm` @ `6aa2875` |
-| `Eval` + `HandRank` binding | 🟡 Spike-quality — proves the shape, `pkwasm/src/lib.rs` (uncommitted); `bestFive` returns `String`, not `Cards` |
+| wasm32 feasibility: `rayon`, `getrandom`, feature set, bundle size | **Complete** — `pkwasm` @ `f5c029a` |
+| `Eval` + `HandRank` binding | 🟡 Spike-quality — proves the shape (`pkwasm/src/lib.rs:26-90` @ `f5c029a`); `bestFive` returns `String`, not `Cards` |
 | Repo naming, `package.json`, version-lock rule | Planned |
 | Card primitives (`Card`, `Cards`, `Rank`, `Suit`, `Board`, `HoleCards`, `Two`) | Planned |
 | Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | Planned |
@@ -395,7 +397,7 @@ pkwasm/
 
 ## Work Items
 
-### Phase 0 — Feasibility spike ✅ *(complete, uncommitted)*
+### Phase 0 — Feasibility spike ✅ *(landed, `pkwasm` @ `f5c029a`)*
 
 - [x] **0a.** Rewire `pkwasm/Cargo.toml` onto `pkcore 0.9.1`,
       `default-features = false`, features `equity` + `hand-histories` +
@@ -406,10 +408,14 @@ pkwasm/
       produces a loadable module and record the bundle size.
 - [x] **0d.** Verify in a real browser, including a `Cards::deck().shuffle()`
       probe for the `getrandom` path.
-- [ ] **0e.** **Commit the spike.** It is working-tree-only at `6aa2875`; delete
-      the temporary `shuffleProbe` export (`pkwasm/src/lib.rs`, marked
-      `SPIKE PROBE`) and the `index.html` line that calls it, since `Cards` and
-      `Dealer` supersede it in Phases 1 and 3.
+- [x] **0e.** Commit the spike — landed as `f5c029a` on `pkwasm` `main`.
+- [ ] **0f.** Delete the temporary `shuffleProbe` export
+      (`pkwasm/src/lib.rs:92-99` @ `f5c029a`, marked `SPIKE PROBE`) and the
+      `index.html` line that calls it. It shipped with the spike commit
+      deliberately — it is the only proof the browser `getrandom` path is live —
+      but `Cards` and `Dealer` supersede it in Phases 2 and 3, and the
+      `shuffle_is_nondeterministic` test in the [Test Plan](#test-plan) is its
+      permanent replacement. **Do not delete it before that test exists.**
 
 ### Phase 1 — Naming, packaging skeleton, chip rule
 
@@ -486,15 +492,25 @@ pkwasm/
 
 ### Phase 6 — Cross-references
 
-- [ ] **15a.** Register EPIC-86 in `docs/BACKLOG.md`.
-- [ ] **15b.** Add the 80-block to `ROADMAP.md`'s "EPIC Numbering Policy"
-      (`ROADMAP.md:406-417`). EPIC-80–86 are all now claimed but the block is
-      undocumented there, which is how `EPIC-84` collided once already (see
-      EPIC-85's Provenance note). Record: next free = `EPIC-87`.
-- [ ] **15c.** Correct [EPIC-85](EPIC-85_Node_Bindings.md)'s Context — it calls
-      `../pkwasm` *"an unrelated December-2025 wasm-bindgen hello-world with no
-      pkcore in it"*, true when written, stale once Phase 0 commits. Point it
-      here.
+- [x] **15a.** Register EPIC-86 in `docs/BACKLOG.md` — added to the
+      *Contract-only (implementation lives in sibling repos)* table alongside
+      EPIC-34/50–53/60/61/79a, plus a matching `ROADMAP.md` EPIC-table row above
+      EPIC-87's. Noted while doing it: [EPIC-85](EPIC-85_Node_Bindings.md)
+      postdates the 2026-08-22 `/backlog` refresh and is **still absent from
+      both files** even though `pkcore.js` has shipped to npm — recorded in
+      BACKLOG's header note, but fixing it belongs to EPIC-85, not here.
+- [x] **15b.** Add the 80-block to `ROADMAP.md`'s "EPIC Numbering Policy" —
+      done at `ROADMAP.md:416`, which retroactively documents EPIC-80–87 and
+      records **next free pkcore number: `EPIC-88`** (this EPIC's original
+      draft said `EPIC-87`; that number was claimed same-day by
+      [EPIC-87](EPIC-87_Pluribus_Export.md) Pluribus-Format Hand Export). The
+      registration also flags `EPIC-81_Ckc_Rs_Dependency.md:532`'s *"Next free:
+      `EPIC-82`"* as stale — a separate cleanup, not this EPIC's.
+- [x] **15c.** Correct [EPIC-85](EPIC-85_Node_Bindings.md)'s Context — its
+      `../pkwasm` sentence was put in the past tense and given a *Superseded
+      2026-08-29* note pointing here, which also restates why the two EPICs are
+      complements (native N-API vs sandboxed `wasm32`) so the correction does
+      not read as EPIC-86 invalidating EPIC-85's premise.
 
 ### Deferred (follow-on EPICs, not this one)
 
@@ -567,8 +583,12 @@ pkwasm/
   stale sentence).
 - **Adds:** the `@imperialbower/pkcore-wasm` npm package, and `pkwasm` becomes a
   real binding repo rather than a hello-world.
-- **Breaks:** `pkwasm`'s existing `greet`/`add`/`fibonacci` exports
-  (`pkwasm/src/lib.rs` @ `6aa2875`), which are scaffold with no consumers.
+- **Breaks:** `pkwasm`'s `greet`/`add`/`fibonacci` scaffold exports — already
+  removed by the Phase 0 spike (present at `6aa2875`, gone at `f5c029a`). They
+  had no consumers. The crate rename in Work Item 1a is the one remaining
+  break: `pkg/pkwasm_bg.wasm` becomes `pkg/pkcore_wasm_bg.wasm`, which matters
+  only to anything pinning that path — nothing does, since `pkg/` is
+  gitignored (`pkwasm/pkg/.gitignore` is `*`) and was never published.
 
 ## Dependencies
 

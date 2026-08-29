@@ -2,6 +2,15 @@
 
 This module is named `Nubibus`. It means clouds or a swarm, and it's a pun on Pluribus. 
 
+> **No longer read-only.** This document describes the *import* half — parsing
+> a Pluribus log line into a `Pluribus` and replaying it as a `Table`. Since
+> `0.10.0` the module can also write the format back out, via the `Unumable`
+> trait (*e pluribus unum*). That half is
+> [EPIC-87](EPIC-87_Pluribus_Export.md), which also turned the 10,000-hand
+> corpus in `data/pluribus/raw` into a regression suite for the replay engine
+> described below, and settled the street-divider theory that used to sit as a
+> `TODO` on `Pluribus::parse_all_rounds`.
+
 ## Links
 
 * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)

@@ -5,6 +5,66 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Pluribus-format hand export** — `pkcore` can now *write* the Pluribus log
+  format it has always been able to read
+  ([EPIC-87](docs/epics/EPIC-87_Pluribus_Export.md)). A new `Unumable` trait
+  (*e pluribus unum*) is the write half of `Plurable`, with implementations for
+  `Card`, `Two`, `Three`, `Four`, `Five`, `HoleCards`, `Board`, `PluribusEvent`
+  and `Pluribus`. `Pluribus::write_log` renders a whole log file — four header
+  lines and one `STATE:` line per hand — as a `String`; `TryFrom<&Table> for
+  Pluribus` rebuilds the line a finished hand would have produced, inverting
+  the cumulative-amount conversion that `DEFECT_021` got backwards. All of it
+  is pure formatting: no new dependency, no new feature flag, and no I/O in the
+  kernel — `examples/unum.rs` owns the only `fs::write`.
+
+  The point of the writer is that it turns the 10,000-hand corpus into a
+  regression suite. `tests/heavy_tests.rs` now round-trips every archived hand
+  and fails if the replay engine's behaviour changes.
+
+- `Pluribus::divider_hypothesis`, which reconstructs the `/` betting-round
+  dividers from the flat action sequence and the player count alone.
+
+### Changed
+
+- The note at `Pluribus::parse_all_rounds` is rewritten from theory to finding.
+  It used to read *"I have a theory that the divider between rounds isn't
+  needed"*; EPIC-87 tested it, and `divider_hypothesis` agrees with a full
+  table re-simulation on **all 10,000 corpus hands**. The dividers are
+  redundant. The one wrinkle the original note did not anticipate: an all-in
+  run-out terminates its remaining rounds with no action in them at all, so
+  `r10000c///` is a real line, and the reconstruction has to add those trailing
+  dividers from the fact that two players are still live when the actions run
+  out.
+
+### Known limitations
+
+Both are named and asserted rather than silently filtered, and between them
+they account for **every** hand that does not round-trip — there is no
+unexplained residue.
+
+- **Hole-card order within a player does not round-trip.** `Two` normalizes its
+  two cards high-to-low, because `As8s` and `8sAs` are the same hand and must
+  compare equal. 98.4% of corpus hands log at least one player low-card-first,
+  so the byte-exact oracle is a canonicalized line rather than the raw one.
+  Player boundaries, board, actions and payoffs are all exact.
+
+- **Eight half-chip split pots.** `Pluribus.winnings` stays `Vec<isize>` in
+  whole chips, so hands whose payoff field reads `112.5` cannot round-trip.
+  Taken deliberately (EPIC-87 Design option 3) over changing the units of a
+  public field; the eight hands are excluded by name in `HALF_CHIP_HANDS`.
+
+- **92 all-in run-outs the engine cannot finish**
+  ([DEFECT_025](docs/defects/DEFECT_025_all_in_run_out_never_completes.md)).
+  Surfaced, not caused, by this work: when every remaining player is all-in, `Table` deals one more
+  street and then stalls — `is_game_over` wants `is_last_street`, the board
+  never reaches five cards, and the pot is never awarded. Tier 2 detects these
+  by chip conservation and asserts the count, so a fix shows up as the number
+  going down.
+
 ## [0.9.1] - 2026-08-28
 
 ### Added
