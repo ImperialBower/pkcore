@@ -4,7 +4,7 @@ use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::util::Util;
-use crate::{PKError, Pile, Plurable, TheNuts};
+use crate::{PKError, Pile, Plurable, TheNuts, Unumable};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -79,6 +79,20 @@ impl Plurable for Three {
     }
 }
 
+impl Unumable for Three {
+    /// `3h7s5c` — a flop, three cards back to back.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(Three::from_pluribus("3h7s5c").unwrap().to_pluribus(), "3h7s5c");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        self.0.iter().map(Card::to_pluribus).collect()
+    }
+}
 impl Pile for Three {
     fn add<P: Pile>(&self, _other: P) -> Self
     where
@@ -336,5 +350,19 @@ mod arrays__three_tests {
             Three::try_from(Cards::from_str("9♣ 6♦ 5♥ 4♥").unwrap()).unwrap_err(),
             PKError::TooManyCards
         );
+    }
+
+    #[test]
+    fn three_renders_a_flop_back_to_back() {
+        assert_eq!(Three::from_pluribus("3h7s5c").unwrap().to_pluribus(), "3h7s5c");
+    }
+
+    #[test]
+    fn three_preserves_dealt_order() {
+        // Unlike `Two` and `Four`, `Three` does not sort — which is what lets
+        // a `Board`'s flop round-trip byte-exactly.
+        for flop in ["3h7s5c", "5c7s3h", "AsKdQh", "2c2d2h"] {
+            assert_eq!(Three::from_pluribus(flop).unwrap().to_pluribus(), flop);
+        }
     }
 }

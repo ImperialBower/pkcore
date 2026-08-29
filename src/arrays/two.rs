@@ -8,7 +8,7 @@ use crate::cards::Cards;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::Util;
-use crate::{PKError, Pile, Plurable, SuitShift, TheNuts};
+use crate::{PKError, Pile, Plurable, SuitShift, TheNuts, Unumable};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -1563,6 +1563,20 @@ impl Plurable for Two {
     }
 }
 
+impl Unumable for Two {
+    /// `Qc4h` — the two cards back to back, no separator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(Two::from_pluribus("Qc4h").unwrap().to_pluribus(), "Qc4h");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        self.0.iter().map(Card::to_pluribus).collect()
+    }
+}
 impl Pile for Two {
     fn add<P: Pile>(&self, _other: P) -> Self
     where
@@ -2248,5 +2262,26 @@ mod arrays__two_tests {
 
         assert!(Two::try_from(slice).is_err());
         assert_eq!(err, Two::try_from(slice).unwrap_err());
+    }
+
+    #[test]
+    fn two_renders_both_cards_back_to_back() {
+        assert_eq!(Two::from_pluribus("Qc4h").unwrap().to_pluribus(), "Qc4h");
+    }
+
+    #[test]
+    fn two_round_trips_when_already_high_to_low() {
+        for hand in ["Qc4h", "AsKs", "5h5d", "Td9d"] {
+            assert_eq!(Two::from_pluribus(hand).unwrap().to_pluribus(), hand);
+        }
+    }
+
+    #[test]
+    fn two_normalizes_a_low_first_hand() {
+        // `Two` sorts high-to-low so that `8sAs` and `As8s` compare equal.
+        // The writer therefore cannot reproduce the logged order, and the
+        // round trip is canonical rather than byte-exact. 98.4% of the
+        // Pluribus corpus logs at least one player low-card-first.
+        assert_eq!(Two::from_pluribus("8sAs").unwrap().to_pluribus(), "As8s");
     }
 }

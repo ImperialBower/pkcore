@@ -18,9 +18,14 @@
 > landed.** The frontier is unchanged — **kernel-hardening and platform-reach**.
 >
 > **Added by hand since that pass (not a `/backlog` refresh):**
-> [EPIC-87 — Pluribus-Format Hand Export](epics/EPIC-87_Pluribus_Export.md),
-> registered 2026-08-29 against `main` @ `28f214d`, pkcore `0.9.1`. The rest of
-> this document still reflects the 2026-08-22 state and is due a refresh.
+> [EPIC-87 — Pluribus-Format Hand Export](epics/EPIC-87_Pluribus_Export.md) and
+> [EPIC-86 — Browser Bindings](epics/EPIC-86_Browser_Bindings.md), both
+> registered 2026-08-29 against `main` @ `28f214d`, pkcore `0.9.1`. EPIC-86 is
+> contract-only and listed under that heading below. The rest of this document
+> still reflects the 2026-08-22 state and is due a refresh — note that
+> [EPIC-85 — JavaScript Bindings](epics/EPIC-85_Node_Bindings.md) postdates the
+> last refresh and is still absent from both this file and `ROADMAP.md`'s EPIC
+> table, though `pkcore.js` has shipped to npm.
 
 ---
 
@@ -87,7 +92,16 @@ Ranked by "designed, unblocked, and nothing has landed yet".
    `cargo check` in CI.
 
 6. **EPIC-87 — Pluribus-Format Hand Export** ([`epics/EPIC-87_Pluribus_Export.md`](epics/EPIC-87_Pluribus_Export.md))
-   Drafted 2026-08-29, nothing landed. Gives `pkcore` the writer it has never
+   ✅ **Complete 2026-08-29, shipped as `0.10.0`.** Tier 1 round-trips
+   9,992/10,000 hands, Tier 2 9,901/10,000 with **zero unexplained** failures,
+   and the street-divider theory is confirmed on all 10,000. It also surfaced a
+   new `Table` defect — 92 all-in run-outs the engine cannot finish — which
+   is filed as
+   [`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md).
+   See the EPIC's corrigendum. Original entry
+   follows.
+
+   Drafted 2026-08-29. Gives `pkcore` the writer it has never
    had for the Pluribus log format — `Unumable`, the write half of the
    read-only `Plurable` trait (`src/lib.rs:977`). The payoff is not the
    exporter: round-tripping `data/pluribus/raw` turns **10,000 archived hands
@@ -125,6 +139,7 @@ expecting pkcore work items.
 | [EPIC-60](epics/EPIC-60_Showcase.md) — Platform showcase | presentation across all surfaces | Planned |
 | [EPIC-61](epics/EPIC-61_AI_Observability.md) — AI-native observability | `pkdealer` | Planned |
 | [EPIC-79a](epics/EPIC-79a_Real_Cryptography_Backend.md) — Real crypto backend | `pkmental` | Proposed |
+| [EPIC-86](epics/EPIC-86_Browser_Bindings.md) — Browser bindings (`@imperialbower/pkcore-wasm`) | `pkwasm` | Phase 0 spike landed (`pkwasm` @ `f5c029a`); Phases 1–5 planned |
 
 ---
 
@@ -142,16 +157,22 @@ Written down, not committed to. No status table, no work items yet.
 - **[EPIC_FEATURE — WAMR](epics/EPIC_FEATURE_wasm_wamr.md)** — WebAssembly Micro
   Runtime support. Status: Proposal.
 - **[EPIC_Pluribus](epics/EPIC_Pluribus.md)** — the `Nubibus` module; Pluribus
-  hand-log **import** and replay. Partially built (`src/analysis/nubibus.rs`),
-  undocumented errors — see tech debt. The export half is now specified
-  separately as [EPIC-87](epics/EPIC-87_Pluribus_Export.md), which is designed
-  rather than idea-stage and is listed under *Ship-ready next* above.
+  hand-log import, replay, **and (since `0.10.0`) export**. Partially built
+  (`src/analysis/nubibus.rs`), undocumented errors — see tech debt. The export
+  half landed as [EPIC-87](epics/EPIC-87_Pluribus_Export.md), so the module is
+  no longer read-only.
 
 ---
 
 ## Bugs / Defects
 
-**Every filed defect is closed.** All 23 `DEFECT_0NN` docs are **Fixed**
+**One defect is open.**
+[`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md) — an
+all-in run-out never completes; the board stops short and the pot is never
+awarded (92 of the 10,000 corpus hands). Found by
+[EPIC-87](epics/EPIC-87_Pluribus_Export.md)'s Tier 2 on 2026-08-29.
+
+Every other filed defect is closed. All 23 earlier `DEFECT_0NN` docs are **Fixed**
 (`DEFECT_001` is a preserved record of a rejected rule interpretation,
 reverted in `0.0.55`); `DEFECT_008` was closed outright on 2026-08-21 with
 D8-6 recorded as an accepted divergence. `DEFECT_018` and `DEFECT_019` were

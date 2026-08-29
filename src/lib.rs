@@ -985,6 +985,24 @@ pub trait Plurable {
         Self: Sized;
 }
 
+/// The other half of [`Plurable`]. *E pluribus unum* — out of many, one:
+/// `Plurable` takes one Pluribus string apart, `Unumable` puts one back
+/// together.
+///
+/// Kept as a sibling trait rather than a second method on [`Plurable`] so that
+/// "can be read" and "can be written" stay separately provable, and so no
+/// existing implementor is broken by a new required method.
+pub trait Unumable {
+    /// Renders `self` as its fragment of a Pluribus log line.
+    ///
+    /// Infallible by construction: every implementor is a valid poker object,
+    /// and every valid poker object has a rendering. Blank cards are the one
+    /// wrinkle, and they are *elided*, not errors — see
+    /// [`Board`](crate::play::board::Board).
+    #[must_use]
+    fn to_pluribus(&self) -> String;
+}
+
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
 /// The more I think about this, the more I feel like this is me avoiding the best practice
 /// of returning `Result` and `Option`. I'm worried about speed, but that's probably Knuth's

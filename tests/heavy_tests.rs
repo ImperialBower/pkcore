@@ -223,4 +223,295 @@ mod heavy_tests {
             errors.join("\n")
         );
     }
+
+    // ── EPIC-87: Pluribus-format export ───────────────────────────────────
+
+    /// The eight corpus hands that split a pot to half a chip.
+    ///
+    /// `Pluribus.winnings` is `Vec<isize>` in whole chips and `parse_isizes`
+    /// truncates `112.5` to `112`, so these eight cannot round-trip byte for
+    /// byte. EPIC-87 took Design option 3 in the open: keep the public field's
+    /// units, and name the exclusions here rather than hide them behind a
+    /// silent filter on "any line containing a dot".
+    const HALF_CHIP_HANDS: [(&str, usize); 8] = [
+        ("sample_game_102.log", 0),
+        ("sample_game_32.log", 23),
+        ("sample_game_41b.log", 204),
+        ("sample_game_60.log", 88),
+        ("sample_game_75b.log", 76),
+        ("sample_game_88.log", 128),
+        ("sample_game_91.log", 43),
+        ("sample_game_91.log", 53),
+    ];
+
+    /// Re-orders each player's two hole cards high-to-low **in the raw text**.
+    ///
+    /// `Two` normalizes its two cards on construction, because `As8s` and
+    /// `8sAs` are the same hand and must compare equal — so a writer built on
+    /// it cannot reproduce the logged order, and 98.4% of corpus hands log at
+    /// least one player low-card-first. The comparison is therefore against a
+    /// line pkcore could actually have produced.
+    ///
+    /// Built by string surgery over the original rather than by rendering the
+    /// parsed form: an oracle that went through the writer would agree with
+    /// the writer no matter how wrong the writer was.
+    fn canonicalize(line: &str) -> String {
+        use pkcore::prelude::Card;
+        use std::str::FromStr;
+
+        let fields: Vec<&str> = line.split(':').collect();
+        if fields.len() != 6 {
+            return line.to_string();
+        }
+
+        let (dealt, board) = match fields[3].split_once('/') {
+            Some((dealt, board)) => (dealt, Some(board)),
+            None => (fields[3], None),
+        };
+
+        let sorted: Vec<String> = dealt
+            .split('|')
+            .map(|pair| {
+                if pair.len() != 4 {
+                    return pair.to_string();
+                }
+                let (first, second) = pair.split_at(2);
+                match (Card::from_str(first), Card::from_str(second)) {
+                    (Ok(one), Ok(two)) if two > one => format!("{second}{first}"),
+                    _ => pair.to_string(),
+                }
+            })
+            .collect();
+
+        let cards = match board {
+            Some(board) => format!("{}/{}", sorted.join("|"), board),
+            None => sorted.join("|"),
+        };
+
+        format!(
+            "{}:{}:{}:{}:{}:{}",
+            fields[0], fields[1], fields[2], cards, fields[4], fields[5]
+        )
+    }
+
+    /// EPIC-87 Tier 1: every logged hand, parsed and written straight back
+    /// out, byte for byte.
+    ///
+    /// Expected to pass on **9,992 of 10,000**. The eight exclusions are named
+    /// in [`HALF_CHIP_HANDS`], and the count is asserted rather than the
+    /// boolean, so a regression shows up as a number that went up.
+    #[test]
+    fn pluribus__corpus_round_trips_byte_exact() {
+        use pkcore::analysis::nubibus::Pluribus;
+        use pkcore::prelude::{Nubificus, Unumable};
+        use std::str::FromStr;
+
+        let logs = Nubificus::get_log_files("data/pluribus/raw/").expect("failed to load log files");
+        let mut hands = 0;
+        let mut failures: Vec<String> = Vec::new();
+
+        for log in &logs {
+            let name = log.rsplit('/').next().unwrap_or(log).to_string();
+            for line in std::fs::read_to_string(log).expect("unreadable log").lines() {
+                if !line.starts_with("STATE:") {
+                    continue;
+                }
+                let Ok(hand) = Pluribus::from_str(line) else {
+                    continue;
+                };
+                hands += 1;
+
+                if HALF_CHIP_HANDS.contains(&(name.as_str(), hand.index)) {
+                    continue;
+                }
+
+                let rendered = hand.to_pluribus();
+                if rendered != canonicalize(line) {
+                    failures.push(format!("{name} #{}\n  in : {line}\n  out: {rendered}", hand.index));
+                }
+            }
+        }
+
+        assert_eq!(hands, 10_000, "the corpus changed size");
+        assert!(
+            failures.is_empty(),
+            "{} of {} hands did not round trip:\n{}",
+            failures.len(),
+            hands,
+            failures.iter().take(10).cloned().collect::<Vec<_>>().join("\n")
+        );
+    }
+
+    /// EPIC-87 Phase 3d: the divider theory, settled.
+    ///
+    /// `Pluribus::divider_hypothesis` places the `/` from the flat action
+    /// sequence and the player count alone — no cards, no table, no replay.
+    /// `Pluribus::actions_to_pluribus` places them by replaying the hand
+    /// through a `Table`, which is correct by construction. If the two agree
+    /// everywhere, the dividers are redundant, exactly as the note at
+    /// `Pluribus::parse_all_rounds` guessed.
+    ///
+    /// They agree on all 10,000.
+    #[test]
+    fn pluribus__divider_hypothesis_matches_the_replay() {
+        use pkcore::analysis::nubibus::{Pluribus, PluribusEvent};
+        use pkcore::prelude::Nubificus;
+
+        let logs = Nubificus::get_log_files("data/pluribus/raw/").expect("failed to load log files");
+        let mut checked = 0;
+        let mut disagreements: Vec<String> = Vec::new();
+
+        for log in &logs {
+            for hand in Pluribus::read_in_log(log.as_str()).expect("failed to parse log file") {
+                let events: Vec<PluribusEvent> = hand.actions.iter().copied().collect();
+                let replayed = hand.actions_to_pluribus().expect("replay failed");
+                checked += 1;
+
+                match Pluribus::divider_hypothesis(&events, hand.players.len()) {
+                    Some(guessed) if guessed == replayed => {}
+                    Some(guessed) => disagreements.push(format!(
+                        "  replay: {replayed}\n  guess : {guessed}\n  raw   : {}",
+                        hand.raw
+                    )),
+                    None => disagreements.push(format!("  no answer for: {}", hand.raw)),
+                }
+            }
+        }
+
+        assert_eq!(checked, 10_000, "the corpus changed size");
+        assert!(
+            disagreements.is_empty(),
+            "the divider theory failed on {} of {} hands:\n{}",
+            disagreements.len(),
+            checked,
+            disagreements.iter().take(10).cloned().collect::<Vec<_>>().join("\n")
+        );
+    }
+
+    /// EPIC-87 Tier 2: replay each logged hand through the engine, then ask
+    /// the finished table to write the line back out.
+    ///
+    /// This is the tier that can catch a `DEFECT_021`-shaped bug in mirror
+    /// image — the cumulative-amount conversion run backwards.
+    ///
+    /// Two classes of hand are excluded, and between them they account for
+    /// **every** failure — there is no unexplained residue:
+    ///
+    /// 1. The eight [`HALF_CHIP_HANDS`].
+    /// 2. **92 all-in run-outs the engine cannot finish** (91 counted here —
+    ///    the 92nd is also a half-chip hand and is excluded before the check).
+    ///    When every
+    ///    remaining player is all-in, `Table` deals one more street and then
+    ///    stalls: `is_game_over` wants `is_last_street`, the board never
+    ///    reaches five cards, and the pot is never awarded. That is a `Table`
+    ///    state-machine gap, not an exporter bug, and EPIC-87's Tier 2 is the
+    ///    first thing that ever asked the engine to run a board out. Detected
+    ///    here by chip conservation — a hand that actually finished pays out
+    ///    exactly what it took in, so the net column sums to zero.
+    ///
+    /// The flop comes back in canonical order because `DealtFlop` carries a
+    /// single `Bard`, which is a bitset; see `TryFrom<&Table> for Pluribus`.
+    #[test]
+    fn pluribus__corpus_replays_and_re_exports() {
+        use pkcore::analysis::nubibus::Pluribus;
+        use pkcore::bard::Bard;
+        use pkcore::prelude::{Card, Nubificus, Unumable};
+        use std::str::FromStr;
+
+        /// [`canonicalize`] plus the flop in `Bard::DECK` order — highest bit
+        /// first, so spades, then hearts, diamonds, clubs, descending by rank
+        /// within each suit.
+        fn canonicalize_with_flop(line: &str) -> String {
+            let canonical = canonicalize(line);
+            let fields: Vec<&str> = canonical.split(':').collect();
+            if fields.len() != 6 {
+                return canonical;
+            }
+            let Some((dealt, board)) = fields[3].split_once('/') else {
+                return canonical;
+            };
+
+            let mut streets: Vec<String> = board.split('/').map(str::to_string).collect();
+            if let Some(flop) = streets.first_mut()
+                && flop.len() == 6
+            {
+                let mut cards: Vec<String> = (0..3).map(|i| flop[i * 2..i * 2 + 2].to_string()).collect();
+                cards.sort_by_key(|card| {
+                    std::cmp::Reverse(
+                        Card::from_str(card)
+                            .map(|card| Bard::from(card).as_u64())
+                            .unwrap_or_default(),
+                    )
+                });
+                *flop = cards.concat();
+            }
+
+            format!(
+                "{}:{}:{}:{}/{}:{}:{}",
+                fields[0],
+                fields[1],
+                fields[2],
+                dealt,
+                streets.join("/"),
+                fields[4],
+                fields[5]
+            )
+        }
+
+        let logs = Nubificus::get_log_files("data/pluribus/raw/").expect("failed to load log files");
+        let mut hands = 0;
+        let mut stalled = 0;
+        let mut failures: Vec<String> = Vec::new();
+
+        for log in &logs {
+            let name = log.rsplit('/').next().unwrap_or(log).to_string();
+            for line in std::fs::read_to_string(log).expect("unreadable log").lines() {
+                if !line.starts_with("STATE:") {
+                    continue;
+                }
+                let Ok(hand) = Pluribus::from_str(line) else {
+                    continue;
+                };
+                hands += 1;
+
+                if HALF_CHIP_HANDS.contains(&(name.as_str(), hand.index)) {
+                    continue;
+                }
+
+                let mut nubificus = Nubificus::try_from(&hand).expect("rebuild failed");
+                nubificus.play_hand().expect("replay failed");
+
+                let mut exported = Pluribus::try_from(&nubificus.table).expect("export failed");
+                exported.index = hand.index;
+
+                // Chip conservation: a non-zero sum means the pot was never
+                // awarded, which is the all-in run-out the engine cannot
+                // finish. Counted, not silently skipped.
+                if exported.winnings.iter().sum::<isize>() != 0 {
+                    stalled += 1;
+                    continue;
+                }
+
+                let rendered = exported.to_pluribus();
+                if rendered != canonicalize_with_flop(line) {
+                    failures.push(format!("{name} #{}\n  in : {line}\n  out: {rendered}", hand.index));
+                }
+            }
+        }
+
+        assert_eq!(hands, 10_000, "the corpus changed size");
+        assert!(
+            failures.is_empty(),
+            "{} of {} hands did not survive the replay round trip:\n{}",
+            failures.len(),
+            hands,
+            failures.iter().take(10).cloned().collect::<Vec<_>>().join("\n")
+        );
+        assert_eq!(
+            stalled, 91,
+            "the number of hands the engine cannot run out changed; if this went \
+             down, the all-in run-out gap is being fixed and this test should \
+             tighten with it"
+        );
+    }
 }

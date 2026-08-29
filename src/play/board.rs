@@ -7,7 +7,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::util::Util;
-use crate::{PKError, Pile, Plurable, SOK, TheNuts};
+use crate::{PKError, Pile, Plurable, SOK, TheNuts, Unumable};
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
@@ -96,6 +96,48 @@ impl Plurable for Board {
             )),
             _ => Err(PKError::InvalidPluribusIndex),
         }
+    }
+}
+
+impl Unumable for Board {
+    /// `3h7s5c/Qs/6c`, `3h7s5c/Qs`, `3h7s5c`, or `""` for a hand that never
+    /// saw a flop.
+    ///
+    /// The inverse of [`Board::from_pluribus`], which pads the streets a hand
+    /// never reached with [`Card::BLANK`]. This truncates at the first blank
+    /// instead of padding, so a blank suit (`_`) can never reach a log line,
+    /// and a hand that ended pre-flop renders as the empty string rather than
+    /// a stray `/`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(Board::from_pluribus("3h7s5c/Qs/6c").unwrap().to_pluribus(), "3h7s5c/Qs/6c");
+    /// assert_eq!(Board::from_pluribus("3h7s5c").unwrap().to_pluribus(), "3h7s5c");
+    /// assert_eq!(Board::from_pluribus("").unwrap().to_pluribus(), "");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        if !self.flop.is_dealt() {
+            return String::new();
+        }
+
+        let mut rendered = self.flop.to_pluribus();
+
+        if !self.turn.is_dealt() {
+            return rendered;
+        }
+        rendered.push('/');
+        rendered.push_str(&self.turn.to_pluribus());
+
+        if !self.river.is_dealt() {
+            return rendered;
+        }
+        rendered.push('/');
+        rendered.push_str(&self.river.to_pluribus());
+
+        rendered
     }
 }
 
@@ -340,5 +382,41 @@ mod play_board_tests {
         // Cactus Kev rank 1 is the royal flush; it needs the T♠ in hand.
         assert_eq!(1, best.hand_rank.value);
         assert!(best.hand.contains(&Card::TEN_SPADES));
+    }
+
+    #[test]
+    fn board_renders_every_street_it_reached() {
+        assert_eq!(
+            Board::from_pluribus("3h7s5c/Qs/6c").unwrap().to_pluribus(),
+            "3h7s5c/Qs/6c"
+        );
+    }
+
+    #[test]
+    fn board_omits_unreached_streets() {
+        // Flop-only renders with no trailing `/`; an empty board renders as
+        // the empty string, not as a stray divider. 4,662 of the 10,000
+        // corpus hands end pre-flop, so the empty case is the plurality.
+        assert_eq!(Board::from_pluribus("3h7s5c/Qs").unwrap().to_pluribus(), "3h7s5c/Qs");
+        assert_eq!(Board::from_pluribus("3h7s5c").unwrap().to_pluribus(), "3h7s5c");
+        assert_eq!(Board::from_pluribus("").unwrap().to_pluribus(), "");
+        assert_eq!(Board::default().to_pluribus(), "");
+    }
+
+    #[test]
+    fn board_never_renders_blank_suit() {
+        // `Suit::BLANK.to_char_letter()` is `_`, and it must never reach a
+        // log line — `from_pluribus` pads absent streets with `Card::BLANK`,
+        // and the writer has to truncate rather than render them.
+        for board in ["", "3h7s5c", "3h7s5c/Qs", "3h7s5c/Qs/6c"] {
+            let rendered = Board::from_pluribus(board).unwrap().to_pluribus();
+            assert!(!rendered.contains('_'), "{board} rendered as {rendered}");
+        }
+    }
+
+    #[test]
+    fn board_round_trips_the_flop_in_dealt_order() {
+        // `Three` does not sort, so an out-of-order flop survives exactly.
+        assert_eq!(Board::from_pluribus("5c7s3h").unwrap().to_pluribus(), "5c7s3h");
     }
 }

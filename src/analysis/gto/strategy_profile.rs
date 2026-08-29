@@ -141,9 +141,7 @@ impl ActionFrequencies {
             // Same tiny count as in `uniform`; precision loss is impossible.
             #[allow(clippy::cast_precision_loss)]
             let p = 1.0 / self.0.len() as f64;
-            for x in &mut self.0 {
-                *x = p;
-            }
+            self.0.fill(p);
         } else {
             for x in &mut self.0 {
                 *x /= sum;

@@ -67,7 +67,7 @@ pub use crate::util::name::Name;
 pub use crate::util::terminal::Terminal;
 
 // Re-export core traits
-pub use crate::{Agency, Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};
+pub use crate::{Agency, Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift, Unumable};
 
 // Re-export all constants
 pub use crate::{

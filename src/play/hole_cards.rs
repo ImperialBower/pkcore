@@ -10,7 +10,7 @@ use crate::cards::Cards;
 use crate::play::board::Board;
 use crate::prelude::Seats;
 use crate::util::Util;
-use crate::{Card, PKError, Pile, Plurable, TheNuts};
+use crate::{Card, PKError, Pile, Plurable, TheNuts, Unumable};
 use itertools::Itertools;
 use log::error;
 use rayon::iter::ParallelIterator;
@@ -281,6 +281,38 @@ impl Plurable for HoleCards {
     }
 }
 
+impl Unumable for HoleCards {
+    /// `Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d` — one `|` between each player.
+    ///
+    /// [`HoleCards::from_pluribus`] throws the `|` separators away: it splits
+    /// on them, joins the pieces back together, and re-splits every two
+    /// characters. The player boundaries survive only because every player
+    /// holds exactly two cards. This re-imposes them from the `Two`-per-player
+    /// shape of the type.
+    ///
+    /// Each [`Two`] is normalized high-to-low on construction, so a player
+    /// whose cards were logged low-first renders high-first. The player
+    /// *boundaries* round-trip exactly; the order *within* a player does not,
+    /// because [`Two`] deliberately cannot express it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let dealt = "Qc4h|Tc9c|As8s|Qh7c|QdJc|5h5d";
+    /// assert_eq!(HoleCards::from_pluribus(dealt).unwrap().to_pluribus(), dealt);
+    ///
+    /// // `8sAs` is normalized to `As8s` — same hand, canonical order.
+    /// assert_eq!(
+    ///     HoleCards::from_pluribus("Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d").unwrap().to_pluribus(),
+    ///     dealt
+    /// );
+    /// ```
+    fn to_pluribus(&self) -> String {
+        self.0.iter().map(Two::to_pluribus).collect::<Vec<String>>().join("|")
+    }
+}
 impl Pile for HoleCards {
     fn add<P: Pile>(&self, other: P) -> Self
     where
@@ -536,5 +568,33 @@ mod play__hold_cards_tests {
 
         assert_ne!(clean, paired);
         assert_eq!(clean, paired.clean());
+    }
+
+    #[test]
+    fn hole_cards_restore_player_boundaries() {
+        // `from_pluribus` splits on `|`, joins the pieces, and re-splits every
+        // two characters — the boundaries survive only because every player
+        // holds exactly two cards. The writer has to re-impose them.
+        let dealt = "Qc4h|Tc9c|As8s|Qh7c|QdJc|5h5d";
+        let rendered = HoleCards::from_pluribus(dealt).unwrap().to_pluribus();
+
+        assert_eq!(rendered, dealt);
+        assert_eq!(rendered.matches('|').count(), 5);
+    }
+
+    #[test]
+    fn hole_cards_normalize_within_a_player_but_not_across() {
+        // Each `Two` sorts high-to-low; the player order never moves.
+        assert_eq!(
+            HoleCards::from_pluribus("Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d")
+                .unwrap()
+                .to_pluribus(),
+            "Qc4h|Tc9c|As8s|Qh7c|QdJc|5h5d"
+        );
+    }
+
+    #[test]
+    fn hole_cards_render_empty_for_no_players() {
+        assert_eq!(HoleCards::default().to_pluribus(), "");
     }
 }

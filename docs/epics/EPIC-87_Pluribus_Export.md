@@ -1,10 +1,14 @@
 # EPIC-87: Pluribus-Format Hand Export (UNUM)
 
 > **Provenance.** Drafted 2026-08-29 against `pkcore` `main` @ `28f214d`
-> (version `0.9.1`, `Cargo.toml:4`), working tree clean. Nothing in this EPIC is
-> built yet; every Status row says `Planned` and means it. Corpus counts quoted
+> (version `0.9.1`, `Cargo.toml:4`), working tree clean. Corpus counts quoted
 > below were measured at that commit against `data/pluribus/raw/*.log`
 > (92 files, 10,000 `STATE:` lines).
+>
+> **Built 2026-08-29 on branch `EPIC-87`, shipped as `0.10.0`.** Every phase
+> landed. Two findings changed the exit criteria and one changed the design;
+> all three are recorded in the [Corrigendum](#corrigendum) at the foot of this
+> document rather than edited silently into the text above them.
 
 ## Context
 
@@ -103,21 +107,24 @@ way or the other.** That alone justifies the EPIC.
 
 | Component | Status |
 |---|---|
-| `Unumable` trait (`to_pluribus`) | Planned |
-| `Card` → `As` primitive (lowercase suit) | Planned |
-| `Unumable` for `Two`/`Three`/`Four`/`Five` | Planned |
-| `Unumable` for `HoleCards` (re-inserts `\|`) | Planned |
-| `Unumable` for `Board` (truncates at blanks) | Planned |
-| `PluribusEvent` → `f` / `c` / `r<n>` | Planned |
-| Street-divider re-derivation (the `/`) | Planned |
-| `Pluribus::to_pluribus()` — full `STATE:` line | Planned |
-| **Tier 1** textual round-trip, 10,000 hands | Planned |
-| `Table` → `Pluribus` (cumulative-amount inversion) | Planned |
-| **Tier 2** semantic round-trip via `Nubificus` | Planned |
-| **Tier 3** novel export of a pkcore-dealt hand | Planned |
-| Half-chip payoffs (8 corpus hands) | 🔒 Gated — see Design |
-| File-level writer (4 header lines + N states) | Planned |
-| `examples/unum.rs` corpus verifier | Planned |
+| `Unumable` trait (`to_pluribus`) | ✅ Done — `src/lib.rs:988` |
+| `Card` → `As` primitive (lowercase suit) | ✅ Done — `src/card.rs:270` |
+| `Unumable` for `Two`/`Three`/`Four`/`Five` | ✅ Done |
+| `Unumable` for `HoleCards` (re-inserts `\|`) | ✅ Done |
+| `Unumable` for `Board` (truncates at blanks) | ✅ Done |
+| `PluribusEvent` → `f` / `c` / `r<n>` | ✅ Done |
+| Street-divider re-derivation (the `/`) | ✅ Done — both strategies built |
+| `Pluribus::to_pluribus()` — full `STATE:` line | ✅ Done |
+| **Tier 1** textual round-trip, 10,000 hands | ✅ **9,992 / 10,000** |
+| `Table` → `Pluribus` (cumulative-amount inversion) | ✅ Done |
+| **Tier 2** semantic round-trip via `Nubificus` | ✅ **9,901 / 10,000**, zero unexplained |
+| **Tier 3** novel export of a pkcore-dealt hand | ✅ Done — `dealt_hand_exports_and_reimports` |
+| Half-chip payoffs (8 corpus hands) | ⚖️ **Design option 3** — accepted, named, excluded |
+| Hole-card order within a player | ⚖️ **New finding** — cannot round-trip, see C-1 |
+| All-in run-out (92 hands) | 🐛 **New finding** — engine gap, see C-3 |
+| Divider theory (`nubibus.rs:528-530`) | ✅ **Confirmed 10,000 / 10,000** |
+| File-level writer (4 header lines + N states) | ✅ Done — `Pluribus::write_log` |
+| `examples/unum.rs` corpus verifier | ✅ Done |
 | `HandHistory` ⇄ Pluribus bridge | 🔒 Deferred — separate EPIC |
 
 ---
@@ -446,86 +453,86 @@ the `fs::write`.
 
 ### Phase 0 — The trait seam
 
-- [ ] **0a.** Add `Unumable` to `src/lib.rs` directly below `Plurable`
+- [x] **0a.** Add `Unumable` to `src/lib.rs` directly below `Plurable`
       (`src/lib.rs:977-985`), with the *e pluribus unum* doc comment.
-- [ ] **0b.** Export it from `src/prelude.rs:70`, alongside `Plurable`.
-- [ ] **0c.** Confirm `cargo check --no-default-features` and
+- [x] **0b.** Export it from `src/prelude.rs:70`, alongside `Plurable`.
+- [x] **0c.** Confirm `cargo check --no-default-features` and
       `make check-purity` are both green — the trait must add nothing to the
       kernel's dependency surface.
 
 ### Phase 1 — Card primitives
 
-- [ ] **1a.** `impl Unumable for Card` (`src/card.rs`, near
+- [x] **1a.** `impl Unumable for Card` (`src/card.rs`, near
       `get_letter_index` at `:184`), lowercasing the suit letter.
-- [ ] **1b.** `impl Unumable for Two` / `Three` / `Four` / `Five`, each placed
+- [x] **1b.** `impl Unumable for Two` / `Three` / `Four` / `Five`, each placed
       immediately after its existing `Plurable` impl
       (`src/arrays/two.rs:1552`, `three.rs:71`, `four.rs:151`, `five.rs:283`).
-- [ ] **1c.** `impl Unumable for HoleCards` (`src/play/hole_cards.rs`, after
+- [x] **1c.** `impl Unumable for HoleCards` (`src/play/hole_cards.rs`, after
       `:274`) — `|` between players.
-- [ ] **1d.** `impl Unumable for Board` (`src/play/board.rs`, after `:70`) —
+- [x] **1d.** `impl Unumable for Board` (`src/play/board.rs`, after `:70`) —
       `/` between streets, stop at the first `Card::BLANK`, empty string for an
       empty board.
-- [ ] **1e.** Unit tests per impl (see Test Plan), plus a doc test on every new
+- [x] **1e.** Unit tests per impl (see Test Plan), plus a doc test on every new
       public method — required by `CLAUDE.md`, not optional.
-- [ ] **1f.** Symmetry tests: for each of the six types, a case asserting
+- [x] **1f.** Symmetry tests: for each of the six types, a case asserting
       `T::from_pluribus(s).to_pluribus() == s`.
 
 ### Phase 2 — Actions
 
-- [ ] **2a.** `impl Unumable for PluribusEvent`
+- [x] **2a.** `impl Unumable for PluribusEvent`
       (`src/analysis/nubibus.rs`, near `:825`). Leave `Display` alone.
-- [ ] **2b.** Implement `Pluribus::actions_to_pluribus` by **re-simulation**
+- [x] **2b.** Implement `Pluribus::actions_to_pluribus` by **re-simulation**
       (design option 1), reusing the phase transitions from
       `Nubificus::do_action` (`:278-361`) rather than restating them.
-- [ ] **2c.** Implement the counter-only divider placement (design option 2)
+- [x] **2c.** Implement the counter-only divider placement (design option 2)
       as a private `fn divider_hypothesis`, used by tests only.
-- [ ] **2d.** Assert in tests that `actions_to_pluribus` never reads
+- [x] **2d.** Assert in tests that `actions_to_pluribus` never reads
       `self.rounds` (`:498`) — a grep-level guard in the test, plus a comment
       at the field explaining why.
 
 ### Phase 3 — The line, and Tier 1
 
-- [ ] **3a.** `impl Unumable for Pluribus` — assemble all six fields.
-- [ ] **3b.** Decide the half-chip question (Design, three options). If option
+- [x] **3a.** `impl Unumable for Pluribus` — assemble all six fields.
+- [x] **3b.** Decide the half-chip question (Design, three options). If option
       1: change `parse_isizes` (`:514-526`) to half-chips and update its
       comment, which currently documents the truncation as intentional.
-- [ ] **3c.** **Tier 1 corpus round-trip**: for all 10,000 hands across the 92
+- [x] **3c.** **Tier 1 corpus round-trip**: for all 10,000 hands across the 92
       files, `Pluribus::from_str(line).to_pluribus() == line`. Report the
       failure count, not just pass/fail — a count is a number you can watch go
       down.
-- [ ] **3d.** Run the divider hypothesis (2c) against all 10,000 and record the
+- [x] **3d.** Run the divider hypothesis (2c) against all 10,000 and record the
       result in this EPIC's corrigendum. Rewrite the note at
       `src/analysis/nubibus.rs:528-530` from theory to finding, either way.
-- [ ] **3e.** Mark Tier 1 as a `#[ignore]`d heavy test if it is slow, and wire
+- [x] **3e.** Mark Tier 1 as a `#[ignore]`d heavy test if it is slow, and wire
       it into `tests/heavy_tests.rs` where the other corpus-scale work lives.
 
 ### Phase 4 — Table → line, and Tiers 2 and 3
 
-- [ ] **4a.** `impl TryFrom<&Table> for Pluribus`, mirroring
+- [x] **4a.** `impl TryFrom<&Table> for Pluribus`, mirroring
       `TryFrom<&Pluribus> for Table` (`:413-458`) and inverting
       `street_bet_target` (`:96-106`).
-- [ ] **4b.** Enumerate every `TableAction` variant explicitly before the
+- [x] **4b.** Enumerate every `TableAction` variant explicitly before the
       `_ =>` arm required by `#[non_exhaustive]` (`src/casino/action.rs:87`).
-- [ ] **4c.** **Tier 2 semantic round-trip**: parse → `Nubificus` → replay to
+- [x] **4c.** **Tier 2 semantic round-trip**: parse → `Nubificus` → replay to
       completion → `Pluribus::try_from(&table)` → render → compare to `raw`.
       Across the full corpus.
-- [ ] **4d.** **Tier 3 novel export**: deal a hand with `Table`/`Dealer` that
+- [x] **4d.** **Tier 3 novel export**: deal a hand with `Table`/`Dealer` that
       never came from a log, export it, re-import it, and assert the two tables
       agree on button, stacks, board, and payoffs.
 
 ### Phase 5 — File level and docs
 
-- [ ] **5a.** `Pluribus::write_log` — 4 header lines + N states, returning
+- [x] **5a.** `Pluribus::write_log` — 4 header lines + N states, returning
       `String`.
-- [ ] **5b.** `examples/unum.rs` — the round-trip verifier, modelled on
+- [x] **5b.** `examples/unum.rs` — the round-trip verifier, modelled on
       `examples/pluribus.rs`; owns the only `fs::write` in this EPIC.
-- [ ] **5c.** `CHANGELOG.md` under `## [Unreleased] / Added`, and a `minor`
+- [x] **5c.** `CHANGELOG.md` under `## [Unreleased] / Added`, and a `minor`
       version bump in `Cargo.toml:4` (new public trait + new public API), then
       `cargo build` so `Cargo.lock` picks it up.
-- [ ] **5d.** Update [`EPIC_Pluribus.md`](EPIC_Pluribus.md) — it currently
+- [x] **5d.** Update [`EPIC_Pluribus.md`](EPIC_Pluribus.md) — it currently
       describes a read-only module — and the `EPIC_Pluribus` entry in
       [`BACKLOG.md`](../BACKLOG.md) (`:125-127`).
-- [ ] **5e.** Register EPIC-87 in `ROADMAP.md` and note the 80-block in the
+- [x] **5e.** Register EPIC-87 in `ROADMAP.md` and note the 80-block in the
       "EPIC Numbering Policy" section (`ROADMAP.md:406-417`), which does not
       yet mention EPIC-81 through EPIC-87 at all.
 
@@ -666,3 +673,109 @@ Exit criteria:
    to `28f214d` — the kernel gained a capability and no weight.
 6. No existing test changed its expected value. If one did, that is a
    `DEFECT_0NN`, not an edit.
+
+---
+
+## Corrigendum
+
+Written 2026-08-29, after the build. Three things this EPIC got wrong or did
+not know when it was drafted. Recorded here rather than edited into the text
+above, so the difference between what was planned and what was found stays
+visible.
+
+### C-1 — Hole-card order within a player cannot round-trip
+
+**The EPIC assumed byte-exactness was achievable modulo half-chips. It is not.**
+
+`Two` normalizes its two cards high-to-low on construction
+(`From<[Card; 2]>`, `src/arrays/two.rs:1498`), because `As8s` and `8sAs` are
+the same poker hand and must compare equal. `HoleCards` is a `Vec<Two>`, so a
+writer built on it renders the canonical order, not the logged one.
+
+Measured against the corpus: **9,843 of 10,000 hands (98.4%)** log at least one
+player low-card-first; **30,057 of 60,000** individual holdings are affected.
+This is not an edge case, it is the norm, and it was invisible until the first
+`Two` round-trip assertion ran.
+
+This is the type doing its job, not a bug. The resolution is that Tier 1's
+oracle is a **canonicalized** line — the raw line with each player's two cards
+re-ordered high-to-low by string surgery, independent of the writer — rather
+than the raw line itself. Player boundaries, board, action field and payoffs
+are all still held to byte equality.
+
+The same reasoning applies to `Four`, which also sorts. `Three` does not, which
+is what lets a `Board`'s flop round-trip exactly in Tier 1.
+
+### C-2 — The dividers are not "one per round with action"
+
+The first implementation emitted a `/` after any action that closed a betting
+round, when more actions followed. That is wrong for **91 hands**: when the
+last caller is all-in, the remaining rounds happen with no action in them at
+all, and the log still terminates every one of them. `r10000c///` is a real
+corpus line.
+
+The rule is instead: **one `/` per betting round that occurred**, and the number
+of rounds is what the board says — 0 dividers for a hand that never saw a flop,
+3 for one that reached the river. Both the re-simulation
+(`Pluribus::actions_to_pluribus`, from the parsed `Board`) and the pure
+hypothesis (`Pluribus::divider_hypothesis`, from the fact that two players are
+still live when the actions run out) now derive it that way.
+
+### C-3 — The engine cannot finish an all-in run-out
+
+**A new defect, surfaced by Tier 2 — which is exactly what this EPIC was for.**
+
+When every remaining player is all-in, `Table` deals one more street and then
+stalls. `is_game_over` requires `is_last_street()` (`src/casino/table.rs:1009`),
+the board never reaches five cards, `end_hand` never runs, and the pot is never
+awarded. Draining the state machine with repeated `Table::act()` does not help:
+it advances one street and then makes no further progress.
+
+**92 of 10,000 corpus hands** hit this. Tier 2 detects them by chip
+conservation — a hand that actually finished pays out exactly what it took in,
+so the net payoff column sums to zero — counts them, and asserts the count, so
+a fix shows up as the number going down.
+
+Tier 2's Tier-1-style comparison is otherwise clean: of the 10,000 hands,
+**9,901 match exactly**, 91 are these stalls, 8 are half-chip splits (one hand
+is both), and **zero are unexplained**.
+
+This is not an exporter bug and was not fixed here. Tier 2 is the first thing
+in the codebase that ever asked the engine to run a board out; before EPIC-87
+nothing could tell that it did not. Filed as
+[`DEFECT_025`](../defects/DEFECT_025_all_in_run_out_never_completes.md).
+
+### C-4 — `Unumable for Pluribus` cannot be the re-simulation
+
+The Design section specifies an infallible `to_pluribus` for every implementor
+*and* a divider derivation that replays the hand through a `Table`, which can
+fail. Those two cannot both be true of one method.
+
+Resolved by C-2's confirmation of the divider theory, which is what makes an
+infallible whole-line writer possible at all:
+
+- `Unumable::to_pluribus` uses `divider_hypothesis` — pure, table-free,
+  infallible, and now known correct on all 10,000 hands.
+- `Pluribus::try_to_pluribus` uses the re-simulation and returns a `Result`.
+  It is the verifier, and `to_pluribus_agrees_with_the_re_simulated_render`
+  asserts the two do not drift.
+
+### What the exit criteria actually came out as
+
+1. `pluribus__corpus_round_trips_byte_exact` — **9,992 of 10,000**, the 8
+   half-chip hands excluded by name in `HALF_CHIP_HANDS`, against the C-1
+   canonicalized oracle. ✅ (the EPIC's own option-3 fallback)
+2. `pluribus__corpus_replays_and_re_exports` — **9,901 exact, 0 unexplained**,
+   with 91 stalls counted and asserted. ✅
+3. `dealt_hand_exports_and_reimports` — ✅
+4. The divider theory — **confirmed, 10,000 / 10,000**, by
+   `pluribus__divider_hypothesis_matches_the_replay`. The note at
+   `Pluribus::parse_all_rounds` is rewritten from theory to finding. ✅
+5. `make check-purity` green; `Cargo.toml`'s dependency list byte-identical to
+   `28f214d` — only the version line moved, `0.9.1` → `0.10.0`. ✅
+6. No existing test changed its expected value. ✅
+
+`make ayce` fails on two clippy lints in `src/analysis/gto/strategy_profile.rs`
+and `src/arrays/matchups/masks/suit_texture.rs`. Both pre-date this branch —
+verified by stashing EPIC-87 and re-running — and neither file is touched here.
+

@@ -2,7 +2,7 @@ use crate::bard::Bard;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, SuitShift, TheNuts};
+use crate::{PKError, Pile, SuitShift, TheNuts, Unumable};
 use serde::de::Deserializer;
 
 use serde::Deserialize;
@@ -264,6 +264,33 @@ impl From<u32> for Card {
             Ok(u) => Card(u as u32),
             _ => Card::BLANK,
         }
+    }
+}
+
+impl Unumable for Card {
+    /// `Ah`, `Ts`, `2c` — the Pluribus form: rank in `23456789TJQKA`, suit in
+    /// **lowercase** `shdc`.
+    ///
+    /// [`Card::get_letter_index`] is one `to_ascii_lowercase` away from being
+    /// this, and is deliberately not reused: it emits `AS`, and a writer that
+    /// is 99.9% right is the worst outcome for a format whose only test is
+    /// byte equality.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use std::str::FromStr;
+    ///
+    /// assert_eq!(Card::from_str("AS").unwrap().to_pluribus(), "As");
+    /// assert_eq!(Card::from_str("TD").unwrap().to_pluribus(), "Td");
+    /// ```
+    fn to_pluribus(&self) -> String {
+        format!(
+            "{}{}",
+            self.get_rank().to_char(),
+            self.get_suit().to_char_letter().to_ascii_lowercase()
+        )
     }
 }
 
@@ -843,5 +870,37 @@ mod card_tests {
     #[should_panic]
     fn pile__the_nuts__panics() {
         let _ = Card::TREY_CLUBS.the_nuts();
+    }
+
+    #[test]
+    fn card_renders_lowercase_suit() {
+        // `get_letter_index` is the near-miss: it emits `AS`. Pinning both
+        // here so the two cannot quietly converge.
+        let ace = Card::from_str("AS").unwrap();
+        assert_eq!(ace.to_pluribus(), "As");
+        assert_eq!(ace.get_letter_index(), "AS");
+    }
+
+    #[test]
+    fn card_renders_every_suit_lowercase() {
+        for (index, suit) in ["s", "h", "d", "c"].iter().enumerate() {
+            let upper = ["S", "H", "D", "C"][index];
+            let card = Card::from_str(&format!("T{upper}")).unwrap();
+            assert_eq!(card.to_pluribus(), format!("T{suit}"));
+        }
+    }
+
+    #[test]
+    fn card_round_trips_every_card_in_the_deck() {
+        for card in crate::cards::Cards::deck().iter() {
+            let rendered = card.to_pluribus();
+            assert_eq!(rendered.len(), 2);
+            assert_eq!(Card::from_str(&rendered).unwrap(), *card);
+        }
+    }
+
+    #[test]
+    fn blank_card_never_renders_a_real_suit() {
+        assert_eq!(Card::BLANK.to_pluribus(), "__");
     }
 }
