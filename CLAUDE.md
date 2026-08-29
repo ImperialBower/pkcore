@@ -65,17 +65,22 @@ Stricter than Rust norms — both kinds of test are required, not just one:
 
 ## Changelog and version — required on every change
 
-Every change that touches code is done only when these two are done as well:
+Every change that touches code is done only when these two are done as well,
+**in this order**:
 
-1. **Add a `CHANGELOG.md` entry** under `## [Unreleased]`, in the correct
-   Keep a Changelog group (`Added`, `Changed`, `Fixed`, `Removed`,
-   `Deprecated`, `Security`). Describe the behaviour that changed and why, not
-   the diff. Link the EPIC or DEFECT doc when one exists.
-2. **Bump `version` in `Cargo.toml`** by semver:
+1. **Bump `version` in `Cargo.toml`** by semver:
    - patch — bug fix, docs, tests, internals with no public API change
    - minor — new public API, or new behaviour that is backward compatible
    - major — any breaking change to the public API
    Then run `cargo build` so `Cargo.lock` picks up the new `pkcore` version.
+2. **Add a `CHANGELOG.md` entry under that new version number**, as
+   `## [X.Y.Z] - YYYY-MM-DD` with today's date — **not** under
+   `## [Unreleased]`. The bump in step 1 is what names the section, so the
+   heading is always a real version. Do not create or add to an `[Unreleased]`
+   section; if one is already there, fold it into the version you just bumped
+   to. Put the entry in the correct Keep a Changelog group (`Added`, `Changed`,
+   `Fixed`, `Removed`, `Deprecated`, `Security`). Describe the behaviour that
+   changed and why, not the diff. Link the EPIC or DEFECT doc when one exists.
 
 Do not skip either step because the change "is small". A pure documentation
 edit that touches no code and no public API is the only exception, and it
