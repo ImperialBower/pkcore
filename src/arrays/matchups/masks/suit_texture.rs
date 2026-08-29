@@ -74,12 +74,9 @@ impl From<&SortedHeadsUp> for SuitTexture {
             3 => {
                 // #[case("A♠ A♣ A♥ 2♥", "A♠ A♥ A♦ 2♦", Type1123)]
                 if shu.higher.is_suited() {
-                    if shu.lower.is_suited() {
-                        panic!("This is impossible since ")
-                    } else {
-                        // #[case("8♣ 2♣ 3♠ 2♥", "8♠ 2♠ 3♥ 2♦", Type1233)]
-                        SuitTexture::Type1123
-                    }
+                    assert!(!shu.lower.is_suited(), "This is impossible since ");
+                    // #[case("8♣ 2♣ 3♠ 2♥", "8♠ 2♠ 3♥ 2♦", Type1233)]
+                    SuitTexture::Type1123
                 } else {
                     if shu.lower.is_suited() {
                         SuitTexture::Type1233
