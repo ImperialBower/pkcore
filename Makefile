@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -23,8 +23,9 @@ help:
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
 	@echo "  make test-kernel     - cargo test --no-default-features (the bare kernel, as CI runs it)"
+	@echo "  make test-serial     - Run the test suite with parallel OFF (exercises the serial arms)"
 	@echo "  make check-features  - cargo check each feature alone on top of --no-default-features"
-	@echo "  make ayce            - Run fmt, actionlint, build_test, test-kernel, check-features, check-purity, clippy, and docs"
+	@echo "  make ayce            - Run fmt, actionlint, build_test, test-kernel, test-serial, check-features, check-purity, check-wasm, clippy, and docs"
 	@echo "  make help            - Display this help message"
 	@echo ""
 	@echo "Nightly:"
@@ -43,7 +44,7 @@ help:
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
-	@echo "  make check-purity       - Assert no rusqlite/zstd/termion/dotenvy with --no-default-features"
+	@echo "  make check-purity       - Assert no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -209,6 +210,14 @@ actionlint:
 test-kernel:
 	cargo test --no-default-features
 
+# Runs the library WITHOUT `parallel`, so the serial arms of the equity engine,
+# range equity and turn evaluation are executed rather than merely compiled.
+# `check-features` only type-checks them; this is what proves the serial fold
+# and the rayon reduce agree (see
+# `exact_enumerate__counts_are_identical_serial_or_parallel`).
+test-serial:
+	cargo test --no-default-features --features equity,bot-profiles,hand-histories,player-stats
+
 check-features:
 	@for f in hand-histories bot-profiles player-stats player-stats-persistence equity; do \
 		echo "--- cargo check --no-default-features --features $$f --lib --tests"; \
@@ -217,7 +226,7 @@ check-features:
 
 ayce: export RUSTFLAGS := -Dwarnings
 ayce: export CARGO_INCREMENTAL := 0
-ayce: fmt actionlint build_test test-kernel check-features check-purity clippy create_docs
+ayce: fmt actionlint build_test test-kernel test-serial check-features check-purity check-wasm clippy create_docs
 
 # Install required tools
 install-tools:
@@ -240,25 +249,39 @@ install-watch:
 	cargo install cargo-watch
 
 # Check that the library compiles for WebAssembly
+# Two configurations, because they fail differently. The default build proves
+# the crate still *compiles* for wasm; the second proves the configuration we
+# actually tell browser consumers to use — `default-features = false` without
+# `parallel` — builds, so a WASM target never links a rayon thread pool it has
+# no threads to run (see the Parallelism section in src/lib.rs).
 check-wasm:
 	cargo check --target wasm32-unknown-unknown
+	cargo check --target wasm32-unknown-unknown --no-default-features --features equity,bot-profiles,hand-histories,player-stats
 
 # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that with default
-# features off, the storage/terminal layers drop out and no rusqlite/zstd/termion/
-# dotenvy remains in the dependency tree. serde_yaml_bw is a documented exception
-# (it arrives transitively via pkstate). This target is the single source of the
-# purity gate — the CI job in basic.yaml invokes `make check-purity` rather than
-# re-inlining the pipeline (audit P9j.4). The `::error::` prefix is a GitHub
-# Actions annotation in CI and a harmless plain line locally.
+# features off, the storage/terminal/YAML layers drop out and no rusqlite/zstd/
+# termion/dotenvy/serde_yaml_bw/rayon remains in the dependency tree.
+#
+# serde_yaml_bw used to be a documented exception: it arrived transitively via
+# `pkstate`, so the bot-profiles/hand-histories gates could not actually keep a
+# YAML parser out of a lean build. `pkstate` was dropped from Cargo.toml, which
+# closed that edge — MURATORI_AUDIT.md (0.10.0) verified `cargo tree
+# --no-default-features -e normal | grep -c serde_yaml_bw` returns 0. It is in
+# the pattern below so a future first-party edge fails CI instead of being
+# rediscovered by the next audit.
+#
+# This target is the single source of the purity gate — the CI job in
+# basic.yaml invokes `make check-purity` rather than re-inlining the pipeline
+# (audit P9j.4). The `::error::` prefix is a GitHub Actions annotation in CI and
+# a harmless plain line locally.
 check-purity:
-	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy' || true); \
+	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon' || true); \
 	if [ -n "$$leaked" ]; then \
-		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal:"; \
+		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal/bot-profiles/parallel:"; \
 		echo "$$leaked"; \
 		exit 1; \
 	fi; \
-	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy with --no-default-features."; \
-	echo "(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"
+	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features."
 
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:

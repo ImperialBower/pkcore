@@ -104,9 +104,12 @@ pub use crate::play::visibility::Visibility;
 // casino
 pub use crate::casino::cashier::chips::Stack;
 pub use crate::casino::dealer::Dealer;
+// Deprecated in 0.11.0; kept in the prelude so existing `use pkcore::prelude::*`
+// callers still resolve and get the deprecation warning rather than a hard error.
+#[allow(deprecated)]
 pub use crate::casino::manager::TableManager;
 pub use crate::casino::position::Positions;
-pub use crate::casino::table::{Player, Seat, Seats, Table};
+pub use crate::casino::table::{BettingState, Player, SNAPSHOT_VERSION, Seat, SeatState, Seats, Table, TableState};
 pub use crate::casino::winnings::{PotWin, Winnings};
 
 // analysis/store
@@ -167,7 +170,7 @@ pub use crate::bot::training::{ExploitTrainer, GenerationRecord, TrainingConfig,
 // casino
 pub use crate::casino::action::PlayerAction;
 pub use crate::casino::principal::Principal;
-pub use crate::casino::session::{PokerSession, SeatView, SessionStep, SessionView};
+pub use crate::casino::session::{PokerSession, SeatView, SessionState, SessionStep, SessionView};
 
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;

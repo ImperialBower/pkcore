@@ -19,7 +19,9 @@ use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
 use crate::analysis::gto::vs::Versus;
+use crate::arrays::two::Two;
 use crate::play::board::Board;
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::fmt::Display;
 
@@ -90,14 +92,16 @@ impl RangeEquity {
             return Ok(WinLoseDraw::default());
         }
 
-        let results: Result<Vec<WinLoseDraw>, PKError> = hero_twos
-            .to_vec()
-            .par_iter()
-            .map(|hero_two| {
-                let versus = Versus::new_with_board(*hero_two, self.villain.clone(), self.board);
-                self.odds_for_versus(&versus)
-            })
-            .collect();
+        let twos = hero_twos.to_vec();
+        let odds = |hero_two: &Two| {
+            let versus = Versus::new_with_board(*hero_two, self.villain.clone(), self.board);
+            self.odds_for_versus(&versus)
+        };
+
+        #[cfg(feature = "parallel")]
+        let results: Result<Vec<WinLoseDraw>, PKError> = twos.par_iter().map(odds).collect();
+        #[cfg(not(feature = "parallel"))]
+        let results: Result<Vec<WinLoseDraw>, PKError> = twos.iter().map(odds).collect();
 
         results.map(|v| v.into_iter().fold(WinLoseDraw::default(), |acc, wld| acc + wld))
     }

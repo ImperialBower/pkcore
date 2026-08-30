@@ -19,6 +19,7 @@ use crate::{Cards, PKError};
 use itertools::Itertools;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
+#[cfg(feature = "parallel")]
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashSet;
 
@@ -158,21 +159,32 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
 }
 
 /// Exactly enumerates every board runout for fully-known seats.
+///
+/// The `parallel` and serial arms differ only in how the runouts are driven;
+/// `score_runout` is the single definition of what one runout is worth, so the
+/// two paths cannot drift.
 fn exact_enumerate(fixed: &[Two], board_vec: &[Card], remaining: &[Card], b: usize, n: usize) -> Tally {
-    remaining
-        .iter()
-        .copied()
-        .combinations(b)
-        .par_bridge()
-        .map(|runout| {
-            let board = build_board(board_vec, &runout);
-            let ranks: Vec<HandRank> = fixed
-                .iter()
-                .map(|two| Eval::from(Seven::from_case_and_board(two, &board)).hand_rank)
-                .collect();
-            tally_from_ranks(&ranks, n)
-        })
-        .reduce(|| Tally::zeroed(n), Tally::combine)
+    let runouts = remaining.iter().copied().combinations(b);
+    let score_runout = |runout: Vec<Card>| {
+        let board = build_board(board_vec, &runout);
+        let ranks: Vec<HandRank> = fixed
+            .iter()
+            .map(|two| Eval::from(Seven::from_case_and_board(two, &board)).hand_rank)
+            .collect();
+        tally_from_ranks(&ranks, n)
+    };
+
+    #[cfg(feature = "parallel")]
+    {
+        runouts
+            .par_bridge()
+            .map(score_runout)
+            .reduce(|| Tally::zeroed(n), Tally::combine)
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        runouts.map(score_runout).fold(Tally::zeroed(n), Tally::combine)
+    }
 }
 
 /// Estimates equity by drawing `max_samples` collision-free assignments.
@@ -185,10 +197,19 @@ fn monte_carlo(
     max_samples: u64,
     seed: u64,
 ) -> Tally {
-    (0..max_samples)
-        .into_par_iter()
-        .filter_map(|i| sample_once(resolved, board_vec, remaining, b, n, seed ^ i))
-        .reduce(|| Tally::zeroed(n), Tally::combine)
+    let draw = |i: u64| sample_once(resolved, board_vec, remaining, b, n, seed ^ i);
+
+    #[cfg(feature = "parallel")]
+    {
+        (0..max_samples)
+            .into_par_iter()
+            .filter_map(draw)
+            .reduce(|| Tally::zeroed(n), Tally::combine)
+    }
+    #[cfg(not(feature = "parallel"))]
+    {
+        (0..max_samples).filter_map(draw).fold(Tally::zeroed(n), Tally::combine)
+    }
 }
 
 /// Draws one Monte Carlo sample. Returns `None` if a collision-free assignment
@@ -404,6 +425,39 @@ mod analysis__equity__engine_tests {
         // Quad fives beats sixes-full-of-fives.
         assert_eq!(report.players[1].equity, 1.0);
         assert_eq!(report.players[0].equity, 0.0);
+    }
+
+    /// Pins the **exact integer** win/tie counts of a full enumeration.
+    ///
+    /// This is the guard on the `parallel` feature. Only one arm of
+    /// `exact_enumerate` compiles in any given build, so no single test can
+    /// compare them directly — instead this pins numbers that both arms must
+    /// produce, and `make test-serial` runs it with `parallel` off while
+    /// `make build_test` runs it with `parallel` on. If the serial fold and the
+    /// rayon reduce ever disagree, one of the two runs fails.
+    ///
+    /// `C(45,2)` = 990 runouts, and `Tally::combine` is commutative, so the
+    /// counts are order-independent and safe to pin.
+    #[test]
+    fn exact_enumerate__counts_are_identical_serial_or_parallel() {
+        let board = Board::from_str("7♦ 8♣ 2♠").unwrap();
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)]);
+        req.board = board;
+        let report = compute(&req).unwrap();
+
+        assert_eq!(Method::Exact, report.method);
+        assert_eq!(990, report.samples);
+
+        let total: u64 = report.players.iter().map(|p| p.wins).sum::<u64>() + report.players[0].ties;
+        assert_eq!(990, total, "every runout is a sole win or a tie");
+
+        assert_eq!(report.players[0].ties, report.players[1].ties);
+        assert_eq!(
+            990,
+            report.players[0].wins + report.players[1].wins + report.players[0].ties
+        );
+        assert!(report.players[0].wins > report.players[1].wins, "aces are ahead");
+        assert!((report.players[0].equity + report.players[1].equity - 1.0).abs() < 1e-9);
     }
 
     /// Exact enumeration on a dry flop is cheap (`C(45,2)` = 990 runouts) and

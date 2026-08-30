@@ -37,7 +37,7 @@ use uuid::Uuid;
 /// assert_eq!(action, PlayerAction::Bet(200));
 /// assert_eq!(action.to_string(), "Bet(200)");
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlayerAction {
     /// Discard hole cards and exit the hand.
     Fold,

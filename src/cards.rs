@@ -11,10 +11,11 @@ use crate::util::terminal::Terminal;
 use crate::{Forgiving, PKError, Pile, SuitShift, TheNuts};
 use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
-use itertools::{Combinations, Itertools};
+use itertools::Itertools;
 use rand::prelude::SliceRandom;
 use rand::rng;
-use rayon::iter::{IterBridge, ParallelBridge};
+#[cfg(feature = "parallel")]
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
@@ -22,9 +23,6 @@ use std::hash::Hash;
 use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
-
-pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
-    std::sync::LazyLock::new(|| Cards::deck().combinations(5));
 
 /// What are the contracts for Cards?
 ///
@@ -239,12 +237,17 @@ impl Cards {
     ///     result
     /// }
     /// ```
-    pub fn combinations(&self, k: usize) -> Combinations<IntoIter<Card>> {
+    pub fn combinations(&self, k: usize) -> impl Iterator<Item = Vec<Card>> {
         self.0.clone().into_iter().combinations(k)
     }
 
+    /// The parallel twin of [`combinations`](Self::combinations).
+    ///
+    /// Requires the `parallel` feature; see the [crate-level notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     #[must_use]
-    pub fn par_combinations(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
+    pub fn par_combinations(&self, k: usize) -> impl ParallelIterator<Item = Vec<Card>> {
         self.0.clone().into_iter().combinations(k).par_bridge()
     }
 

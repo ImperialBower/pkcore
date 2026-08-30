@@ -238,8 +238,9 @@ impl Outs {
         self.longest_player() == player
     }
 
-    #[must_use]
-    pub fn iter(&self) -> indexmap::map::Iter<'_, usize, Cards> {
+    // No `#[must_use]`: `impl Iterator` already carries it, and clippy rejects
+    // the duplicate. It was needed when this returned `indexmap::map::Iter`.
+    pub fn iter(&self) -> impl Iterator<Item = (&usize, &Cards)> {
         self.0.iter()
     }
 

@@ -5,6 +5,217 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-08-29
+
+### Changed (breaking)
+
+- **`store` and `terminal` are no longer default features.** A plain
+  `cargo add pkcore` stopped building a **bundled C SQLite** (rusqlite + zstd)
+  and termion — neither is needed to play poker. The six remaining defaults are
+  all pure-compute or YAML. Consumers that want the storage or terminal layers
+  now ask for them: `features = ["store"]`. `pkcore.js` and `pkcore.py` already
+  did. (`MURATORI_AUDIT.md` checklist item 8 *partial* → **pass**.)
+
+- **The combinatorics signatures return `impl Iterator`.** `Pile`'s
+  `combinations_after`, `combinations_remaining`, `enumerate_after` and
+  `enumerate_remaining`, plus `Cards::combinations`, `Deck::combinations` and
+  `Outs::iter`, no longer name
+  `itertools::Combinations<indexmap::set::IntoIter<Card>>` or
+  `indexmap::map::Iter`; the `parallel`-gated `Pile::par_combinations_remaining`
+  and `Cards::par_combinations` return `impl ParallelIterator`. **No third-party
+  type remains in any public function signature** — implementing `Pile` no
+  longer pins you to itertools 0.14 / indexmap 2 / rayon 1 semver.
+
+  Semver-breaking on paper; 13 internal call sites and, verified across all 15
+  repos that depend on pkcore, **zero** external ones. Possible because `Pile`
+  is never used as `dyn Pile`, so RPITIT applies.
+
+- **Removed `pub static FIVE_CARD_COMBOS` and `Deck::to_par_iter`.** Both leaked
+  concrete itertools/rayon types and both had zero live callers anywhere — the
+  only references to `FIVE_CARD_COMBOS` were commented out.
+
+- **`TableManager` and `TableEvent` are `#[deprecated]`.** A multi-table sketch
+  that never grew hand-lifecycle gating, with no consumers. Hold a
+  `HashMap<Uuid, PokerSession>` instead, which gives the same routing plus the
+  lifecycle guarantees it never had. Still exported, so existing code warns
+  rather than fails; removal comes one release after this one.
+
+### Changed (behaviour)
+
+- **`Card` deserialization now rejects an index it cannot parse.** It used to
+  return `Ok(0)` — a *blank card* — so a corrupt or truncated payload
+  deserialized into a structurally valid board full of blanks instead of
+  failing. `Table::restore` cannot be built on a codec with no way to say no.
+  Anything reading malformed card strings and relying on the blank fallback now
+  sees an error, which is the point.
+
+  One string is still accepted that `Card::from_str` rejects: `"__"`, the form
+  `Card::BLANK` writes itself as, now named by `Card::BLANK_INDEX`. That
+  asymmetry was load-bearing and invisible — blanks only ever round-tripped
+  *because* of the `Ok(0)` fallback, and an undealt seat is full of them. See
+  EPIC-88's corrigendum.
+
+- **`EquityOptions::max_samples` now defaults to 25,000, down from 100,000.**
+  This is a **silent** change: nothing fails to compile, and every existing test
+  sets the option explicitly, so callers who relied on the default now get a
+  faster, less precise answer without being told. Read this line if you consume
+  `analysis::equity`.
+
+  Measured against full exact enumeration (Apple M1, release, 40 seeds,
+  worst case over 2-seat and 6-seat requests):
+
+  | `max_samples` | worst error | honestly displayable | 6-seat cost |
+  |---|---|---|---|
+  | 10,000 | ~1.2 pp | — | 89 ms |
+  | **25,000 (new default)** | **~0.7 pp** | **whole percents** | **202 ms** |
+  | 50,000 | ~0.5 pp | whole percents | 422 ms |
+  | 100,000 (old default) | ~0.3 pp | one decimal place | 792 ms |
+
+  The curve has no inflection — measured RMS tracks `sqrt(p(1-p)/n)` to within
+  4% at every size — so the default is a promise about precision, not a tuned
+  optimum: every 4× cut in samples doubles the error. 100,000 was the number
+  that made a rendered decimal place real; 25,000 is the number that makes a
+  whole percent real at a quarter of the cost. **If you render a decimal place,
+  set `max_samples = 100_000` explicitly.**
+
+  The old value was also equal to `exact_threshold`, which is a different knob —
+  `exact_threshold` decides *whether* to sample, `max_samples` decides how hard.
+  They are no longer equal, and the docs now say so. `default_options_are_pinned`
+  guards both against silent drift.
+
+### Added
+
+- **`Table::showdown` and `Table::audit_chip_total`** — the fine tier under
+  `Table::end_hand`, which is now literally `showdown()` + `reset()` +
+  `audit_chip_total()`. `showdown()` awards the pot and stops there, leaving
+  the board, the hole cards and the phase untouched, so a spectator UI can
+  render the result *before* the table resets. Previously the only way to see
+  that state was to `clone` the whole `Table` and diff it.
+  ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md) recommendation 3 — granularity
+  4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
+  following `end_hand()` would resolve an empty one.
+
+- **`Table::snapshot` / `Table::restore` and `PokerSession::snapshot` /
+  `PokerSession::restore`** — a live, mid-hand table now writes down to compact
+  `postcard` bytes and comes back **byte-identical**
+  ([EPIC-88](docs/epics/EPIC-88_Table_Snapshot.md)). This closes the finding
+  `MURATORI_AUDIT.md` has carried since 0.3.2: *the game state cannot be written
+  down*. A hand interrupted mid-street and resumed from bytes produces the same
+  `Winnings` as one played straight through, so a service that must survive a
+  restart no longer keeps a second hand-maintained copy of the truth.
+  **Retention 3/5 → 4/5.**
+
+  The wire shape is a `TableState` / `SessionState` DTO
+  (`src/casino/table/snapshot.rs`), deliberately **not** `#[derive(Serialize)]`
+  on `Table`: that would freeze the engine's 21 public fields into a format
+  snapshots outlive. Also public: `SeatState`, `BettingState`,
+  `SNAPSHOT_VERSION`, and `PKError::{SnapshotCorrupt, SnapshotVersion}`.
+  `PlayerAction` and `ForcedBets` gained serde derives.
+
+  **Snapshot bytes carry the undealt deck — the future of the hand.** Store them
+  in the host's private storage; never send one to a player or a spectator. Use
+  `PokerSession::view` for anything a person may see.
+
+  20 tests cover it: byte-identical mid-hand round-trip, mid-street resume
+  against an uninterrupted control, deck order, blank seat slots, stud up-card
+  visibility, all five variants, determinism, and a `PKError` — never a
+  half-built table — for garbage bytes, an unknown version tag, or an
+  unparseable card.
+
+- **A `parallel` feature** (on by default) gating every `rayon` entry point:
+  `Pile::par_combinations_remaining`, `Cards::par_combinations`,
+  `Deck::par_iter` / `to_par_iter`, `HoleCards::bcm_rayon_case_evals`,
+  `Twos::bcm_rayon_case_evals`, and the multi-threaded drivers inside
+  `analysis::equity`, `analysis::range_equity` and `TurnEval`.
+
+  **The reason is WASM, not tidiness.** `analysis::equity::compute` called
+  `par_bridge()` and `into_par_iter()` with no `wasm32` guard, and rayon shipped
+  in the wasm32-unknown-unknown build — a browser has no threads to spawn, so
+  that build linked a thread pool that could never run, and the failure would
+  have surfaced at runtime in the browser rather than at compile time. Nothing
+  triggers it today (no web consumer calls `compute` yet), so this closes a trap
+  rather than a live bug. Browser consumers should now depend on pkcore with
+  `default-features = false` and omit `parallel`; `pkarena0-web` already does.
+
+  With the feature off, `rayon` and `rayon-core` leave the dependency tree
+  entirely — verified by `cargo tree --no-default-features -i rayon`, which now
+  prints nothing on both the host and wasm32 targets — and every rayon type
+  leaves the public API. That is what lets a downstream type implement `Pile`
+  without pulling in a thread pool, which was the actual Muratori complaint.
+  The supply-chain saving is small and worth stating honestly: 120 → 118 crates,
+  because `crossbeam-*` stays via `cardpack → fluent-templates → ignore` and
+  `either` via `itertools`.
+
+  Serial and parallel arms share one definition of the work each item does — the
+  closure is named once and only the driver line differs — so **results are
+  identical**, only slower. Measured on an Apple M1 (8 cores), release, idle:
+  about **3×** across the hero paths — exact flop 3.1 ms vs 8.8 ms, exact
+  pre-flop 5.19 s vs 16.15 s, 100k-sample Monte Carlo 275 ms vs 1.03 s (2 seats)
+  and 1.12 s vs 3.15 s (6 seats). Not 8×, because half the M1's cores are
+  efficiency cores and the exact paths bridge a single `Combinations` iterator,
+  leaving the generator serial. The crate docs now carry that table plus
+  `max_samples` budgeting for browser builds, which get the serial column
+  whether or not they link rayon: a default 100,000-sample pre-flop call is
+  ~1 s serially, a visible UI stall, and 10,000 samples buys ~100 ms at about
+  half a percentage point of sampling error. `exact_enumerate__counts_are_identical_serial_or_parallel`
+  pins the exact integer win/tie counts of a 990-runout enumeration; a new
+  `make test-serial` target runs the suite with `parallel` off so the serial arms
+  are executed rather than merely type-checked, and it is wired into `make ayce`.
+
+- **`src/casino/mod.rs` rewritten from a driver list into a tier map.** It now
+  documents **Tier 1** (`Table` — the engine and the `act_*` primitives) and
+  **Tier 2** (`PokerSession` canonical, `Dealer` the explicit-street wrapper),
+  with a table per driver naming exactly what each call composes — checked
+  against the bodies, e.g. `Dealer::advance_street` = an `is_betting_complete`
+  guard + `Table::bring_it_in`. Three unlabelled siblings became one engine and
+  two documented wrappers. (**Redundancy 4/5 → 5/5.**)
+
+  `Dealer` was documented rather than retired on purpose: `pkcore.js` drives 13
+  of its methods and `pkcore.py` imports `Dealer`, `DealerError` and
+  `DealerAction`, so retiring it would break the Node and Python bindings whose
+  own downstream users are not visible from this repo.
+
+- **A module header for `casino`** naming the canonical driver. `src/casino/mod.rs`
+  was fourteen `pub mod` lines with no documentation, behind which sat three
+  public drivers — `PokerSession`, `Dealer`, `TableManager` — with three action
+  vocabularies and two error types and nothing saying which to start with. It
+  now carries a comparison table stating that `PokerSession` is canonical, what
+  each of the other two is for, and that moving a call site between them is a
+  rewrite rather than a swap. `TableManager` gets the module and item docs it
+  never had, including that it is a multi-table sketch with no hand-lifecycle
+  gating of its own. ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md)
+  recommendation 2 — redundancy 3/5 → 4/5.)
+
+### Changed
+
+- **The kernel purity gate now blocks `serde_yaml_bw` and `rayon`.**
+  `make check-purity` used to announce on success that *"serde_yaml_bw remains
+  via pkstate — documented ceiling"*. Both the dependency and the ceiling are
+  gone: dropping `pkstate` from `Cargo.toml` closed the transitive edge, and
+  `cargo tree --no-default-features -e normal | grep -c serde_yaml_bw` returns 0.
+  The gate was telling integrators something false about the crate's purity, and
+  it had never actually checked for the parser it was excusing. Both crates are
+  now in the gate's pattern, so a future first-party edge fails CI instead of
+  being rediscovered by the next audit.
+
+- **`make check-wasm` now checks two configurations**: the default build, and
+  the one browser consumers are told to use (`--no-default-features` without
+  `parallel`). They fail differently, and only the second proves a wasm target
+  never links a rayon thread pool it has no threads to run.
+
+- **`make ayce` gained `test-serial` and `check-wasm`.** `check-features` only
+  type-checked the no-`parallel` configuration; nothing ever ran it.
+
+- `docs/MURATORI_AUDIT.md` refreshed against 0.10.0. Coupling moves 3/5 → 4/5
+  and practical-checklist item 8 *fail* → *partial*, both because the
+  `pkcore → pkstate → serde_yaml_bw` edge is gone and `casino::session` is no
+  longer gated on `bot-profiles`. Two recommendations from the 0.8.2 run are
+  void: `pkstate` is no longer a dependency, so there is no external state type
+  left to write `TryFrom<&PKState> for Table` against. Retention stays 3/5 —
+  the new `TryFrom<&Pluribus> for Table` is a real read-back direction, but it
+  declines a mid-hand table and forces `STARTING_STACK`, so a live table still
+  cannot be written down and resumed.
+
 ## [0.10.0] - 2026-08-29
 
 ### Added

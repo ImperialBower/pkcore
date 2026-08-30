@@ -326,6 +326,81 @@
 //! - **Memory**: Minimal card representation (~4 bytes per card)
 //! - **Database**: Pre-computed results enable instant lookups
 //!
+//! ## Parallelism
+//!
+//! The `parallel` feature (on by default) backs the `par_*` methods on
+//! [`Pile`], [`Cards`] and [`Deck`](crate::deck::Deck),
+//! and the multi-threaded drivers inside the equity engine, range equity and
+//! turn evaluation, with [rayon](https://docs.rs/rayon).
+//!
+//! **Turn it off for `wasm32-unknown-unknown`.** A browser target has no
+//! threads to spawn, so a WASM build that links rayon carries a thread pool
+//! that can never run — and the failure shows up at runtime, in the browser,
+//! rather than at compile time. Depend on pkcore with
+//! `default-features = false` and omit `parallel`:
+//!
+//! ```toml
+//! pkcore = { version = "0.11", default-features = false, features = ["equity"] }
+//! ```
+//!
+//! With the feature off, `rayon` and `rayon-core` leave the dependency tree
+//! entirely and every rayon type leaves the public API — which is what lets a
+//! downstream type implement [`Pile`] without pulling in a thread pool. The
+//! serial and parallel paths share one definition of the work each item does,
+//! so **results are identical either way**; only the wall-clock time differs.
+//! `make check-purity` asserts the absence.
+//!
+//! ### What it costs
+//!
+//! Release build, Apple M1 (8 cores: 4 performance + 4 efficiency), idle
+//! machine, both binaries run back to back:
+//!
+//! | Workload | `parallel` on | off | speedup |
+//! |---|---|---|---|
+//! | Exact, flop — 990 runouts, 2 seats | 3.1 ms | 8.8 ms | 2.8× |
+//! | Exact, pre-flop — 1.7M runouts, 2 seats | 5.19 s | 16.15 s | 3.1× |
+//! | Monte Carlo — 100k samples, 2 seats | 275 ms | 1.03 s | 3.7× |
+//! | Monte Carlo — 100k samples, 6 seats | 1.12 s | 3.15 s | 2.8× |
+//!
+//! (The Monte Carlo rows use 100k samples to match the exact rows' scale; the
+//! shipped default is 25,000, roughly a quarter of those times.)
+//!
+//! About 3×, not 8×. Half the M1's cores are efficiency cores, and the two
+//! exact paths bridge a single `Combinations` iterator with
+//! [`par_bridge`](rayon::iter::ParallelBridge::par_bridge), so the generator
+//! itself stays serial and only the evaluation fans out. The Monte Carlo path
+//! splits a plain integer range instead, which is why it scales best.
+//!
+//! ### Budgeting a browser build
+//!
+//! A WASM build gets the right-hand column — it always would have, threads or
+//! no threads. Serially a Monte Carlo sample costs roughly 10 µs at 2 seats and
+//! 32 µs at 6, so the default 25,000 samples
+//! ([`EquityOptions::max_samples`](crate::analysis::equity::EquityOptions::max_samples))
+//! is about 250 ms heads-up and 600 ms six-way in a browser. That default is
+//! honest to the nearest whole percent (~0.7 pp worst case); raise it to
+//! 100,000 (~0.3 pp) only if you render a decimal place, and expect ~2.4 s
+//! six-way serially if you do.
+//!
+//! ```
+//! # #[cfg(feature = "equity")] {
+//! # use pkcore::analysis::equity::{EquityRequest, PlayerSpec};
+//! # use pkcore::arrays::two::Two;
+//! let mut req = EquityRequest::new(vec![
+//!     PlayerSpec::Exact(Two::HAND_AS_AH),
+//!     PlayerSpec::Exact(Two::HAND_KS_KH),
+//! ]);
+//! req.opts.max_samples = 10_000; // ~100 ms serially, ~±1pp
+//! # }
+//! ```
+//!
+//! Exact enumeration needs no such care: it is chosen only when the runout
+//! space is under
+//! [`exact_threshold`](crate::analysis::equity::EquityOptions::exact_threshold)
+//! (100,000 by default — a separate knob from `max_samples`, which decides how
+//! hard to sample once sampling is chosen), which keeps the flop, turn and
+//! river exact and lets the 1.7M-runout pre-flop space fall to sampling.
+//!
 //! ## Compiler Features
 //!
 //! The crate uses Clippy's pedantic checking and forbids unsafe unwrap patterns:
@@ -353,8 +428,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use analysis::evals::Evals;
 use analysis::the_nuts::TheNuts;
-use indexmap::set::IntoIter;
-use itertools::Combinations;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -369,8 +443,8 @@ use crate::prelude::{PlayerState, TableAction};
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
-use rayon::iter::IterBridge;
-use std::iter::Enumerate;
+#[cfg(feature = "parallel")]
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::str::FromStr;
 
 #[macro_use]
@@ -548,6 +622,15 @@ pub enum PKError {
     NotEnoughCards,
     NotEnoughHands,
     PlayerOutOfHand,
+    /// EPIC-88: the bytes handed to a `restore` do not decode as a snapshot.
+    SnapshotCorrupt,
+    /// EPIC-88: a snapshot's `version` tag is not one this build understands.
+    /// Checked before any other field is read, so a mismatched payload can
+    /// never be half-applied.
+    SnapshotVersion {
+        found: u16,
+        expected: u16,
+    },
     SqlError,
     TableActionOutOfOrder(TableAction),
     TableFull,
@@ -577,10 +660,13 @@ pub enum PKError {
     /// The Binary Card Map (`generated/bcm.zst`, ~403 MB) could not be loaded —
     /// it is self-generated data that is absent from the published crate.
     ///
-    /// Returned by BCM-backed APIs ([`SortedHeadsUp::wins`][crate::arrays::matchups::sorted_heads_up::SortedHeadsUp::wins]
-    /// and `StartingHands` case evals) instead of panicking. Generate the file
-    /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
-    /// and point `PKCORE_75BCM_PATH` at it.
+    /// Returned by BCM-backed APIs (`SortedHeadsUp::wins` and `StartingHands`
+    /// case evals) instead of panicking. Generate the file with
+    /// `SevenFiveBCM::generate_bin` and point `PKCORE_75BCM_PATH` at it.
+    ///
+    /// Both are named as code rather than linked: they live behind the `store`
+    /// feature, which stopped being a default in 0.11.0, so an intra-doc link
+    /// would fail to resolve in a default `cargo doc` build.
     BcmUnavailable,
     /// The table has more seats than the variant can deal from one deck.
     ///
@@ -654,6 +740,10 @@ impl Display for PKError {
             PKError::NotEnoughCards => "Not Enough Cards Error",
             PKError::NotEnoughHands => "Not Enough Hands Error",
             PKError::PlayerOutOfHand => "Player is out of hand Error",
+            PKError::SnapshotCorrupt => "Snapshot Corrupt Error",
+            PKError::SnapshotVersion { found, expected } => {
+                &*format!("Snapshot Version Error: found {found}, this build reads {expected}")
+            }
             PKError::SqlError => "SQL Error",
             PKError::TableActionOutOfOrder(table_action) => {
                 &*format!("Table Action Out of Order Error: {table_action}")
@@ -858,19 +948,30 @@ pub trait Pile {
     /// programming language.
     ///
     /// **Breakdown strict TDD**
-    fn combinations_after(&self, k: usize, cards: &Cards) -> Combinations<IntoIter<Card>> {
+    fn combinations_after(&self, k: usize, cards: &Cards) -> impl Iterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k} cards: {cards})");
-        self.remaining_after(cards).combinations(k)
+        // `.0.into_iter()` moves the pile into the iterator. With a concrete
+        // return type the ownership was implicit; `impl Iterator` captures
+        // lifetimes, so a borrow of the temporary would not outlive the call.
+        self.remaining_after(cards).0.into_iter().combinations(k)
     }
 
-    fn combinations_remaining(&self, k: usize) -> Combinations<IntoIter<Card>> {
+    fn combinations_remaining(&self, k: usize) -> impl Iterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k})");
-        self.remaining().combinations(k)
+        self.remaining().0.into_iter().combinations(k)
     }
 
-    fn par_combinations_remaining(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
+    /// The parallel twin of
+    /// [`combinations_remaining`](Self::combinations_remaining).
+    ///
+    /// Requires the `parallel` feature. Without it this method is absent and
+    /// `Pile` carries no `rayon` types at all, which is what makes the trait
+    /// implementable without pulling in a thread pool. See the [notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
+    fn par_combinations_remaining(&self, k: usize) -> impl ParallelIterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k})");
-        self.remaining().par_combinations(k)
+        self.remaining().0.into_iter().combinations(k).par_bridge()
     }
 
     /// Tried refactoring this as `self.cards().index_set().contains(card)`, but it broke a lot of
@@ -883,12 +984,12 @@ pub trait Pile {
         self.contains(&Card::BLANK)
     }
 
-    fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
+    fn enumerate_after(&self, k: usize, cards: &Cards) -> impl Iterator<Item = (usize, Vec<Card>)> {
         log::info!("Pile.enumerate_after(k: {k} cards: {cards})");
-        self.remaining_after(cards).combinations(k).enumerate()
+        self.remaining_after(cards).0.into_iter().combinations(k).enumerate()
     }
 
-    fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
+    fn enumerate_remaining(&self, k: usize) -> impl Iterator<Item = (usize, Vec<Card>)> {
         log::info!("Pile.enumerate_after(k: {k})");
         self.combinations_remaining(k).enumerate()
     }

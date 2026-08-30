@@ -43,11 +43,13 @@ mod actions;
 mod player;
 mod seat;
 mod seats;
+pub mod snapshot;
 mod transition;
 
 pub use player::Player;
 pub use seat::Seat;
 pub use seats::Seats;
+pub use snapshot::{BettingState, SNAPSHOT_VERSION, SeatState, TableState};
 
 /// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
 /// `HighStud` picks the seat with the *best* visible hand (used by Stud
@@ -2720,29 +2722,106 @@ impl Table {
         Ok(Winnings::from(results))
     }
 
-    /// Resolves the hand (showdown or fold-win) and resets the table.
+    /// Awards the pot without resetting the table.
+    ///
+    /// This is the fine tier of [`end_hand`](Self::end_hand), which is exactly
+    /// `showdown()` + [`reset`](Self::reset) +
+    /// [`audit_chip_total`](Self::audit_chip_total). Call this one when you
+    /// need to observe the table *between* the award and the reset — a
+    /// spectator UI rendering the showdown while the board and hole cards are
+    /// still in play, for instance. Without it the only way to see that state
+    /// is to `clone` the whole table before calling `end_hand`.
+    ///
+    /// Dispatches on how many seats are still in the hand: one is a fold-win,
+    /// two is the heads-up path, more is the side-pot-aware multiway path.
+    /// Chips move to the winners and `pot` drops to zero; nothing else is
+    /// touched, so `board`, `dealt_hole_cards` and every seat's cards survive
+    /// the call.
+    ///
+    /// Use one tier or the other, never both: `showdown()` zeroes the pot, so
+    /// a following `end_hand()` would resolve an empty pot and hand back
+    /// [`Winnings`] worth nothing.
     ///
     /// # Errors
     ///
-    /// - `PKError::ActionIsntFinished` if the hand is not yet over.
-    /// - `PKError::Fubar` if no players are in hand.
-    pub fn end_hand(&mut self) -> Result<Winnings, PKError> {
-        self.log(TableAction::EndHand);
+    /// - [`PKError::ActionIsntFinished`] if the hand is not yet over.
+    /// - [`PKError::Fubar`] if no players are in the hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::action::PlayerAction;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    ///
+    /// // The small blind folds, so seat 1 wins by default.
+    /// let folder = table.next_to_act();
+    /// table.apply_action(folder, PlayerAction::Fold).unwrap();
+    ///
+    /// // The award happens, but the table is NOT reset: the board and every
+    /// // seat's cards are still in play, so a UI can render the result.
+    /// let winnings = table.showdown().unwrap();
+    /// assert_eq!(1, winnings.len());
+    /// assert_eq!(0, table.pot);
+    /// assert!(!table.dealt_hole_cards.is_empty());
+    ///
+    /// // Finish the hand yourself.
+    /// table.reset();
+    /// table.audit_chip_total().unwrap();
+    /// assert_eq!(2_000, table.table_chip_count());
+    /// ```
+    pub fn showdown(&mut self) -> Result<Winnings, PKError> {
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
 
-        let winnings = match self.seats.active_in_hand().len() {
-            0 => return Err(PKError::Fubar),
-            1 => self.showdown_single_seat()?,
-            2 => self.showdown_headsup()?,
-            _ => self.showdown_multiway()?,
-        };
+        match self.seats.active_in_hand().len() {
+            0 => Err(PKError::Fubar),
+            1 => self.showdown_single_seat(),
+            2 => self.showdown_headsup(),
+            _ => self.showdown_multiway(),
+        }
+    }
 
-        // Reset before the audit so the table is left in a clean state even if
-        // the audit fails and the caller decides to continue.
-        self.reset();
-
+    /// Asserts that chips were conserved across the hand.
+    ///
+    /// Compares [`table_chip_count`](Self::table_chip_count) against
+    /// `hand_chip_total`, the total snapshotted when the hand started. This is
+    /// the third of the three calls [`end_hand`](Self::end_hand) composes, and
+    /// it is separately callable so a caller driving the fine tier can run the
+    /// same books check the coarse tier runs.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::ChipAuditFailed`] when the two totals disagree. The
+    /// mismatch is also written to `event_log` as
+    /// [`TableAction::ChipAuditFailed`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    ///
+    /// // Nothing has left the table, so the books balance.
+    /// table.audit_chip_total().unwrap();
+    /// ```
+    pub fn audit_chip_total(&mut self) -> Result<(), PKError> {
         let actual = self.table_chip_count();
         if actual != self.hand_chip_total {
             self.log(TableAction::ChipAuditFailed(self.hand_chip_total, actual));
@@ -2751,6 +2830,102 @@ impl Table {
                 actual,
             });
         }
+        Ok(())
+    }
+
+    /// Writes the whole table down as compact `postcard` bytes, mid-hand.
+    ///
+    /// # These bytes are the future of the hand
+    ///
+    /// The snapshot carries the **undealt deck, in order**. Anyone holding it
+    /// can read the runout before it happens. Store it in the host's private
+    /// storage; never send it to a player or a spectator. Use
+    /// [`PokerSession::view`](crate::casino::session::PokerSession::view) for
+    /// anything a person is allowed to see.
+    ///
+    /// The shape on the wire is [`TableState`], not `Table` itself, so the
+    /// engine's fields stay free to change — see [the module
+    /// docs](crate::casino::table::snapshot).
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::SnapshotCorrupt`] if the state cannot be encoded, which in
+    /// practice means an allocation failure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::action::PlayerAction;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    ///
+    /// // Stop mid-hand, write it down, and bring it back.
+    /// let bytes = table.snapshot().unwrap();
+    /// let restored = Table::restore(&bytes).unwrap();
+    ///
+    /// assert_eq!(table, restored);
+    /// assert_eq!(table.next_to_act(), restored.next_to_act());
+    /// ```
+    pub fn snapshot(&self) -> Result<Vec<u8>, PKError> {
+        let state = TableState::from(self);
+        postcard::to_allocvec(&state).map_err(|_| PKError::SnapshotCorrupt)
+    }
+
+    /// Rebuilds a table from [`snapshot`](Self::snapshot) bytes. Play continues
+    /// identically — the undealt deck order is preserved, so the runout is the
+    /// one the original table would have dealt.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::SnapshotCorrupt`] if the bytes do not decode.
+    /// - [`PKError::SnapshotVersion`] if the payload's version tag is not
+    ///   [`SNAPSHOT_VERSION`]. Checked before any other field is read, so a
+    ///   mismatched payload is never half-applied.
+    /// - [`PKError::InvalidCardIndex`] if a card index does not parse.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// // Garbage is refused, not silently accepted.
+    /// assert!(Table::restore(&[0xff, 0xff, 0xff]).is_err());
+    /// ```
+    pub fn restore(bytes: &[u8]) -> Result<Self, PKError> {
+        let state: TableState = postcard::from_bytes(bytes).map_err(|_| PKError::SnapshotCorrupt)?;
+        Table::try_from(&state)
+    }
+
+    /// Resolves the hand (showdown or fold-win) and resets the table.
+    ///
+    /// A composition of three separately callable steps:
+    /// [`showdown`](Self::showdown) → [`reset`](Self::reset) →
+    /// [`audit_chip_total`](Self::audit_chip_total). Drop to those when you
+    /// need to see the table between the award and the reset; stay here
+    /// otherwise. Calling both tiers on one hand double-resolves it.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::ActionIsntFinished` if the hand is not yet over.
+    /// - `PKError::Fubar` if no players are in hand.
+    /// - `PKError::ChipAuditFailed` if chips were not conserved.
+    pub fn end_hand(&mut self) -> Result<Winnings, PKError> {
+        self.log(TableAction::EndHand);
+
+        let winnings = self.showdown()?;
+
+        // Reset before the audit so the table is left in a clean state even if
+        // the audit fails and the caller decides to continue.
+        self.reset();
+        self.audit_chip_total()?;
 
         Ok(winnings)
     }
@@ -3571,6 +3746,104 @@ mod casino__table_tests {
 
         let utg_seat = table.seats.get_seat(utg).unwrap();
         assert_eq!(100, utg_seat.player.bet);
+    }
+
+    // ── Showdown / audit fine tier ────────────────────────────────────────────
+
+    /// The whole point of exposing `showdown()`: it awards the pot but leaves
+    /// the hand's cards where they are, so a caller can render the result
+    /// before the table is reset.
+    #[test]
+    fn showdown_awards_the_pot_without_resetting_the_table() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let folder = table.next_to_act();
+        table.act_fold(folder).unwrap();
+
+        let winnings = table.showdown().unwrap();
+
+        assert_eq!(1, winnings.len());
+        assert_eq!(0, table.pot);
+        // `reset()` has NOT run: the hole cards and the phase survive.
+        assert!(!table.dealt_hole_cards.is_empty());
+        assert_ne!(GamePhase::NewHand, table.phase);
+    }
+
+    /// `end_hand` is documented as `showdown` + `reset` + `audit_chip_total`.
+    /// Driving the three by hand must land on the same table state and the
+    /// same payout as the one coarse call.
+    #[test]
+    fn showdown_reset_and_audit_compose_to_end_hand() {
+        let coarse = {
+            let mut table = make_two_player_table();
+            table.act_forced_bets().unwrap();
+            table.deal_cards_to_seats().unwrap();
+            let folder = table.next_to_act();
+            table.act_fold(folder).unwrap();
+            let winnings = table.end_hand().unwrap();
+            (winnings, table.table_chip_count(), table.pot, table.phase)
+        };
+
+        let fine = {
+            let mut table = make_two_player_table();
+            table.act_forced_bets().unwrap();
+            table.deal_cards_to_seats().unwrap();
+            let folder = table.next_to_act();
+            table.act_fold(folder).unwrap();
+            let winnings = table.showdown().unwrap();
+            table.reset();
+            table.audit_chip_total().unwrap();
+            (winnings, table.table_chip_count(), table.pot, table.phase)
+        };
+
+        assert_eq!(coarse.0, fine.0);
+        assert_eq!(coarse.1, fine.1);
+        assert_eq!(coarse.2, fine.2);
+        assert_eq!(coarse.3, fine.3);
+        assert_eq!(20_000, fine.1);
+    }
+
+    /// `showdown()` inherits `end_hand`'s guard: a hand still in progress is
+    /// refused rather than half-resolved.
+    #[test]
+    fn showdown_refuses_a_hand_that_is_not_over() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        assert!(matches!(table.showdown(), Err(PKError::ActionIsntFinished)));
+    }
+
+    #[test]
+    fn audit_chip_total_passes_when_no_chips_have_left_the_table() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+
+        assert_eq!(20_000, table.hand_chip_total);
+        assert!(table.audit_chip_total().is_ok());
+    }
+
+    /// The books are checked against `hand_chip_total`, so corrupting a stack
+    /// after the snapshot must be caught — and logged.
+    #[test]
+    fn audit_chip_total_reports_a_mismatch_and_logs_it() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+
+        // Vanish a chip behind the engine's back.
+        table.seats.get_seat_mut(0).unwrap().player.chips -= 1;
+
+        let err = table.audit_chip_total().unwrap_err();
+        assert_eq!(
+            PKError::ChipAuditFailed {
+                expected: 20_000,
+                actual: 19_999,
+            },
+            err
+        );
+        assert!(table.event_log.contains(&TableAction::ChipAuditFailed(20_000, 19_999)));
     }
 
     // ── Chip audit ────────────────────────────────────────────────────────────

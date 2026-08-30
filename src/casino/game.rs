@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Forced bets for a hand: blinds, antes, and (EPIC-29 Phase 6) bring-in.
 ///
 /// Hold'em and Omaha use `small_blind` + `big_blind`; antes are optional.
@@ -18,7 +20,7 @@
 /// assert_eq!(10, stud.ante);
 /// assert_eq!(30, stud.bring_in);
 /// ```
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ForcedBets {
     pub small_blind: usize,
     pub big_blind: usize,
