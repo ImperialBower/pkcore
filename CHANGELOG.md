@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2026-08-29
 
+### Changed (breaking)
+
+- **`store` and `terminal` are no longer default features.** A plain
+  `cargo add pkcore` stopped building a **bundled C SQLite** (rusqlite + zstd)
+  and termion — neither is needed to play poker. The six remaining defaults are
+  all pure-compute or YAML. Consumers that want the storage or terminal layers
+  now ask for them: `features = ["store"]`. `pkcore.js` and `pkcore.py` already
+  did. (`MURATORI_AUDIT.md` checklist item 8 *partial* → **pass**.)
+
+- **The combinatorics signatures return `impl Iterator`.** `Pile`'s
+  `combinations_after`, `combinations_remaining`, `enumerate_after` and
+  `enumerate_remaining`, plus `Cards::combinations`, `Deck::combinations` and
+  `Outs::iter`, no longer name
+  `itertools::Combinations<indexmap::set::IntoIter<Card>>` or
+  `indexmap::map::Iter`; the `parallel`-gated `Pile::par_combinations_remaining`
+  and `Cards::par_combinations` return `impl ParallelIterator`. **No third-party
+  type remains in any public function signature** — implementing `Pile` no
+  longer pins you to itertools 0.14 / indexmap 2 / rayon 1 semver.
+
+  Semver-breaking on paper; 13 internal call sites and, verified across all 15
+  repos that depend on pkcore, **zero** external ones. Possible because `Pile`
+  is never used as `dyn Pile`, so RPITIT applies.
+
+- **Removed `pub static FIVE_CARD_COMBOS` and `Deck::to_par_iter`.** Both leaked
+  concrete itertools/rayon types and both had zero live callers anywhere — the
+  only references to `FIVE_CARD_COMBOS` were commented out.
+
+- **`TableManager` and `TableEvent` are `#[deprecated]`.** A multi-table sketch
+  that never grew hand-lifecycle gating, with no consumers. Hold a
+  `HashMap<Uuid, PokerSession>` instead, which gives the same routing plus the
+  lifecycle guarantees it never had. Still exported, so existing code warns
+  rather than fails; removal comes one release after this one.
+
 ### Changed (behaviour)
 
 - **`Card` deserialization now rejects an index it cannot parse.** It used to
@@ -128,6 +161,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pins the exact integer win/tie counts of a 990-runout enumeration; a new
   `make test-serial` target runs the suite with `parallel` off so the serial arms
   are executed rather than merely type-checked, and it is wired into `make ayce`.
+
+- **`src/casino/mod.rs` rewritten from a driver list into a tier map.** It now
+  documents **Tier 1** (`Table` — the engine and the `act_*` primitives) and
+  **Tier 2** (`PokerSession` canonical, `Dealer` the explicit-street wrapper),
+  with a table per driver naming exactly what each call composes — checked
+  against the bodies, e.g. `Dealer::advance_street` = an `is_betting_complete`
+  guard + `Table::bring_it_in`. Three unlabelled siblings became one engine and
+  two documented wrappers. (**Redundancy 4/5 → 5/5.**)
+
+  `Dealer` was documented rather than retired on purpose: `pkcore.js` drives 13
+  of its methods and `pkcore.py` imports `Dealer`, `DealerError` and
+  `DealerAction`, so retiring it would break the Node and Python bindings whose
+  own downstream users are not visible from this repo.
 
 - **A module header for `casino`** naming the canonical driver. `src/casino/mod.rs`
   was fourteen `pub mod` lines with no documentation, behind which sat three

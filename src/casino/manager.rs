@@ -4,14 +4,21 @@
 //! [`Uuid`], push [`TableEvent`]s addressed to one of them, then drain the
 //! queue with [`TableManager::process_events`].
 //!
-//! **A sketch, not a finished surface.** Unlike
-//! [`PokerSession`](crate::casino::session::PokerSession) — the canonical
-//! driver, see the [`casino`](crate::casino) module header — it has no
-//! hand-lifecycle gating of its own: an `ActBet` event applies straight to the
-//! table's `act_bet`, and the table's own validation is the only guard. There
-//! is no step enum to poll and no session state. Reach for it when you are
-//! experimenting with multi-table routing, not when you are integrating a
-//! single game.
+//! **Deprecated as of 0.11.0.** It was always a sketch rather than a finished
+//! surface: unlike [`PokerSession`](crate::casino::session::PokerSession) — the
+//! canonical driver, see the [`casino`](crate::casino) module header — it never
+//! grew hand-lifecycle gating of its own. An `ActBet` event applies straight to
+//! the table's `act_bet`, with the table's own validation as the only guard;
+//! there is no step enum to poll and no session state. Nothing depends on it.
+//!
+//! **Drive many tables by holding many `PokerSession`s** — a `HashMap<Uuid,
+//! PokerSession>` gives you the same routing plus the lifecycle guarantees this
+//! type never had. Retiring a redundant sibling is what moves the crate from
+//! "three documented drivers" to "one engine and two documented tiers".
+
+// The deprecation is aimed at consumers. This module is the type's own
+// implementation and its tests, which must keep compiling until it is removed.
+#![allow(deprecated)]
 
 use crate::PKError;
 use crate::prelude::{ForcedBets, Seats, Table};
@@ -19,9 +26,11 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// A registry of [`Table`]s keyed by id, plus a queue of pending
-/// [`TableEvent`]s to apply to them. See the [module
-/// header](self) before choosing this over
-/// [`PokerSession`](crate::casino::session::PokerSession).
+/// [`TableEvent`]s to apply to them.
+#[deprecated(
+    since = "0.11.0",
+    note = "a multi-table sketch with no hand-lifecycle gating; hold a HashMap<Uuid, PokerSession> instead"
+)]
 #[allow(dead_code)]
 pub struct TableManager {
     pub tables: HashMap<Uuid, Table>,
@@ -33,6 +42,7 @@ pub struct TableManager {
 /// Every variant carries its own `table_id`; an event naming a table that is
 /// not registered fails with [`PKError::TableNotFound`] rather than being
 /// silently dropped.
+#[deprecated(since = "0.11.0", note = "part of the deprecated TableManager sketch")]
 #[allow(dead_code)]
 pub enum TableEvent {
     ActBet { table_id: Uuid, seat: u8, amount: usize },

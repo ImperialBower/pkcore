@@ -428,8 +428,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use analysis::evals::Evals;
 use analysis::the_nuts::TheNuts;
-use indexmap::set::IntoIter;
-use itertools::Combinations;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::HashSet;
@@ -445,8 +444,7 @@ use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
 #[cfg(feature = "parallel")]
-use rayon::iter::IterBridge;
-use std::iter::Enumerate;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::str::FromStr;
 
 #[macro_use]
@@ -662,10 +660,13 @@ pub enum PKError {
     /// The Binary Card Map (`generated/bcm.zst`, ~403 MB) could not be loaded —
     /// it is self-generated data that is absent from the published crate.
     ///
-    /// Returned by BCM-backed APIs ([`SortedHeadsUp::wins`][crate::arrays::matchups::sorted_heads_up::SortedHeadsUp::wins]
-    /// and `StartingHands` case evals) instead of panicking. Generate the file
-    /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
-    /// and point `PKCORE_75BCM_PATH` at it.
+    /// Returned by BCM-backed APIs (`SortedHeadsUp::wins` and `StartingHands`
+    /// case evals) instead of panicking. Generate the file with
+    /// `SevenFiveBCM::generate_bin` and point `PKCORE_75BCM_PATH` at it.
+    ///
+    /// Both are named as code rather than linked: they live behind the `store`
+    /// feature, which stopped being a default in 0.11.0, so an intra-doc link
+    /// would fail to resolve in a default `cargo doc` build.
     BcmUnavailable,
     /// The table has more seats than the variant can deal from one deck.
     ///
@@ -947,14 +948,17 @@ pub trait Pile {
     /// programming language.
     ///
     /// **Breakdown strict TDD**
-    fn combinations_after(&self, k: usize, cards: &Cards) -> Combinations<IntoIter<Card>> {
+    fn combinations_after(&self, k: usize, cards: &Cards) -> impl Iterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k} cards: {cards})");
-        self.remaining_after(cards).combinations(k)
+        // `.0.into_iter()` moves the pile into the iterator. With a concrete
+        // return type the ownership was implicit; `impl Iterator` captures
+        // lifetimes, so a borrow of the temporary would not outlive the call.
+        self.remaining_after(cards).0.into_iter().combinations(k)
     }
 
-    fn combinations_remaining(&self, k: usize) -> Combinations<IntoIter<Card>> {
+    fn combinations_remaining(&self, k: usize) -> impl Iterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k})");
-        self.remaining().combinations(k)
+        self.remaining().0.into_iter().combinations(k)
     }
 
     /// The parallel twin of
@@ -965,9 +969,9 @@ pub trait Pile {
     /// implementable without pulling in a thread pool. See the [notes on
     /// parallelism](crate#parallelism).
     #[cfg(feature = "parallel")]
-    fn par_combinations_remaining(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
+    fn par_combinations_remaining(&self, k: usize) -> impl ParallelIterator<Item = Vec<Card>> {
         log::debug!("Pile.combinations_after(k: {k})");
-        self.remaining().par_combinations(k)
+        self.remaining().0.into_iter().combinations(k).par_bridge()
     }
 
     /// Tried refactoring this as `self.cards().index_set().contains(card)`, but it broke a lot of
@@ -980,12 +984,12 @@ pub trait Pile {
         self.contains(&Card::BLANK)
     }
 
-    fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
+    fn enumerate_after(&self, k: usize, cards: &Cards) -> impl Iterator<Item = (usize, Vec<Card>)> {
         log::info!("Pile.enumerate_after(k: {k} cards: {cards})");
-        self.remaining_after(cards).combinations(k).enumerate()
+        self.remaining_after(cards).0.into_iter().combinations(k).enumerate()
     }
 
-    fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
+    fn enumerate_remaining(&self, k: usize) -> impl Iterator<Item = (usize, Vec<Card>)> {
         log::info!("Pile.enumerate_after(k: {k})");
         self.combinations_remaining(k).enumerate()
     }

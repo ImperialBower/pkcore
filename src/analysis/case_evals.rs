@@ -36,7 +36,8 @@ impl CaseEvals {
     /// (`CaseEvals::wins`, etc.) aggregate order-independently.
     #[must_use]
     pub fn from_holdem_at_flop(board: Three, hands: &HoleCards) -> CaseEvals {
-        let runouts = hands.combinations_after(2, &board.cards());
+        let board_cards = board.cards();
+        let runouts = hands.combinations_after(2, &board_cards);
         let eval = |v: Vec<Card>| CaseEval::from_holdem_at_flop(board, Two::from(v), hands).ok();
 
         #[cfg(feature = "parallel")]

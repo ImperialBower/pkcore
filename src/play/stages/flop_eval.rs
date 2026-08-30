@@ -372,7 +372,8 @@ mod play__stages__flop_eval_tests {
     fn iterations_heads_up() {
         let game = TestData::the_hand();
 
-        let combos = game.hands.enumerate_after(2, &game.board.cards());
+        let board_cards = game.board.cards();
+        let combos = game.hands.enumerate_after(2, &board_cards);
 
         assert_eq!(combos.count(), 903);
     }

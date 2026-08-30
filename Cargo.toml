@@ -26,6 +26,15 @@ all-features = true
 ## `cargo run --example`.  Downstream consumers who don't need persistence
 ## can opt out with `default-features = false` and re-enable just what they
 ## want.
+##
+## `store` and `terminal` were dropped from this list in 0.11.0. They are the two
+## heavyweight I/O layers — `store` builds a **bundled C SQLite** (rusqlite +
+## zstd) and `terminal` pulls termion — and neither is needed to play poker, so
+## a plain `cargo add pkcore` no longer pays for them. Everything pure-compute
+## and every YAML surface stays on by default.
+##
+## Consumers that need them ask explicitly; `pkcore.js` and `pkcore.py` already
+## did (`features = ["store"]`).
 default = [
     "bot-profiles",
     "hand-histories",
@@ -33,8 +42,6 @@ default = [
     "player-stats-persistence",
     "equity",
     "parallel",
-    "store",
-    "terminal",
 ]
 ## Enables the on-disk storage layer.
 store = ["dep:rusqlite", "dep:zstd"]

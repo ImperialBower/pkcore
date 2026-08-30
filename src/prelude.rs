@@ -104,6 +104,9 @@ pub use crate::play::visibility::Visibility;
 // casino
 pub use crate::casino::cashier::chips::Stack;
 pub use crate::casino::dealer::Dealer;
+// Deprecated in 0.11.0; kept in the prelude so existing `use pkcore::prelude::*`
+// callers still resolve and get the deprecation warning rather than a hard error.
+#[allow(deprecated)]
 pub use crate::casino::manager::TableManager;
 pub use crate::casino::position::Positions;
 pub use crate::casino::table::{BettingState, Player, SNAPSHOT_VERSION, Seat, SeatState, Seats, Table, TableState};
