@@ -10,6 +10,7 @@ use crate::card::Card;
 use crate::play::game::Game;
 use crate::prelude::{Cards, Table, TheNuts};
 use log::trace;
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
@@ -87,17 +88,20 @@ impl TurnEval {
         //   because of auto-deref coercion. If the compiler complains, that's the place to look.
         let cases: Vec<Card> = game.turn_remaining().into_iter().collect();
 
-        let case_evals: Vec<CaseEval> = cases
-            .par_iter()
-            .enumerate()
-            .map(|(j, case)| {
-                trace!(
-                    "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                    j, game.board.flop, game.board.turn, case
-                );
-                TurnEval::turn_case_eval(game, case)
-            })
-            .collect();
+        let eval_case = |(j, case): (usize, &Card)| {
+            trace!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j, game.board.flop, game.board.turn, case
+            );
+            TurnEval::turn_case_eval(game, case)
+        };
+
+        // Both arms collect through an indexed iterator, so the output order is
+        // the input order either way — `Outs`/`Wins`/`Display` stay deterministic.
+        #[cfg(feature = "parallel")]
+        let case_evals: Vec<CaseEval> = cases.par_iter().enumerate().map(eval_case).collect();
+        #[cfg(not(feature = "parallel"))]
+        let case_evals: Vec<CaseEval> = cases.iter().enumerate().map(eval_case).collect();
 
         CaseEvals::from(case_evals)
     }
@@ -143,11 +147,12 @@ impl TurnEval {
 
         let combos: Vec<Vec<Card>> = self.game.turn_remaining_board().combinations(3).collect();
 
-        let evals: Vec<_> = combos
-            .par_iter()
-            .filter_map(|v| Game::flop_get_seven(board, v).ok())
-            .map(|seven| seven.eval())
-            .collect();
+        let to_eval = |v: &Vec<Card>| Game::flop_get_seven(board, v).ok().map(|seven| seven.eval());
+
+        #[cfg(feature = "parallel")]
+        let evals: Vec<_> = combos.par_iter().filter_map(to_eval).collect();
+        #[cfg(not(feature = "parallel"))]
+        let evals: Vec<_> = combos.iter().filter_map(to_eval).collect();
 
         for eval in evals {
             the_nuts.push(eval);

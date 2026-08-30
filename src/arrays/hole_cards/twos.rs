@@ -16,6 +16,7 @@ use std::str::FromStr;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+#[cfg(feature = "parallel")]
 use rayon::iter::ParallelIterator;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::sync::mpsc;
@@ -141,7 +142,7 @@ impl StartingHands {
     ///
     /// Returns [`PKError::BcmUnavailable`] if the BCM data file is absent, or a
     /// cast error if a card combination is invalid.
-    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+    #[cfg(all(feature = "store", feature = "parallel", not(target_arch = "wasm32")))]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self
             .par_combinations_remaining(5)

@@ -1,7 +1,9 @@
 use crate::card::Card;
 use crate::cards::Cards;
 use itertools::{Combinations, Itertools};
+#[cfg(feature = "parallel")]
 use rayon::prelude::*;
+#[cfg(feature = "parallel")]
 use rayon::slice::Iter;
 use std::array::IntoIter;
 
@@ -88,11 +90,21 @@ impl Deck {
         POKER_DECK.0.iter()
     }
 
+    /// A parallel iterator over the whole deck, by value.
+    ///
+    /// Requires the `parallel` feature; see the [crate-level notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     #[must_use]
     pub fn to_par_iter() -> rayon::array::IntoIter<Card, 52> {
         POKER_DECK.0.into_par_iter()
     }
 
+    /// A parallel iterator borrowing the whole deck.
+    ///
+    /// Requires the `parallel` feature; see the [crate-level notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     #[must_use]
     pub fn par_iter<'data>() -> Iter<'data, Card> {
         POKER_DECK.0.par_iter()

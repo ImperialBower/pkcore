@@ -326,6 +326,81 @@
 //! - **Memory**: Minimal card representation (~4 bytes per card)
 //! - **Database**: Pre-computed results enable instant lookups
 //!
+//! ## Parallelism
+//!
+//! The `parallel` feature (on by default) backs the `par_*` methods on
+//! [`Pile`], [`Cards`] and [`Deck`](crate::deck::Deck),
+//! and the multi-threaded drivers inside the equity engine, range equity and
+//! turn evaluation, with [rayon](https://docs.rs/rayon).
+//!
+//! **Turn it off for `wasm32-unknown-unknown`.** A browser target has no
+//! threads to spawn, so a WASM build that links rayon carries a thread pool
+//! that can never run — and the failure shows up at runtime, in the browser,
+//! rather than at compile time. Depend on pkcore with
+//! `default-features = false` and omit `parallel`:
+//!
+//! ```toml
+//! pkcore = { version = "0.11", default-features = false, features = ["equity"] }
+//! ```
+//!
+//! With the feature off, `rayon` and `rayon-core` leave the dependency tree
+//! entirely and every rayon type leaves the public API — which is what lets a
+//! downstream type implement [`Pile`] without pulling in a thread pool. The
+//! serial and parallel paths share one definition of the work each item does,
+//! so **results are identical either way**; only the wall-clock time differs.
+//! `make check-purity` asserts the absence.
+//!
+//! ### What it costs
+//!
+//! Release build, Apple M1 (8 cores: 4 performance + 4 efficiency), idle
+//! machine, both binaries run back to back:
+//!
+//! | Workload | `parallel` on | off | speedup |
+//! |---|---|---|---|
+//! | Exact, flop — 990 runouts, 2 seats | 3.1 ms | 8.8 ms | 2.8× |
+//! | Exact, pre-flop — 1.7M runouts, 2 seats | 5.19 s | 16.15 s | 3.1× |
+//! | Monte Carlo — 100k samples, 2 seats | 275 ms | 1.03 s | 3.7× |
+//! | Monte Carlo — 100k samples, 6 seats | 1.12 s | 3.15 s | 2.8× |
+//!
+//! (The Monte Carlo rows use 100k samples to match the exact rows' scale; the
+//! shipped default is 25,000, roughly a quarter of those times.)
+//!
+//! About 3×, not 8×. Half the M1's cores are efficiency cores, and the two
+//! exact paths bridge a single `Combinations` iterator with
+//! [`par_bridge`](rayon::iter::ParallelBridge::par_bridge), so the generator
+//! itself stays serial and only the evaluation fans out. The Monte Carlo path
+//! splits a plain integer range instead, which is why it scales best.
+//!
+//! ### Budgeting a browser build
+//!
+//! A WASM build gets the right-hand column — it always would have, threads or
+//! no threads. Serially a Monte Carlo sample costs roughly 10 µs at 2 seats and
+//! 32 µs at 6, so the default 25,000 samples
+//! ([`EquityOptions::max_samples`](crate::analysis::equity::EquityOptions::max_samples))
+//! is about 250 ms heads-up and 600 ms six-way in a browser. That default is
+//! honest to the nearest whole percent (~0.7 pp worst case); raise it to
+//! 100,000 (~0.3 pp) only if you render a decimal place, and expect ~2.4 s
+//! six-way serially if you do.
+//!
+//! ```
+//! # #[cfg(feature = "equity")] {
+//! # use pkcore::analysis::equity::{EquityRequest, PlayerSpec};
+//! # use pkcore::arrays::two::Two;
+//! let mut req = EquityRequest::new(vec![
+//!     PlayerSpec::Exact(Two::HAND_AS_AH),
+//!     PlayerSpec::Exact(Two::HAND_KS_KH),
+//! ]);
+//! req.opts.max_samples = 10_000; // ~100 ms serially, ~±1pp
+//! # }
+//! ```
+//!
+//! Exact enumeration needs no such care: it is chosen only when the runout
+//! space is under
+//! [`exact_threshold`](crate::analysis::equity::EquityOptions::exact_threshold)
+//! (100,000 by default — a separate knob from `max_samples`, which decides how
+//! hard to sample once sampling is chosen), which keeps the flop, turn and
+//! river exact and lets the 1.7M-runout pre-flop space fall to sampling.
+//!
 //! ## Compiler Features
 //!
 //! The crate uses Clippy's pedantic checking and forbids unsafe unwrap patterns:
@@ -369,6 +444,7 @@ use crate::prelude::{PlayerState, TableAction};
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
+#[cfg(feature = "parallel")]
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
 use std::str::FromStr;
@@ -868,6 +944,14 @@ pub trait Pile {
         self.remaining().combinations(k)
     }
 
+    /// The parallel twin of
+    /// [`combinations_remaining`](Self::combinations_remaining).
+    ///
+    /// Requires the `parallel` feature. Without it this method is absent and
+    /// `Pile` carries no `rayon` types at all, which is what makes the trait
+    /// implementable without pulling in a thread pool. See the [notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     fn par_combinations_remaining(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
         log::debug!("Pile.combinations_after(k: {k})");
         self.remaining().par_combinations(k)

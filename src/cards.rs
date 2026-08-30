@@ -14,6 +14,7 @@ use indexmap::set::{IntoIter, Iter};
 use itertools::{Combinations, Itertools};
 use rand::prelude::SliceRandom;
 use rand::rng;
+#[cfg(feature = "parallel")]
 use rayon::iter::{IterBridge, ParallelBridge};
 use std::collections::HashMap;
 use std::fmt;
@@ -243,6 +244,11 @@ impl Cards {
         self.0.clone().into_iter().combinations(k)
     }
 
+    /// The parallel twin of [`combinations`](Self::combinations).
+    ///
+    /// Requires the `parallel` feature; see the [crate-level notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     #[must_use]
     pub fn par_combinations(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
         self.0.clone().into_iter().combinations(k).par_bridge()

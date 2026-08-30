@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+#[cfg(feature = "parallel")]
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::arrays::HandRanker;
@@ -13,6 +14,7 @@ use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts, Unumable};
 use itertools::Itertools;
 use log::error;
+#[cfg(feature = "parallel")]
 use rayon::iter::ParallelIterator;
 use std::fmt;
 use std::slice::Iter;
@@ -199,6 +201,10 @@ impl HoleCards {
     /// # Errors
     ///
     /// `PKError` if unable to convert any five `Cards` combination.
+    ///
+    /// Requires the `parallel` feature; see the [notes on
+    /// parallelism](crate#parallelism).
+    #[cfg(feature = "parallel")]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let hands = self.clone();
         let v: Vec<CaseEval> = self
@@ -208,6 +214,9 @@ impl HoleCards {
         Ok(CaseEvals::from(v))
     }
 
+    /// Only reachable from the `parallel`-gated
+    /// [`bcm_rayon_case_evals`](Self::bcm_rayon_case_evals).
+    #[cfg(feature = "parallel")]
     fn bcm_case_eval(&self, case: Five) -> CaseEval {
         let mut case_eval = CaseEval::default();
 

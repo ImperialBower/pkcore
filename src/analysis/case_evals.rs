@@ -3,8 +3,10 @@ use crate::analysis::case_eval::CaseEval;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::card::Card;
 use crate::play::hole_cards::HoleCards;
 use log::info;
+#[cfg(feature = "parallel")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::slice::Iter;
 use wincounter::wins::Wins;
@@ -34,12 +36,15 @@ impl CaseEvals {
     /// (`CaseEvals::wins`, etc.) aggregate order-independently.
     #[must_use]
     pub fn from_holdem_at_flop(board: Three, hands: &HoleCards) -> CaseEvals {
-        hands
-            .combinations_after(2, &board.cards())
-            .par_bridge()
-            .filter_map(|v| CaseEval::from_holdem_at_flop(board, Two::from(v), hands).ok())
-            .collect::<Vec<CaseEval>>()
-            .into()
+        let runouts = hands.combinations_after(2, &board.cards());
+        let eval = |v: Vec<Card>| CaseEval::from_holdem_at_flop(board, Two::from(v), hands).ok();
+
+        #[cfg(feature = "parallel")]
+        let evals: Vec<CaseEval> = runouts.par_bridge().filter_map(eval).collect();
+        #[cfg(not(feature = "parallel"))]
+        let evals: Vec<CaseEval> = runouts.filter_map(eval).collect();
+
+        evals.into()
     }
 
     /// Enumerates every five-card runout from the deal (preflop) and evaluates
@@ -51,15 +56,18 @@ impl CaseEvals {
     /// runout. The order of the returned `CaseEvals` is unspecified.
     #[must_use]
     pub fn from_holdem_at_deal(hands: &HoleCards) -> CaseEvals {
-        hands
-            .combinations_remaining(5)
-            .par_bridge()
-            .filter_map(|v| {
-                let case = Five::try_from(v).ok()?;
-                CaseEval::from_holdem_at_deal(case, hands).ok()
-            })
-            .collect::<Vec<CaseEval>>()
-            .into()
+        let runouts = hands.combinations_remaining(5);
+        let eval = |v: Vec<Card>| {
+            let case = Five::try_from(v).ok()?;
+            CaseEval::from_holdem_at_deal(case, hands).ok()
+        };
+
+        #[cfg(feature = "parallel")]
+        let evals: Vec<CaseEval> = runouts.par_bridge().filter_map(eval).collect();
+        #[cfg(not(feature = "parallel"))]
+        let evals: Vec<CaseEval> = runouts.filter_map(eval).collect();
+
+        evals.into()
     }
 
     /// Concurrent flop evaluation. Retained as a named entry point for existing

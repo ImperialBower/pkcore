@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2026-08-29
 
+### Changed (behaviour)
+
+- **`EquityOptions::max_samples` now defaults to 25,000, down from 100,000.**
+  This is a **silent** change: nothing fails to compile, and every existing test
+  sets the option explicitly, so callers who relied on the default now get a
+  faster, less precise answer without being told. Read this line if you consume
+  `analysis::equity`.
+
+  Measured against full exact enumeration (Apple M1, release, 40 seeds,
+  worst case over 2-seat and 6-seat requests):
+
+  | `max_samples` | worst error | honestly displayable | 6-seat cost |
+  |---|---|---|---|
+  | 10,000 | ~1.2 pp | — | 89 ms |
+  | **25,000 (new default)** | **~0.7 pp** | **whole percents** | **202 ms** |
+  | 50,000 | ~0.5 pp | whole percents | 422 ms |
+  | 100,000 (old default) | ~0.3 pp | one decimal place | 792 ms |
+
+  The curve has no inflection — measured RMS tracks `sqrt(p(1-p)/n)` to within
+  4% at every size — so the default is a promise about precision, not a tuned
+  optimum: every 4× cut in samples doubles the error. 100,000 was the number
+  that made a rendered decimal place real; 25,000 is the number that makes a
+  whole percent real at a quarter of the cost. **If you render a decimal place,
+  set `max_samples = 100_000` explicitly.**
+
+  The old value was also equal to `exact_threshold`, which is a different knob —
+  `exact_threshold` decides *whether* to sample, `max_samples` decides how hard.
+  They are no longer equal, and the docs now say so. `default_options_are_pinned`
+  guards both against silent drift.
+
 ### Added
 
 - **`Table::showdown` and `Table::audit_chip_total`** — the fine tier under
@@ -18,6 +48,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md) recommendation 3 — granularity
   4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
   following `end_hand()` would resolve an empty one.
+
+- **A `parallel` feature** (on by default) gating every `rayon` entry point:
+  `Pile::par_combinations_remaining`, `Cards::par_combinations`,
+  `Deck::par_iter` / `to_par_iter`, `HoleCards::bcm_rayon_case_evals`,
+  `Twos::bcm_rayon_case_evals`, and the multi-threaded drivers inside
+  `analysis::equity`, `analysis::range_equity` and `TurnEval`.
+
+  **The reason is WASM, not tidiness.** `analysis::equity::compute` called
+  `par_bridge()` and `into_par_iter()` with no `wasm32` guard, and rayon shipped
+  in the wasm32-unknown-unknown build — a browser has no threads to spawn, so
+  that build linked a thread pool that could never run, and the failure would
+  have surfaced at runtime in the browser rather than at compile time. Nothing
+  triggers it today (no web consumer calls `compute` yet), so this closes a trap
+  rather than a live bug. Browser consumers should now depend on pkcore with
+  `default-features = false` and omit `parallel`; `pkarena0-web` already does.
+
+  With the feature off, `rayon` and `rayon-core` leave the dependency tree
+  entirely — verified by `cargo tree --no-default-features -i rayon`, which now
+  prints nothing on both the host and wasm32 targets — and every rayon type
+  leaves the public API. That is what lets a downstream type implement `Pile`
+  without pulling in a thread pool, which was the actual Muratori complaint.
+  The supply-chain saving is small and worth stating honestly: 120 → 118 crates,
+  because `crossbeam-*` stays via `cardpack → fluent-templates → ignore` and
+  `either` via `itertools`.
+
+  Serial and parallel arms share one definition of the work each item does — the
+  closure is named once and only the driver line differs — so **results are
+  identical**, only slower. Measured on an Apple M1 (8 cores), release, idle:
+  about **3×** across the hero paths — exact flop 3.1 ms vs 8.8 ms, exact
+  pre-flop 5.19 s vs 16.15 s, 100k-sample Monte Carlo 275 ms vs 1.03 s (2 seats)
+  and 1.12 s vs 3.15 s (6 seats). Not 8×, because half the M1's cores are
+  efficiency cores and the exact paths bridge a single `Combinations` iterator,
+  leaving the generator serial. The crate docs now carry that table plus
+  `max_samples` budgeting for browser builds, which get the serial column
+  whether or not they link rayon: a default 100,000-sample pre-flop call is
+  ~1 s serially, a visible UI stall, and 10,000 samples buys ~100 ms at about
+  half a percentage point of sampling error. `exact_enumerate__counts_are_identical_serial_or_parallel`
+  pins the exact integer win/tie counts of a 990-runout enumeration; a new
+  `make test-serial` target runs the suite with `parallel` off so the serial arms
+  are executed rather than merely type-checked, and it is wired into `make ayce`.
 
 - **A module header for `casino`** naming the canonical driver. `src/casino/mod.rs`
   was fourteen `pub mod` lines with no documentation, behind which sat three
@@ -32,15 +102,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **The kernel purity gate now checks `serde_yaml_bw`.** `make check-purity`
-  announced on success that *"serde_yaml_bw remains via pkstate — documented
-  ceiling"*. Both the dependency and the ceiling are gone: dropping `pkstate`
-  from `Cargo.toml` closed the transitive edge, and `cargo tree
-  --no-default-features -e normal | grep -c serde_yaml_bw` returns 0. The gate
-  was telling integrators something false about the crate's purity, and it had
-  never actually checked for the parser it was excusing. `serde_yaml_bw` is now
-  in the gate's pattern, so a future first-party edge fails CI instead of being
-  rediscovered by the next audit.
+- **The kernel purity gate now blocks `serde_yaml_bw` and `rayon`.**
+  `make check-purity` used to announce on success that *"serde_yaml_bw remains
+  via pkstate — documented ceiling"*. Both the dependency and the ceiling are
+  gone: dropping `pkstate` from `Cargo.toml` closed the transitive edge, and
+  `cargo tree --no-default-features -e normal | grep -c serde_yaml_bw` returns 0.
+  The gate was telling integrators something false about the crate's purity, and
+  it had never actually checked for the parser it was excusing. Both crates are
+  now in the gate's pattern, so a future first-party edge fails CI instead of
+  being rediscovered by the next audit.
+
+- **`make check-wasm` now checks two configurations**: the default build, and
+  the one browser consumers are told to use (`--no-default-features` without
+  `parallel`). They fail differently, and only the second proves a wasm target
+  never links a rayon thread pool it has no threads to run.
+
+- **`make ayce` gained `test-serial` and `check-wasm`.** `check-features` only
+  type-checked the no-`parallel` configuration; nothing ever ran it.
 
 - `docs/MURATORI_AUDIT.md` refreshed against 0.10.0. Coupling moves 3/5 → 4/5
   and practical-checklist item 8 *fail* → *partial*, both because the
