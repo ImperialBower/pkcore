@@ -55,7 +55,7 @@ this EPIC has landed.*
 seat, the pot, the betting counters and the event log — and derives only
 `Clone, Debug, Eq, PartialEq` (`table.rs:86`). None of its field types carry
 serde either: `Seats` (`table/seats.rs:25`), `Seat` (`table/seat.rs:22`),
-`Player` (`table/player.rs:23`), `Cards` (`src/cards.rs:34`), `ForcedBets`
+`Player` (`table/player.rs:23`), `Cards` (`src/cards.rs:35`), `ForcedBets`
 (`casino/game.rs:21`), `SeatHand` (`src/play/seat_hand.rs:44`), `HoleCard`
 (`src/play/hole_card.rs:29`), `Visibility` (`src/play/visibility.rs:27`).
 `serde_json::to_string(&table)` does not compile — verified in
@@ -94,7 +94,7 @@ grounding this doc, and both are Phase 0:
    restore path cannot be built on a codec that cannot say no.
 2. **`Cards::from_str("")` is an error, not an empty set.** `impl FromStr for
    Cards` returns `Err(PKError::InvalidCardIndex)` when the parsed set is empty
-   (`src/cards.rs:914-916`). A pre-flop table has an empty `board` and an empty
+   (`src/cards.rs:920-922`). A pre-flop table has an empty `board` and an empty
    `muck`, so the obvious `board: String` field in the DTO cannot round-trip the
    most common state in the game.
 
@@ -131,7 +131,7 @@ Concrete rules the snapshot must obey:
 - The snapshot is taken and restored at any point in a hand, including between
   two seats acting on the same street.
 - **Deck order is preserved exactly.** `Cards` is an `IndexSet` and its `Display`
-  walks insertion order (`src/cards.rs:697-703`), so the remaining deck's future
+  walks insertion order (`src/cards.rs:703-709`), so the remaining deck's future
   runout survives the trip unchanged.
 - **Blank cards are preserved as blanks.** A seat holds `BoxedCards::blanks(n)`
   before the deal (`src/arrays/sliced.rs:36`); restoring must not turn a blank
@@ -155,7 +155,7 @@ Concrete rules the snapshot must obey:
 | A table mid-hand | `Table` (`src/casino/table.rs:87`) | ✅ exists, ❌ not serializable |
 | The written-down form of that table | `TableState` | ❌ absent — this EPIC |
 | A card on the wire | `impl Serialize for Card` (`src/card.rs:370`) | 🟡 writes fine, reads back too permissively |
-| An ordered pile | `Cards(IndexSet<Card>)` (`src/cards.rs:34`) | 🟡 order-preserving, ❌ no serde, ❌ empty is an error |
+| An ordered pile | `Cards(IndexSet<Card>)` (`src/cards.rs:35`) | 🟡 order-preserving, ❌ no serde, ❌ empty is an error |
 | A seat's cards + visibility | `SeatHand` (`src/play/seat_hand.rs:45`) | 🟡 private fields, rebuildable via `push` |
 | The audit trail | `Vec<TableAction>` (`src/casino/action.rs:87`) | ✅ serde-ready |
 | A finished hand on the wire | `Pluribus` (`src/analysis/nubibus.rs`) | ✅ round-trips, ❌ finished hands only |
@@ -233,7 +233,7 @@ Three shapes are load-bearing and each answers one of the blockers found in
 Context:
 
 - **`Vec<String>` for card piles, not `String`.** `Cards::from_str("")` errors
-  (`src/cards.rs:914-916`), so a pre-flop board — the most common state there is
+  (`src/cards.rs:920-922`), so a pre-flop board — the most common state there is
   — cannot survive a single-string field. A `Vec` makes empty the natural case
   and keeps the per-card codec the already-stable `Card` string form.
 - **`Vec<Option<String>>` for a seat's cards.** `BoxedCards` is a fixed-width box
@@ -343,7 +343,7 @@ SnapshotCorrupt,
       the snapshot's neighbours on any real boundary, and already listed as
       Planned at `EPIC-37_Mobile_Engine.md:29`.
 - [ ] **0d.** Add `PKError::SnapshotVersion` / `PKError::SnapshotCorrupt`
-      (`src/lib.rs:509`).
+      (`src/lib.rs:585`).
 - [ ] **0e.** Confirm `cargo check --no-default-features` is green.
 
 ### Phase 1 — The DTO
@@ -478,7 +478,7 @@ SnapshotCorrupt,
 - **Preserves** every existing public signature. `Table`'s fields, `PokerSession`'s
   step API, `Pluribus`, `HandHistory` and `SessionView` are untouched.
 - **Adds** `TableState`, `SeatState`, `SessionState`, four methods, two `PKError`
-  variants (the enum is already `#[non_exhaustive]`, `src/lib.rs:508`), and serde
+  variants (the enum is already `#[non_exhaustive]`, `src/lib.rs:584`), and serde
   derives on two existing types.
 - **Breaks** one behaviour deliberately: `Card` deserialization of an invalid
   index now errors instead of yielding a blank (`src/card.rs:387`). Any
