@@ -27,7 +27,7 @@ own downstream EPIC later.
 | Stdout hygiene — stray `println!` in engine paths → `log` | Planned |
 | `SessionView` / `SeatView` serializable read-out (`view` keyed on `Principal`, per EPIC-50) | ✅ `src/casino/session.rs` — `view(Option<Principal>)`, serde round-trip + redaction tests green |
 | `PlayerAction` serde | Planned |
-| `PokerSession::snapshot` / `restore` (mid-hand suspend/resume) | Planned |
+| `PokerSession::snapshot` / `restore` (mid-hand suspend/resume) | **Moved to [EPIC-88](EPIC-88_Table_Snapshot.md)** (2026-08-29) — the capability also serves the pkdealer resumable table service and EPIC-82's `apply(state, action)`, so it was lifted out rather than kept on this epic's schedule. Phase 3 below is superseded; consume EPIC-88's `TableState` when this epic resumes. |
 | `SolveJob` — steppable, cancellable on-device solver | Planned |
 | FFI boundary contract (design doc section, no code) | 🔒 Gated (design only) |
 | Downstream binding crate + app repo | Out of scope (future EPIC) |
@@ -468,6 +468,13 @@ wrapper — recorded here as the contract the downstream repo consumes:
       `docs/LESSONS_LEARNED.md:43`).
 
 ### Phase 3 — Snapshot / restore
+
+> **Superseded 2026-08-29 by [EPIC-88](EPIC-88_Table_Snapshot.md).** The design
+> below (private `TableState` DTO, postcard, no derives on `Table`) was carried
+> forward intact; EPIC-88 adds the two codec blockers this sketch did not
+> anticipate — `Card`'s deserializer returning a blank on a bad index
+> (`src/card.rs:379-389`) and `Cards::from_str("")` erroring rather than
+> yielding an empty pile (`src/cards.rs:914-916`). Left here for the record.
 
 - [ ] **3a.** Private `TableState` DTO mirroring `Table`'s fields
       (`table.rs:83-115`), cards in stable string encoding; `From`
