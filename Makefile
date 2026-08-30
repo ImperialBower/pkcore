@@ -244,21 +244,29 @@ check-wasm:
 	cargo check --target wasm32-unknown-unknown
 
 # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that with default
-# features off, the storage/terminal layers drop out and no rusqlite/zstd/termion/
-# dotenvy remains in the dependency tree. serde_yaml_bw is a documented exception
-# (it arrives transitively via pkstate). This target is the single source of the
-# purity gate — the CI job in basic.yaml invokes `make check-purity` rather than
-# re-inlining the pipeline (audit P9j.4). The `::error::` prefix is a GitHub
-# Actions annotation in CI and a harmless plain line locally.
+# features off, the storage/terminal/YAML layers drop out and no rusqlite/zstd/
+# termion/dotenvy/serde_yaml_bw remains in the dependency tree.
+#
+# serde_yaml_bw used to be a documented exception: it arrived transitively via
+# `pkstate`, so the bot-profiles/hand-histories gates could not actually keep a
+# YAML parser out of a lean build. `pkstate` was dropped from Cargo.toml, which
+# closed that edge — MURATORI_AUDIT.md (0.10.0) verified `cargo tree
+# --no-default-features -e normal | grep -c serde_yaml_bw` returns 0. It is in
+# the pattern below so a future first-party edge fails CI instead of being
+# rediscovered by the next audit.
+#
+# This target is the single source of the purity gate — the CI job in
+# basic.yaml invokes `make check-purity` rather than re-inlining the pipeline
+# (audit P9j.4). The `::error::` prefix is a GitHub Actions annotation in CI and
+# a harmless plain line locally.
 check-purity:
-	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy' || true); \
+	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy|serde_yaml_bw' || true); \
 	if [ -n "$$leaked" ]; then \
-		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal:"; \
+		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal/bot-profiles:"; \
 		echo "$$leaked"; \
 		exit 1; \
 	fi; \
-	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy with --no-default-features."; \
-	echo "(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"
+	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy/serde_yaml_bw with --no-default-features."
 
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:

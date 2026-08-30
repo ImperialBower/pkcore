@@ -5,6 +5,53 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-08-29
+
+### Added
+
+- **`Table::showdown` and `Table::audit_chip_total`** — the fine tier under
+  `Table::end_hand`, which is now literally `showdown()` + `reset()` +
+  `audit_chip_total()`. `showdown()` awards the pot and stops there, leaving
+  the board, the hole cards and the phase untouched, so a spectator UI can
+  render the result *before* the table resets. Previously the only way to see
+  that state was to `clone` the whole `Table` and diff it.
+  ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md) recommendation 3 — granularity
+  4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
+  following `end_hand()` would resolve an empty one.
+
+- **A module header for `casino`** naming the canonical driver. `src/casino/mod.rs`
+  was fourteen `pub mod` lines with no documentation, behind which sat three
+  public drivers — `PokerSession`, `Dealer`, `TableManager` — with three action
+  vocabularies and two error types and nothing saying which to start with. It
+  now carries a comparison table stating that `PokerSession` is canonical, what
+  each of the other two is for, and that moving a call site between them is a
+  rewrite rather than a swap. `TableManager` gets the module and item docs it
+  never had, including that it is a multi-table sketch with no hand-lifecycle
+  gating of its own. ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md)
+  recommendation 2 — redundancy 3/5 → 4/5.)
+
+### Changed
+
+- **The kernel purity gate now checks `serde_yaml_bw`.** `make check-purity`
+  announced on success that *"serde_yaml_bw remains via pkstate — documented
+  ceiling"*. Both the dependency and the ceiling are gone: dropping `pkstate`
+  from `Cargo.toml` closed the transitive edge, and `cargo tree
+  --no-default-features -e normal | grep -c serde_yaml_bw` returns 0. The gate
+  was telling integrators something false about the crate's purity, and it had
+  never actually checked for the parser it was excusing. `serde_yaml_bw` is now
+  in the gate's pattern, so a future first-party edge fails CI instead of being
+  rediscovered by the next audit.
+
+- `docs/MURATORI_AUDIT.md` refreshed against 0.10.0. Coupling moves 3/5 → 4/5
+  and practical-checklist item 8 *fail* → *partial*, both because the
+  `pkcore → pkstate → serde_yaml_bw` edge is gone and `casino::session` is no
+  longer gated on `bot-profiles`. Two recommendations from the 0.8.2 run are
+  void: `pkstate` is no longer a dependency, so there is no external state type
+  left to write `TryFrom<&PKState> for Table` against. Retention stays 3/5 —
+  the new `TryFrom<&Pluribus> for Table` is a real read-back direction, but it
+  declines a mid-hand table and forces `STARTING_STACK`, so a live table still
+  cannot be written down and resumed.
+
 ## [0.10.0] - 2026-08-29
 
 ### Added

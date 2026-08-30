@@ -1,14 +1,38 @@
+//! # `TableManager`
+//!
+//! A queue-driven driver for **many** [`Table`]s at once: register tables by
+//! [`Uuid`], push [`TableEvent`]s addressed to one of them, then drain the
+//! queue with [`TableManager::process_events`].
+//!
+//! **A sketch, not a finished surface.** Unlike
+//! [`PokerSession`](crate::casino::session::PokerSession) — the canonical
+//! driver, see the [`casino`](crate::casino) module header — it has no
+//! hand-lifecycle gating of its own: an `ActBet` event applies straight to the
+//! table's `act_bet`, and the table's own validation is the only guard. There
+//! is no step enum to poll and no session state. Reach for it when you are
+//! experimenting with multi-table routing, not when you are integrating a
+//! single game.
+
 use crate::PKError;
 use crate::prelude::{ForcedBets, Seats, Table};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+/// A registry of [`Table`]s keyed by id, plus a queue of pending
+/// [`TableEvent`]s to apply to them. See the [module
+/// header](self) before choosing this over
+/// [`PokerSession`](crate::casino::session::PokerSession).
 #[allow(dead_code)]
 pub struct TableManager {
     pub tables: HashMap<Uuid, Table>,
     pub event_queue: Vec<TableEvent>,
 }
 
+/// One action or dealing step, addressed to a table by id.
+///
+/// Every variant carries its own `table_id`; an event naming a table that is
+/// not registered fails with [`PKError::TableNotFound`] rather than being
+/// silently dropped.
 #[allow(dead_code)]
 pub enum TableEvent {
     ActBet { table_id: Uuid, seat: u8, amount: usize },

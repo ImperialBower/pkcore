@@ -5,6 +5,16 @@
 //! validation layer so that illegal moves are caught and reported rather than
 //! panicked on.
 //!
+//! **Not the canonical driver.** [`PokerSession`](crate::casino::session::PokerSession)
+//! is; see the [`casino`](crate::casino) module header for the comparison. Use
+//! `Dealer` when you want to drive street progression with explicit calls
+//! (`start_hand`, `advance_street`, `end_hand`) instead of polling
+//! [`SessionStep`](crate::casino::session::SessionStep). It speaks
+//! [`DealerAction`] and [`DealerError`] rather than
+//! [`PlayerAction`](crate::casino::action::PlayerAction) and
+//! [`PKError`], and has no `legal_actions` of its own — reach
+//! through to [`Dealer::table`] for queries.
+//!
 //! ## Typical usage
 //!
 //! ```rust

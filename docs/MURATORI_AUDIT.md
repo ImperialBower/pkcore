@@ -2,122 +2,137 @@
 
 | | |
 |---|---|
-| Subject | `pkcore` 0.8.2 — 1,237 `pub fn`, 16 public traits, 19 public modules; hero surfaces are `casino::table::Table`, `casino::session::PokerSession`, `analysis::equity`, `hand_history` |
-| Commit | `a0a15db1` (read-only git) |
-| Date | 2026-08-25 |
+| Subject | `pkcore` 0.11.0 — 1,243 `pub fn`, 18 public traits, 20 public modules; hero surfaces are `casino::table::Table`, `casino::session::PokerSession`, `analysis::equity`, `analysis::nubibus`, `hand_history` |
+| Commit | `c24b3738` (read-only git); recommendations 2, 3 and 4 applied in-session on top of it |
+| Date | 2026-08-29 |
 | Method | Muratori, *Designing and Evaluating Reusable Components* (2004); anchors per the `/muratori` skill |
-| Reuse kind | **component** — data flows both ways and the caller's program stays in charge: you hand `pkcore` seats, cards, and actions; it hands back `Winnings`, `EquityReport`, `Evals`, and a `Table` you own by value and drive with your own loop. Nothing in the public API takes over control flow. |
+| Reuse kind | **component** — data flows both ways and the caller's program stays in charge: you hand `pkcore` seats, cards, and actions; it hands back `Winnings`, `EquityReport`, `Evals`, `Pluribus`, and a `Table` you own by value and drive with your own loop. Nothing in the public API takes over control flow. |
 
-*Previous audit: 0.3.2 @ `356cb178`, 2026-08-03.*
+*Previous audits: 0.8.2 @ `a0a15db1`, 2026-08-25; 0.3.2 @ `356cb178`, 2026-08-03.*
 
 ## Summary
 
 | Characteristic | Score | One-line verdict |
 |---|---|---|
-| Granularity | 4/5 | Fine tier exists everywhere (`start_hand`/`next_actor`/`apply_action`/`end_hand`, six `act_*` primitives, new `abort_hand`); `end_hand` is still the one coarse-only leaf. |
-| Redundancy | 3/5 **Δ was 2/5** | `TableCelled` and its whole parallel type family are gone (EPIC-83). What remains is three under-documented drivers — `PokerSession`, `Dealer`, `TableManager` — over one coherent engine, with no statement of which is canonical. |
-| Coupling | 3/5 | Same third-party leakage on `Pile`/`Cards`/`Deck` and the same non-optional YAML edge through `pkstate` — plus a gate the last audit missed: the blessed driver `PokerSession` is behind the `bot-profiles` feature. |
-| Retention | 3/5 | The write-down direction now exists on the live engine (`From<&Table> for pkstate::PKState`), `Player` is plain `usize` fields, and `shuffled_deck_str` captures deck order — but there is still no read-back. |
-| Flow control | 5/5 | Zero callback parameters in the public API; the sole `FnMut` (`run_hand`) is implemented *as* the four public step calls; `SessionStep` gained a polled `Failed(PKError)` arm. |
+| Granularity | 5/5 **Δ was 4/5** | `end_hand` is now literally `showdown()` + `reset()` + `audit_chip_total()`, all three public. The last coarse-only leaf is gone. |
+| Redundancy | 4/5 **Δ was 3/5** | `src/casino/mod.rs` now carries a which-driver table naming `PokerSession` canonical, cross-linked from all three drivers. The paths remain three; the guessing does not. |
+| Coupling | 4/5 **Δ was 3/5** | `pkstate` is gone from `Cargo.toml`; `serde_yaml_bw` is now genuinely absent from a lean build (verified 0 hits), and `casino::session` is no longer gated on `bot-profiles`. Third-party types in public signatures remain. |
+| Retention | 3/5 | The Pluribus bridge is now **bidirectional** (`TryFrom<&Table> for Pluribus` + `TryFrom<&Pluribus> for Table`), but only for a *finished* hand. `Table` still has no `Serialize`; no `snapshot`/`restore`. |
+| Flow control | 5/5 | Zero callback parameters in the public API; the sole `FnMut` (`run_hand`) is implemented *as* the four public step calls; `SessionStep` carries a polled `Failed(PKError)` arm. |
 
-**Discontinuity verdict:** The 0.3.2 headline — "the game state cannot be written down at all" — has been half-closed, and the half that closed is the harder half. `From<&Table> for pkstate::PKState` now hangs off the *live* engine (`src/casino/table/pkstate_interop.rs:11,200`) rather than a deprecated twin; `Player` dropped `Stack(Cell<usize>)` for six plain `pub` scalar fields (`src/casino/table/player.rs:24-37`), so a downstream mirror is now a memberwise copy rather than an accessor-scraping exercise; and `PokerSession::shuffled_deck_str` (`src/casino/session.rs:130`, set at `:339`) records the full post-shuffle deck order the previous audit found missing. **The remaining discontinuity is one-directional.** There is no `TryFrom<pkstate::PKState> for Table`, no `PokerSession::snapshot`/`restore` (still **Planned** at `docs/epics/EPIC-37_Mobile_Engine.md:30`), and `HandHistory::replay()` still returns `ReplayResult { final_stacks, is_consistent }` (`src/hand_history.rs:2660-2666`) — a verdict, not a resumable table. Sketch 2 confirms it: the write compiles, the read has no symbol to call. A gRPC table service that must survive a pod restart can now *record* its state cheaply but must still hand-write the inverse mapping to come back, and the inverse is the side that has to be exactly right. Second finding, new to this run: the blessed step-driven driver is not reachable from a lean build. `pub mod session` is `#[cfg(feature = "bot-profiles")]` (`src/casino/mod.rs:14-15`), and the prelude re-export is gated the same way (`src/prelude.rs:170-171`) — so "I want the caller-driven session loop" silently costs "I want a YAML bot-profile parser," and a `--no-default-features` integrator is left with `Dealer` and `TableManager`, the two drivers nothing documents as canonical.
+**Discontinuity verdict:** Two of the previous audit's three headline findings closed in four days, and they closed structurally rather than cosmetically. The `pkcore → pkstate → serde_yaml_bw` edge that put a YAML parser into *every* configuration is gone because `pkstate` was removed from the manifest entirely — `cargo tree --no-default-features -e normal | grep -c serde_yaml_bw` now returns **0**, where the 0.8.2 run returned a live path. `pub mod session` lost its `#[cfg(feature = "bot-profiles")]` (`src/casino/mod.rs:48`), so the blessed step-driven driver no longer costs a format parser. **The remaining discontinuity is the one that was always hardest: you still cannot write a live table down and read it back.** `serde_json::to_string(&session.table)` fails to compile — `Table: Serialize` is not satisfied (Sketch 2, verified). The new `TryFrom<&Pluribus> for Table` (`src/analysis/nubibus.rs:416`) is a genuine read-back direction and is new since the last audit, but it reconstructs a hand *from its start*: stacks are forced to `Pluribus::STARTING_STACK`, the button is forced to the last seat, and `Pluribus::try_from(&table)` on a mid-hand table returns `Err` (Sketch 2, run: `mid-hand export: false`). So a gRPC table service that must survive a pod restart can round-trip a *completed* hand for replay and audit, but cannot resume a table where it left off — it still keeps a second, hand-maintained copy of the truth. Everything else this audit found was fixed in-session and is recorded below with its Δ: granularity reached the anchor ceiling when `end_hand` was split into `showdown` + `reset` + `audit_chip_total`; redundancy moved when `src/casino/mod.rs` — previously fourteen `pub mod` lines with no doc comment above three drivers with three action enums and two error types — gained a which-driver table naming `PokerSession` canonical; and the purity gate now checks for the `serde_yaml_bw` it used to excuse. **One discontinuity remains, and it is the one that needs designing rather than writing.**
 
 ## Characteristics
 
-### Granularity — 4/5
-> Anchor matched: "The fine tier exists for all core operations; one or two coarse-only conveniences remain at the edges."
+### Granularity — 5/5
+> Anchor matched: "Every coarse operation is a documented composition of 2–4 exposed finer calls; a caller can drop one level anywhere without workarounds."
 
-- **Evidence.** The hand lifecycle still decomposes exactly into Muratori's 2–4: `PokerSession::run_hand` (`src/casino/session.rs:683`) is literally `start_hand` (`:333`) → `next_actor` (`:459`) → `apply_action` (`:517`) → `end_hand` (`:608`). Action application decomposes into six primitives under `Table::apply_action` (`src/casino/table/transition.rs:147`), paired with `legal_actions` (`:63`), which the code comments confirm shares its raise-legality check with `act_raise` so what it advertises can never be rejected (`transition.rs:81-84`). Sketch 1 rides that pairing with no workaround.
-- **New since 0.3.2.** Two additions at the lifecycle edges: `PokerSession::abort_hand` (`:642`) unwinds a hand that cannot complete and returns every committed chip, and `SessionStep::Failed(PKError)` (`:93`) is the polled signal that tells you to call it. That is a fine-grained escape from a state that previously had none.
-- **The one gap (unchanged).** `Table::end_hand` (`src/casino/table.rs:2730`) still does three things — showdown, `reset()`, chip audit — and its three showdown branches are still private (`showdown_single_seat` `:2432`, `showdown_headsup` `:2458`, `showdown_multiway` `:2527`). A spectator UI that wants to render the showdown *before* chips move and the table resets has no lower tier; it must `Clone` the `Table` first and diff. Sketch 3 hits this.
-- **Minimal fix.** Make the three `showdown_*` methods `pub`, or add `pub fn showdown(&mut self) -> Result<Winnings, PKError>` and redefine `end_hand` as `showdown()` + `reset()` + audit. Non-breaking; moves this to 5/5.
+- **Δ from previous audit: 4/5 → 5/5**, fixed in-session (recommendation 3).
 
-### Redundancy — 3/5
-> Anchor matched: "No redundancy at all (single-path API — spartan but coherent), or redundancy present but undocumented, forcing callers to guess which path is canonical."
+- **Evidence.** The hand lifecycle decomposes exactly into Muratori's 2–4: `PokerSession::run_hand` (`src/casino/session.rs:633`) is literally `start_hand` (`:304`) → `next_actor` (`:421`) → `apply_action` (`:476`) → `end_hand` (`:561`). Action application decomposes into six primitives under `Table::apply_action` (`src/casino/table/transition.rs:147`), paired with `legal_actions` (`:63`), which shares its raise-legality check with `act_raise` so what it advertises can never be rejected. Sketch 1 rides that pairing with no workaround and runs clean.
+- **The escape hatch is fine-grained too.** `abort_hand` exists on both tiers — `PokerSession::abort_hand` (`session.rs:595`) and `Table::abort_hand` (`table.rs:2792`) — and `SessionStep::Failed(PKError)` (`session.rs:85`) is the polled signal that tells you to call it. A hand that cannot be dealt is unwound, not stranded.
+- **The gap that closed.** For three audits `Table::end_hand` did three things in one call — showdown, `reset()`, chip audit — with all three showdown branches private, so a spectator UI wanting to render the showdown *before* chips move had to `clone` the whole `Table` and diff (Sketch 3's original cost). `end_hand` (`src/casino/table.rs:2847`) is now three lines of composition over three public calls: `showdown` (`:2801`), the already-public `reset` (`:2083`), and the new `audit_chip_total` (`:2836`).
+- **The split is non-overlapping by design.** The naive fix — publish `showdown_*` and leave `end_hand` alone — would have been a footgun: `showdown` sets `self.pot = 0`, so a caller who called it and then `end_hand` would resolve an empty pot and receive `Winnings` worth nothing. Extracting the audit as its own call instead gives exactly Muratori's 2–4 with no overlap to misuse, and the hazard of mixing tiers is documented on both. `showdown_reset_and_audit_compose_to_end_hand` (`table.rs:3689`) asserts the two tiers land on identical winnings, chip count, pot and phase.
+- **Minimal fix.** None. `abort_hand` already existed on both tiers, `legal_actions` already pairs with `apply_action`, and the last coarse-only leaf is gone.
 
-- **Δ from previous audit: 2/5 → 3/5.** The divergent-duplicate condition is gone. `src/casino/table_celled.rs` and its whole family — `SeatsCell`, `SeatCell`, `casino::player::Player`, `TableLog`, `Showdown` — no longer exist; `rg TableCelled src/` returns only a comment in a test (`src/casino/table.rs:4327`). `src/casino/` has one `Table`, one `Seats`, one `Seat`, one `Player`, and the prelude binds each name once (`src/prelude.rs:113`). The name collision that made `use pkcore::prelude::*` a type-error trap is closed. `docs/DIARY_TableCelled_RIP.md` and `docs/epics/EPIC-83_Table_Decelled.md` record the removal.
-- **What remains.** Three public drivers sit over that one engine, each with its own action vocabulary and its own error type: `PokerSession` (`PlayerAction`, `PKError`, `SessionStep`, `src/casino/session.rs:122`), `Dealer` (`DealerAction`, `DealerError`, `src/casino/dealer.rs:38,180`), and `TableManager` (`TableEvent`, `PKError`, `src/casino/manager.rs:7,13`). Nothing in the public docs says which one an integrator should reach for. `Dealer`'s module header presents itself as *the* manager of a table (`dealer.rs:1-6`); `PokerSession`'s presents itself as *the* session facade; `TableManager` carries no module doc at all, is `#[allow(dead_code)]`, and its test module is an empty stub (`manager.rs:132-136`). Sketch 3 picks `Dealer` and finds no `legal_actions` equivalent on it — it has to reach through to the table anyway.
-- **Why 3 and not 2.** All three funnel into the *same* `act_*` primitives on the same `Table` (`manager.rs:60-105`, `dealer.rs:480-520`, `transition.rs:149-172`), and those primitives own the validation — `act_call` degrades to a check when `to_call == 0` (`src/casino/table/actions.rs:539-541`), `act_bet` pre-validates through `validate_raise` (`:478-483`). So the three paths reach identical state; they differ in gating and error surface, not in outcome. That is anchor 3's "guess which path is canonical," not anchor 2's "behave observably differently." Per the source talk this is the characteristic where structural rules run out and taste decides; the taste call is that one engine with three thin unlabelled wrappers is a materially better position than two engines with divergent capabilities.
-- **One real defect inside a path.** `TableManager::handle_event` matches `if let Some(table) = self.tables.get_mut(&table_id)` with no `else` on all eleven arms (`src/casino/manager.rs:59-114`), so an event addressed to an unknown table id returns `Ok(())`. Silent success, not an error. It also applies `act_*` with no hand-lifecycle gate of its own, unlike the other two.
-- **Minimal fix (non-breaking).** Put a two-line "which driver" table in the `casino` module header naming `PokerSession` canonical and the other two as what they are, and give `TableManager::handle_event` a `PKError` for an unknown `table_id`. Retiring or `#[doc(hidden)]`-ing `TableManager` is API-breaking and belongs in an `/epic`.
+### Redundancy — 4/5
+> Anchor matched: "Mostly tiered; minor overlap where two paths differ subtly but harmlessly."
 
-### Coupling — 3/5
-> Anchor matched: "One central object gates everything, or a format/IO crate leaks into public types, but a decoupled path exists."
+- **Δ from previous audit: 3/5 → 4/5**, fixed in-session (recommendation 2).
 
-- **Third-party types on the central trait (unchanged).** `Pile` returns `itertools::Combinations<indexmap::set::IntoIter<Card>>` from `combinations_after`/`combinations_remaining` (`src/lib.rs:854,859`) and `rayon::iter::IterBridge<…>` from `par_combinations_remaining` (`:864`). Same on inherent methods: `Cards::combinations`/`par_combinations`/`index_set` (`src/cards.rs:242,247,390`), `Deck::to_par_iter`/`combinations` (`src/deck.rs:92,106`), `Outs::iter` → `indexmap::map::Iter` (`src/analysis/outs.rs:242`). A downstream that names those types or implements `Pile` is pinned to itertools 0.14 / indexmap 2 / rayon 1 semver.
-- **Third-party types on public struct fields (unchanged).** `wincounter::{Wins, WinResults}` are public fields of `FlopEval` (`src/play/stages/flop_eval.rs:203-204`), `TurnEval` (`turn_eval.rs:22-23`), `RiverEval` (`river_eval.rs:39-40`), and `PlayerWins` (`src/analysis/player_wins.rs:15`); all four are re-exported through the prelude (`src/prelude.rs:10-12`). `uuid::Uuid` is a public field on `Player` and `Table`.
-- **Serialization is still not opt-out.** `serde` (with `derive`) and `serde_json` are unconditional `[dependencies]`. `serde_yaml_bw` is declared `optional = true` but reaches *every* build through a non-optional first-party edge — re-verified this run: `cargo tree --no-default-features --features equity -i serde_yaml_bw` → `serde_yaml_bw v2.5.6 └── pkstate v0.1.2 └── pkcore v0.8.2`. The `bot-profiles`/`hand-histories` gates therefore still do not keep a YAML parser out of a minimal build. All seven default features remain on by default, including `store`, which builds a bundled C SQLite.
-- **New finding this run: the blessed driver is behind a format feature.** `pub mod session` is `#[cfg(feature = "bot-profiles")]` (`src/casino/mod.rs:14-15`) and the prelude re-export is gated identically (`src/prelude.rs:170-171`). `PokerSession` contains no YAML and no bot logic — it is the caller-driven step loop — yet asking for it means asking for `dep:serde_yaml_bw`. This is exactly Muratori's "using capability A silently requires B," and it was present in 0.3.2 too; the previous audit missed it.
-- **Hidden runtime prerequisites (unchanged, the 2/5 corner).** `SevenFiveBCM` locates a 403 MB self-generated file via `PKCORE_75BCM_PATH` (`src/analysis/store/bcm/binary_card_map.rs:219`), failing at call time with `PKError::BcmUnavailable` (`src/lib.rs:584`); `HUPResult::db_path()` reads `HUPS_DB_PATH` the same way (`src/analysis/store/db/hup.rs:58`). Both are `store`-gated and documented at `src/lib.rs:225`, but the API still does not tell you until you hit it.
-- **Why 3 and not 2.** A genuinely decoupled path exists and was re-verified to build: `cargo check --no-default-features` succeeds (20.4 s), and `analysis::equity::compute` (`src/analysis/equity/engine.rs:68`) takes plain data in and hands plain data back with no filesystem, env, or database touch — its module doc makes the "never loads the multi-gigabyte `BinaryCardMap`" promise explicit (`src/analysis/equity/mod.rs:10-12`). Sketch 1 rides that path cleanly.
-- **Minimal fix.** Move `session` behind its own feature (or make it unconditional) so the step loop stops importing a YAML parser — non-breaking for anyone on default features, and the single highest-leverage decoupling available. Widening the two `Pile` combinatorics signatures to `impl Iterator<Item = Vec<Card>>` is a breaking trait change (→ `/epic`).
+- **The engine is single.** The 0.3.2 divergent-duplicate condition (`TableCelled` and its parallel type family) stayed closed. `src/casino/` has one `Table`, one `Seats`, one `Seat`, one `Player`, and the prelude binds each name once.
+- **The drivers are still three — but they are now labelled.** `src/casino/mod.rs` was fourteen lines, all `pub mod`, zero doc comments; there was no module header in which a canonical path could be named. It now opens with a which-driver table stating that `PokerSession` is **canonical** and the one the examples, the self-play harness and the replay tests use; that `Dealer` is for callers who want explicit street control instead of a polled step enum; and that `TableManager` is a multi-table sketch. Each row names its action enum and error type, and the header says outright that moving a call site between drivers is a rewrite, not a swap. All three module headers cross-link back to it, and `TableManager` — previously undocumented and `#[allow(dead_code)]` with no explanation — now says on its own module and on both public types what it is and is not.
+- **The vocabularies genuinely differ.** `DealerAction::Call { seat }` carries the seat inside the enum; `PlayerAction::Call` does not and takes it as a separate argument. `Dealer` has no `legal_actions` — you reach through to `dealer.table` for it. `Dealer` has no `SessionStep` to poll; it exposes `advance_street` (`dealer.rs:358`) as an explicit call instead. Sketch 4 confirms that moving a call site between the two is a rewrite, not a swap.
+- **Δ inside a path, since 0.8.2.** The previously reported defect is **fixed**: `TableManager` now routes every arm through `fn table_mut(&mut self, table_id) -> Result<&mut Table, PKError>` returning `PKError::TableNotFound` (`manager.rs:65-67`), and its test module is no longer an empty stub — `process_events_errors_on_unknown_table_id` (`:152`) is a real regression test. The silent `Ok(())` is gone. The score does not move, because the score was never about that defect; it is about the unnamed canonical path.
+- **Why 4 and not 5.** All three drivers funnel into the *same* `act_*` primitives on the same `Table`, and those primitives own the validation, so the paths reach identical state — anchor 4's "minor overlap where two paths differ subtly but harmlessly." Anchor 5 wants *deliberate tiering*: convenience wrappers sitting over the fine tier, each documenting what it composes. `PokerSession` is not a wrapper over `Dealer`; they are siblings with different vocabularies. Getting to 5 means retiring one, which is API-breaking. Per the source talk this is the characteristic where structural rules run out and taste decides; the taste call is that a documented canonical path among three siblings is materially better than an undocumented one, and short of what a real tiering would be.
+- **Minimal fix.** Retire or `#[doc(hidden)]` `TableManager` and re-express `Dealer` as a thin wrapper over `PokerSession` rather than a sibling. API-breaking — belongs in an `/epic`.
+
+### Coupling — 4/5
+> Anchor matched: "Capabilities isolated, but one benign, type-visible prerequisite (e.g. a builder you must finish), or format deps present yet feature-gated off by default."
+
+- **Δ from previous audit: 3/5 → 4/5.** Both conditions the 0.8.2 audit used to justify 3 are verifiably gone.
+  1. **The YAML edge is closed.** `pkstate` no longer appears anywhere: `grep -rln pkstate src/` → 0 files, `grep -n pkstate Cargo.toml` → 0 lines. `serde_yaml_bw` is `optional = true` with no first-party edge left, and `cargo tree --no-default-features -e normal | grep -c serde_yaml_bw` returns **0** (0.8.2 returned a live `serde_yaml_bw → pkstate → pkcore` path). Under `--no-default-features --features equity` it appears only as a `[dev-dependencies]` edge.
+  2. **The blessed driver is ungated.** `pub mod session;` (`src/casino/mod.rs:48`) and the prelude re-export (`src/prelude.rs:170`) both lost their `#[cfg(feature = "bot-profiles")]`. Asking for the caller-driven step loop no longer means asking for a YAML parser. Sketch 1 needs no feature flags.
+- **What holds it off 5 — third-party types in public signatures (unchanged).** `Pile` returns `itertools::Combinations<indexmap::set::IntoIter<Card>>` from `combinations_after`/`combinations_remaining` (`src/lib.rs:861,866`) and `rayon::iter::IterBridge<…>` from `par_combinations_remaining` (`:871`). Same on inherent methods: `Cards::combinations`/`par_combinations`/`index_set` (`src/cards.rs:242,247,390`), `Deck::to_par_iter`/`combinations` (`src/deck.rs:92,106`), `Outs::iter` → `indexmap::map::Iter` (`src/analysis/outs.rs:242`). Public *fields* carry them too: `wincounter::{Wins, WinResults}` on `FlopEval` (`src/play/stages/flop_eval.rs:203-204`), `TurnEval` (`turn_eval.rs:22-23`), `RiverEval` (`river_eval.rs:39-40`), `PlayerWins` (`src/analysis/player_wins.rs:15`); `uuid::Uuid` on `Player` and `Table`. A downstream that names those types or implements `Pile` is pinned to itertools 0.14 / indexmap 2 / rayon 1 / wincounter 0.1 semver.
+- **Also holds it off 5 — call-time prerequisites and default-on features.** `SevenFiveBCM` locates a 403 MB self-generated file via `PKCORE_75BCM_PATH` (`src/analysis/store/bcm/binary_card_map.rs:219`), failing at call time with `PKError::BcmUnavailable`; `HUPResult::db_path()` reads `HUPS_DB_PATH` the same way (`src/analysis/store/db/hup.rs:58`). `rusqlite::Connection` is a public field (`src/analysis/store/db/sqlite.rs:4`) and `rusqlite::Result` a public return type (`hup.rs:233,245`). All of it is `store`-gated and documented at `src/lib.rs:225` — but all seven features are still **on by default**, including `store`, which builds a bundled C SQLite.
+- **Why 4 and not 3.** Anchor 3 requires a format or IO crate leaking into public types *with* a decoupled path. The format crate no longer reaches a lean build at all, and the decoupled path was re-verified to build: `cargo check --no-default-features` succeeds (20.9 s), `make check-purity` passes, and `analysis::equity::compute` (`src/analysis/equity/engine.rs:68`) takes plain data in and hands plain data back with no filesystem, env, or database touch. What is left — third-party iterator types you can see in the signature, and one documented feature-gated env lookup — is anchor 4's "one benign, type-visible prerequisite."
+- **Stale-documentation defect, found and fixed this run.** `make check-purity` used to print on success *"(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"* — telling integrators something false about the crate's purity, and excusing a parser the gate had never actually checked for. Both the dependency and the ceiling are gone. `serde_yaml_bw` is now in the gate's `grep -iE` pattern (`Makefile:254`), so the closure is defended rather than merely achieved: a future first-party edge fails CI instead of waiting for the next audit. Verified: the tightened gate passes.
+- **Minimal fix.** Widening the two `Pile` combinatorics signatures to `impl Iterator<Item = Vec<Card>>` is a breaking trait change (→ `/epic`) and is what moves this to 5.
 
 ### Retention — 3/5
 > Anchor matched: "Retained mode, but with partial updates and queries — the sync burden exists and is incremental, not wholesale."
 
-- **Evidence for the "incremental" half (unchanged).** `Table` (`src/casino/table.rs:88`) is retained, but the caller owns it by value and every field is `pub` with no `#[non_exhaustive]`. Updates are partial, never wholesale: `apply_action`, `deal_flop`, `bring_it_in`. Queries are first-class: `next_to_act`, `to_call`, `min_raise`, `legal_actions`. `PokerSession::view(Option<Principal>) -> SessionView` (`src/casino/session.rs:769`) is a serializable, per-viewer-redacted read-out (`SessionView`/`SeatView` derive `Serialize, Deserialize` at `:839,886`). Nothing anywhere says "call every frame after mutating."
-- **Three real improvements since 0.3.2, none of which change the score.** (1) The `pkstate` bridge moved to the live engine: `From<&Table> for pkstate::PKState` and `From<Table>` (`src/casino/table/pkstate_interop.rs:11,200`) — in 0.3.2 the only such bridge hung off the deprecated `TableCelled`. Sketch 2 compiles this call. (2) `Player` is now six plain `pub` scalar fields plus `Uuid`, `String`, `PlayerState` (`src/casino/table/player.rs:24-37`); `Stack(Cell<usize>)` is no longer in the tree, so a downstream mirror is a memberwise copy. (3) `PokerSession::shuffled_deck_str: Option<String>` captures the whole 52-card order right after the shuffle (`src/casino/session.rs:130`, written at `:339`) — the missing-deck-order gap the previous audit called out at `EPIC-37:103-106` is closed on the session surface.
-- **Evidence for the remaining sync burden.** The state still cannot be read back. `Table` derives `Clone, Debug, Eq, PartialEq` (`src/casino/table.rs:87`) — no `Serialize`; nor do `Seats` (`table/seats.rs:25`), `Seat` (`table/seat.rs:22`), `Player` (`table/player.rs:23`), `ForcedBets` (`casino/game.rs:21`), or `Cards` (`src/cards.rs:34`). `rg 'From<.*PKState.*> for|TryFrom<.*PKState'` returns **zero** hits — the bridge is one-way. `rg 'pub fn snapshot|pub fn restore'` returns **zero** hits. `HandHistory::replay()` yields `ReplayResult { final_stacks, is_consistent }` (`src/hand_history.rs:2660-2666`), a consistency verdict rather than a live table. So a persisting host still keeps a second, hand-maintained copy of the truth — the diff-and-sync code Muratori names as the retained-mode tax. Sketch 2 measures it.
-- **Not 4/5**, because the retained state is still not "semantically invisible" — the caller must reconstruct it after any process boundary. Not 2/5, because there is no wholesale-replace setter and the library never mutates a structure the caller is told to re-supply.
-- **Minimal fix.** `#[derive(Serialize, Deserialize)]` down the `Table` field tree plus a `deck` field already present as `pub Cards`, then `PokerSession::snapshot()`/`restore()` — **Planned** at `docs/epics/EPIC-37_Mobile_Engine.md:30`. Cheaper interim: write `TryFrom<&pkstate::PKState> for Table` as the inverse of the existing `From`. Either moves this to 4/5 and removes the headline discontinuity.
+- **Evidence for the "incremental" half (unchanged).** `Table` (`src/casino/table.rs:87`) is retained, but the caller owns it by value and every field is `pub` with no `#[non_exhaustive]` (`:88-120`). Updates are partial, never wholesale: `apply_action`, `deal_flop`, `bring_it_in`. Queries are first-class: `next_to_act`, `to_call`, `min_raise`, `legal_actions`. `PokerSession::view(Option<Principal>) -> SessionView` (`src/casino/session.rs:719`) is a serializable, per-viewer-redacted read-out. Nothing anywhere says "call every frame after mutating."
+- **Real improvement since 0.8.2: the write-down is now bidirectional.** EPIC-87 added `TryFrom<&Table> for Pluribus` (`src/analysis/nubibus.rs:631`) and the `Unumable` trait (`src/lib.rs:995`), the write half of `Plurable`. Its inverse, `TryFrom<&Pluribus> for Table` (`nubibus.rs:416`), stacks a deck from the log's hole cards and board — burns slipped in from cards the log never mentions — and hands back a playable `Table`. That is a genuine round-trip through a text format, and `tests/heavy_tests.rs` round-trips all 10,000 corpus hands against it. Neither direction existed on the live engine in 0.3.2, and in 0.8.2 only the write half did (through `pkstate`, since removed).
+- **Why it does not move the score: the round-trip is hand-shaped, not state-shaped.** Sketch 2 measures both walls. `serde_json::to_string(&session.table)` **fails to compile** — `the trait bound Table: serde::Serialize is not satisfied`. `Table` derives only `Clone, Debug, Eq, PartialEq` (`table.rs:86`), and neither do `Seats` (`table/seats.rs:25`), `Seat` (`table/seat.rs:22`), `Player` (`table/player.rs:23`), or `Cards` (`src/cards.rs:34`). And the Pluribus path is not a substitute: run against a mid-hand table, `Pluribus::try_from(&session.table)` returns `Err` (Sketch 2, printed `mid-hand export: false`), because the export harvests a *finished* `event_log`. Even on success the inverse forces `Pluribus::STARTING_STACK` into every seat and the button onto the last seat (`nubibus.rs:422,455`) — right for replaying the experiment's corpus, wrong for resuming a live cash table.
+- **The remaining sync burden.** `grep -rn 'pub fn snapshot\|pub fn restore' src/` returns **zero** hits. `HandHistory::replay()` (`src/hand_history.rs:587`) yields `ReplayResult { final_stacks, is_consistent }` (`:2660`) — a consistency verdict, not a resumable table. So a persisting host keeps a second, hand-maintained copy of the truth: the diff-and-sync code Muratori names as the retained-mode tax.
+- **Not 4/5**, because the retained state is still not "semantically invisible" — the caller must reconstruct it after any process boundary, and for a mid-hand table cannot reconstruct it at all. **Not 2/5**, because there is no wholesale-replace setter and the library never mutates a structure the caller is told to re-supply.
+- **Minimal fix.** `#[derive(Serialize, Deserialize)]` down the `Table` field tree — `Table`, `Seats`, `Seat`, `Player`, `Cards`, `ForcedBets`, and a public accessor or serde impl for `BoxedCards`'s private `Box<[Card]>` (`src/arrays/sliced.rs:24`) — then `PokerSession::snapshot()`/`restore()`, still **Planned** at `docs/epics/EPIC-37_Mobile_Engine.md:30`. Note that the 0.8.2 recommendation ("write `TryFrom<&pkstate::PKState> for Table`") is **void**: `pkstate` is no longer a dependency, so there is no external state type left to bridge to. Either route moves this to 4/5 and removes the headline discontinuity.
 
 ### Flow control — 5/5
 > Anchor matched: "Caller invokes everything; every notification is pollable or returned; callbacks absent or purely optional sugar."
 
-- **Evidence.** `rg 'dyn Fn|impl Fn' src/` returns exactly **two** hits, both private and neither in the public API: `count_allocs` (`src/lib.rs:450`, `pub(crate)`) and `slice_after` (`src/pokerbench/parse.rs:211`, private). No public API requires implementing a library trait to receive events. The single callback-shaped entry point is `PokerSession::run_hand<F: FnMut(&Table, u8) -> PlayerAction>` (`src/casino/session.rs:683`), whose body is the four public calls — the non-callback alternative is not merely offered, it is what the callback is built from. Notifications are polled or returned: `next_step() -> SessionStep` (`:561`), now four-state with `Failed(PKError)` (`:93`), and `Table.event_log: Vec<TableAction>` is a public field (`src/casino/table.rs:101`). Sketch 1 uses the step tier directly; nothing pulled control away from the caller's loop.
-- **Minimal fix.** None. This is the crate's strongest characteristic, and the new `Failed` arm strengthens it — the one failure mode that previously had no polled representation now has one.
+- **Evidence.** `grep -rn 'dyn Fn\|impl Fn' src/` returns exactly **two** hits, both private and neither in the public API: `count_allocs` (`src/lib.rs:450`, `pub(crate)`) and `slice_after` (`src/pokerbench/parse.rs:211`, private). No public API requires implementing a library trait to receive events. The single callback-shaped entry point is `PokerSession::run_hand<F: FnMut(&Table, u8) -> PlayerAction>` (`src/casino/session.rs:633`), whose body is the four public calls — the non-callback alternative is not merely offered, it is what the callback is built from.
+- **Notifications are polled or returned.** `next_step() -> SessionStep` (`session.rs:517`) is four-state including `Failed(PKError)` (`:85`); `Table.event_log: Vec<TableAction>` is a public field (`table.rs:101`); `Dealer::event_log()` (`dealer.rs:644`) returns a slice. Sketch 1 uses the step tier directly and Sketch 3 interleaves its own rendering between steps; nothing pulled control away from the caller's loop.
+- **Minimal fix.** None. This is the crate's strongest characteristic and has been at the anchor ceiling for three consecutive audits.
 
 ## Practical checklist
 
 | # | Item | Status | Evidence |
 |---|---|---|---|
-| 1 | Usage code written before API design (or: sketches integrate cleanly now) | pass | 46 files in `examples/`, 1,634 doc-comment code fences in `src/`. `PokerSession`'s dual API is shaped by named call sites (`src/casino/session.rs` module header). Sketches 1 and 3 compile against the real crate; sketch 2's write half compiles, its read half has no symbol. |
-| 2 | Every retained-mode construct has an immediate-mode equivalent | partial | Immediate: `analysis::equity::compute(&EquityRequest)` (`src/analysis/equity/engine.rs:68`), `Evals`, `HandRank`. Retained without an immediate equivalent: `Table` / `PokerSession`. `SessionView` (`session.rs:769`) is an immediate *read-out*, not an immediate-mode driver; `From<&Table> for PKState` is an immediate *export*, likewise not a driver. |
-| 3 | Every callback/inheritance path has a non-callback alternative | pass | One callback in the whole public API (`run_hand`, `session.rs:683`); its alternative is `start_hand`/`next_actor`/`apply_action`/`end_hand`, which is also its implementation. Zero `dyn Fn`/`impl Fn` in any public signature. |
-| 4 | Callers keep their own datatypes (no forced API types) | partial | Card/hand types must be pkcore's (`Two`, `Five`, `Cards`, `Board`) — unavoidable for a card library, mitigated by the documented `Display`/`FromStr` round-trip contract. But the caller also inherits *third-party* types it did not choose: `wincounter::Wins` (`flop_eval.rs:203`), `itertools::Combinations` (`lib.rs:859`), `rayon::IterBridge` (`:864`), `indexmap::map::Iter` (`outs.rs:242`), `uuid::Uuid` (`table.rs:89`). |
-| 5 | Operations decompose into 2–4 finer-grained calls | pass | `run_hand` → 4 calls; `act_forced_bets` → antes / bring-in / small blind / big blind; `apply_action` → 6 `act_*` primitives (`transition.rs:149-172`). Lone exception: `end_hand` (`table.rs:2730`), whose showdown branches are private. |
-| 6 | Data structures transparent (constructible, inspectable, serializable by caller) | partial | Constructible/inspectable: **improved** — `Table`'s fields are all `pub`, and `Player` is now plain scalars (`table/player.rs:24-37`) rather than `Stack(Cell<usize>)`, so memberwise mirroring works. Serializable: still **no** for `Table`/`Seats`/`Seat`/`Player`/`ForcedBets`/`Cards`; `BoxedCards(Box<[Card]>)` (`src/arrays/sliced.rs:24`) keeps a private field. Serializable where the wire needs it: `TableAction`, `GameType`, `GamePhase`, `BettingStructure`, `HandHistory`, `SessionView`, `SeatView`. |
-| 7 | Resource-management integration optional, never mandatory | pass | No allocator hook, handle registry, or ownership protocol. Every value is caller-owned (`let mut table = Table::nlh_from_seats(…)`). `store` (rusqlite/zstd) and `terminal` (termion) are features, not requirements; `cargo check --no-default-features` builds. |
-| 8 | File-format usage optional, never forced | fail | Downgraded from *partial*. YAML/SQLite/zstd/termion sit behind flags, but all seven are **on by default**; `serde` + `serde_json` are unconditional; `serde_yaml_bw` arrives in every configuration via the non-optional `pkcore → pkstate 0.1.2` edge (re-verified by `cargo tree`); **and** the blessed session driver is itself gated on the YAML feature `bot-profiles` (`src/casino/mod.rs:14-15`), so avoiding the format costs you the API. |
-| 9 | Runtime source shipped / readable by integrators | pass | Rust crate published to crates.io — `src/` ships with every `cargo add`. Noted: `Cargo.toml exclude` drops `examples/*`, `docs/*`, `benches/*`, and `proto/*` from the published artifact, so the 46 worked examples and the EPIC/ANALYSIS docs are GitHub-only. The runtime source itself is always readable. |
+| 1 | Usage code written before API design (or: sketches integrate cleanly now) | pass | 47 files in `examples/`, 1,658 doc-comment code fences in `src/`. `PokerSession`'s dual API is shaped by named call sites. Sketches 1, 3 and 4 compile *and run* against the real crate; sketch 2's write half fails to compile, which is the finding. |
+| 2 | Every retained-mode construct has an immediate-mode equivalent | partial | Immediate: `analysis::equity::compute(&EquityRequest)` (`src/analysis/equity/engine.rs:68`), `Evals`, `HandRank`. Retained without an immediate equivalent: `Table` / `PokerSession`. `SessionView` (`session.rs:719`) is an immediate *read-out*, `Pluribus` an immediate *export* — neither is an immediate-mode driver. |
+| 3 | Every callback/inheritance path has a non-callback alternative | pass | One callback in the whole public API (`run_hand`, `session.rs:633`); its alternative is `start_hand`/`next_actor`/`apply_action`/`end_hand`, which is also its implementation. Zero `dyn Fn`/`impl Fn` in any public signature. |
+| 4 | Callers keep their own datatypes (no forced API types) | partial | Card/hand types must be pkcore's (`Two`, `Five`, `Cards`, `Board`) — unavoidable for a card library, mitigated by the documented `Display`/`FromStr` round-trip contract. But the caller also inherits *third-party* types it did not choose: `wincounter::Wins` (`flop_eval.rs:203`), `itertools::Combinations` (`lib.rs:866`), `rayon::IterBridge` (`:871`), `indexmap::map::Iter` (`outs.rs:242`), `uuid::Uuid` (`table.rs:88`), `rusqlite::Connection` (`store/db/sqlite.rs:4`, gated). |
+| 5 | Operations decompose into 2–4 finer-grained calls | pass **Δ evidence** | `run_hand` → 4 calls; `act_forced_bets` → antes / bring-in / small blind / big blind; `apply_action` → 6 `act_*` primitives (`transition.rs:147`). The lone exception is fixed: `end_hand` (`table.rs:2847`) is now `showdown` (`:2801`) + `reset` (`:2083`) + `audit_chip_total` (`:2836`), all public. |
+| 6 | Data structures transparent (constructible, inspectable, serializable by caller) | partial | Constructible/inspectable: **yes** — all seventeen `Table` fields are `pub` (`table.rs:88-120`), `Player` is plain scalars, and `Table::nlh_primed` accepts an injected deck. Serializable: still **no** for `Table`/`Seats`/`Seat`/`Player`/`ForcedBets`/`Cards`; `BoxedCards(Box<[Card]>)` (`src/arrays/sliced.rs:24`) keeps a private field. Serializable where the wire needs it: `TableAction`, `PlayerState`, `GameType`, `GamePhase`, `BettingStructure`, `HandHistory`, `SessionView`. |
+| 7 | Resource-management integration optional, never mandatory | pass | No allocator hook, handle registry, or ownership protocol. Every value is caller-owned (`let mut table = Table::nlh_from_seats(…)`). `store` (rusqlite/zstd) and `terminal` (termion) are features, not requirements; `cargo check --no-default-features` builds and `make check-purity` passes. |
+| 8 | File-format usage optional, never forced | partial **Δ was fail** | The 0.8.2 *fail* rested on `serde_yaml_bw` reaching every configuration through `pkstate`; `pkstate` is gone from `Cargo.toml` and `cargo tree --no-default-features -e normal \| grep -c serde_yaml_bw` returns **0**. The blessed driver is ungated (`casino/mod.rs:14`). Not *pass*: `serde` + `serde_json` remain unconditional `[dependencies]`, and all seven features — YAML, SQLite, zstd, termion — are still **on by default**. |
+| 9 | Runtime source shipped / readable by integrators | pass | Rust crate published to crates.io — `src/` ships with every `cargo add`. Noted: `Cargo.toml exclude` (`:13`) drops `examples/*`, `docs/*`, `benches/*`, `proto/*`, `perf/*` from the published artifact, so the 47 worked examples and the EPIC/ANALYSIS docs are GitHub-only. The runtime source itself is always readable. |
 
 ## Kernel lens
 
-Three of the five findings are kernel-shaped; two are not.
+Two of the five findings are kernel-shaped; three are not.
 
-- **Coupling → purity.** The two env-var-located data stores (`PKCORE_75BCM_PATH`, `HUPS_DB_PATH`) and the bundled-SQLite `store` feature are exactly what kernel purity rules out by construction. They are already feature-gated, so the kernel-shaped work here is confirming the gate holds — `make check-purity` is the existing guard. The `pkstate → serde_yaml_bw` edge is a purity leak the gate does not currently catch, because it is a first-party dependency rather than a direct one.
-- **Retention → the pure transition function.** The one-way `From<&Table> for PKState` is half of `apply(state, action) -> state`. Adding the inverse gives pkcore a genuine immediate-mode transition surface over a serializable state type, which is the single change that most moves the crate toward the kernel shape. `docs/epics/EPIC-82_spike-kernel` is the existing home for that thinking.
+- **Coupling → purity. Materially improved, and now enforced.** The `pkstate → serde_yaml_bw` edge that `make check-purity` named as a "documented ceiling" is gone by construction, because the dependency is gone — and the gate now checks for `serde_yaml_bw` itself (`Makefile:254`), converting an achieved property into a defended one. The two env-var-located data stores (`PKCORE_75BCM_PATH`, `HUPS_DB_PATH`) and the bundled-SQLite `store` feature remain what kernel purity rules out; they are already gated, and the gate holds.
+- **Retention → the pure transition function. This is now the crate's single largest kernel gap.** `apply(state, action) -> state` needs a state type that survives a process boundary, and `Table` has none. The Pluribus round-trip proves the *domain* can be written down and read back — the corpus round-trips 10,000 hands — but it writes down a completed hand, not a resumable position. Deriving serde down the `Table` tree is the change that most moves the crate toward the kernel shape, and it should be designed against the kernel invariants rather than retrofitted: `docs/epics/EPIC-82_spike-kernel` is the existing home for that thinking, and `EPIC-37_Mobile_Engine.md:30` already carries `snapshot`/`restore` as Planned.
 - **Flow control → delivery-agnosticism.** Already at the structural limit: zero inversion, everything polled or returned. Nothing to do.
-- **Granularity → boundary shape.** The private `showdown_*` trio is the one place the boundary is coarser than the domain. Minor.
-- **Redundancy → unmapped.** Three drivers over one engine is a documentation and taste problem, not a purity or boundary problem. The kernel pattern has no position on it, and this run's fix is a doc paragraph.
+- **Granularity → boundary shape.** Closed. The private `showdown_*` trio was the one place the boundary was coarser than the domain; `showdown` and `audit_chip_total` are now public and `end_hand` is their composition.
+- **Redundancy → unmapped.** Three drivers over one engine is a documentation and taste problem, not a purity or boundary problem. The kernel pattern has no position on it, and this run's fix was a module doc comment.
 
 **Recommendation:** run `/domain-kernel` Mode A before EPIC-37's snapshot/restore work lands, so the serializable state type is designed against the kernel invariants rather than retrofitted onto them.
 
 ## Recommendations
 
-Ordered by leverage.
+Ordered by leverage. Items 2, 3 and 4 of the original list were applied in-session and are recorded under **Done this run**.
 
-1. **Write `TryFrom<&pkstate::PKState> for Table`** as the inverse of the existing `From` (`src/casino/table/pkstate_interop.rs:11`). Non-breaking, additive, and it closes the headline discontinuity by itself. Moves **retention** 3 → 4. If the shape wants designing rather than writing, that is EPIC-37's `snapshot`/`restore` and belongs in an `/epic`.
-2. **Ungate `casino::session` from `bot-profiles`** — give it its own feature or make it unconditional (`src/casino/mod.rs:14-15`, `src/prelude.rs:170-171`). The step loop contains no YAML. Non-breaking for default-feature users. Moves **coupling** toward 4 and flips checklist item 8 back to *partial*.
-3. **Name the canonical driver.** A short table in the `casino` module header: `PokerSession` canonical, `Dealer` the legacy imperative wrapper, `TableManager` a multi-table sketch. While there, give `TableManager::handle_event` a `PKError` for an unknown `table_id` instead of a silent `Ok(())` (`src/casino/manager.rs:59-114`). Moves **redundancy** 3 → 4.
-4. **Expose the showdown.** Add `pub fn showdown(&mut self) -> Result<Winnings, PKError>` and redefine `end_hand` as `showdown()` + `reset()` + audit (`src/casino/table.rs:2730`). Non-breaking. Moves **granularity** 4 → 5.
-5. **Get `pkstate` to declare `serde_yaml_bw` optional.** Upstream, one-line, and it makes pkcore's own YAML feature gates real for the first time. Moves **coupling** and checklist item 8.
-6. **Widen the `Pile` combinatorics signatures** to `impl Iterator<Item = Vec<Card>>` / `impl ParallelIterator<…>` (`src/lib.rs:854,859,864`). Breaking trait change — `/epic` it. Moves **coupling** 3 → 4 and checklist item 4 toward *pass*.
+1. **Derive `Serialize`/`Deserialize` down the `Table` field tree**, then add `PokerSession::snapshot()`/`restore()`. Touches `Table` (`src/casino/table.rs:86`), `Seats`, `Seat`, `Player`, `ForcedBets`, `Cards` (`src/cards.rs:34`), and needs a serde impl or accessor for `BoxedCards`'s private `Box<[Card]>` (`src/arrays/sliced.rs:24`). Non-breaking and additive, but wide enough that the shape wants designing — this is EPIC-37's Planned work and belongs in an `/epic`. Moves **retention** 3 → 4 and closes the headline discontinuity. *(Supersedes the 0.8.2 recommendation to write `TryFrom<&pkstate::PKState> for Table`, which is void — `pkstate` is no longer a dependency.)*
+2. **Reconsider default features.** All seven are on, including `store`, which builds a bundled C SQLite for every default `cargo add pkcore`. Trimming the default set to the pure core plus `equity` would flip checklist item 8 to *pass*. Breaking for existing consumers → `/epic`.
+3. **Widen the `Pile` combinatorics signatures** to `impl Iterator<Item = Vec<Card>>` / `impl ParallelIterator<…>` (`src/lib.rs:861,866,871`), and mirror on `Cards`/`Deck`/`Outs`. Breaking trait change — `/epic` it. Moves **coupling** 4 → 5 and checklist item 4 toward *pass*.
+4. **Retire a driver.** Redundancy is at 4/5 because three siblings are documented, not tiered. `#[doc(hidden)]` on `TableManager` and re-expressing `Dealer` as a wrapper over `PokerSession` would make it 5/5. API-breaking — `/epic`.
+
+### Done this run
+
+Applied on top of `c24b3738`, released as 0.11.0.
+
+- **Expose the showdown** — `Table::showdown` (`src/casino/table.rs:2801`) and `Table::audit_chip_total` (`:2836`) are public, and `end_hand` (`:2847`) is their composition with `reset`. The audit was split out rather than folded into `showdown` so the two tiers cannot overlap: `showdown` zeroes the pot, so a `showdown` + `end_hand` sequence would otherwise have resolved an empty pot. Five unit tests and two doc tests, including one asserting the two tiers land on identical state. **Granularity 4 → 5.**
+- **Name the canonical driver** — `src/casino/mod.rs` carries a which-driver table; `session.rs`, `dealer.rs` and `manager.rs` cross-link to it; `TableManager` and `TableEvent` have docs for the first time. **Redundancy 3 → 4.**
+- **Defend the purity closure** — `serde_yaml_bw` added to `make check-purity`'s pattern and the stale `pkstate` claims removed (`Makefile:246-262`). Gate verified passing.
 
 ## Evidence appendix
 
 ### Usage sketches
 
-All three were written as a real `examples/` target and run through `cargo check` against `pkcore` 0.8.2, then deleted. Compilation results are reported as observed, not assumed.
+All four were written as `examples/zz_sketch.rs` and built with `cargo build --example zz_sketch`; sketches 1, 2 and 3 were also run. The file was removed afterwards.
 
-**1. First integration — drive one hand from your own loop.**
+#### 1. First integration — the caller-driven step loop
 
 ```rust
 let seats = Seats::new(vec![
     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
 ]);
-let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(10, 20)));
+let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)));
 session.start_hand()?;
 loop {
     match session.next_step() {
@@ -131,60 +146,101 @@ loop {
             session.apply_action(seat, pick)?;
         }
         SessionStep::StreetAdvanced => {}
-        SessionStep::HandComplete => break,
-        SessionStep::Failed(e) => return Err(e),   // new in 0.8.x
+        SessionStep::HandComplete => { session.end_hand()?; break; }
+        SessionStep::Failed(_)    => { session.abort_hand()?; break; }
     }
 }
-let _winnings = session.end_hand()?;
-let _view = session.view(None);                    // serializable read-out
 ```
 
-Compiles. The only friction was discovering `SessionStep::Failed` from a non-exhaustive-match error — which is the compiler doing its job, and the arm it forced is a real recovery path (`abort_hand`). **Verdict: incremental step.**
+Compiles and runs on a default build, and — new since 0.8.2 — on a build without `bot-profiles`, because `casino::session` is no longer gated. The match is exhaustive over four variants, `legal_actions` is queryable before acting, and every arm has a call to make. Nothing is registered; the caller owns the loop. **Verdict: incremental step.**
 
-**2. Requirement shift — the table must outlive the process.**
+#### 2. Requirement shift — persist a live table across a pod restart
 
 ```rust
-let table = Table::nlh_from_seats(seats, ForcedBets::new(10, 20));
+session.start_hand().unwrap();
 
-// Write-down direction — exists, compiles:
-let snapshot: pkstate::PKState = pkstate::PKState::from(&table);
+// A: serde on the live engine.
+let _json = serde_json::to_string(&session.table).unwrap();
+// error[E0277]: the trait bound `Table: serde::Serialize` is not satisfied
 
-// Read-back direction — no symbol to call:
-// let restored: Table = Table::try_from(snapshot)?;   // no such impl
+// B: the redacted view serializes — but it is a read-out, not a restore source.
+let view = session.view(None);
+let json = serde_json::to_string(&view).unwrap();
+let _back: SessionView = serde_json::from_str(&json).unwrap();
+// No `PokerSession::from(view)` / `Table::try_from(&view)` exists.
+
+// C: Pluribus is the one round-trip — but only for a FINISHED hand.
+let p = Pluribus::try_from(&session.table);
+println!("mid-hand export: {:?}", p.is_ok());   // prints: mid-hand export: false
 ```
 
-The export compiles. The import does not exist: `rg 'From<.*PKState.*> for|TryFrom<.*PKState'` over `src/` returns zero hits, and `rg 'pub fn snapshot|pub fn restore'` likewise. `HandHistory::replay()` gets you a finished hand's `final_stacks`, not a mid-hand table. The integrator writes the inverse mapping by hand — across `Seats`, `Seat`, `Player`, `Cards`, `BoxedCards`, and 20 `Table` fields — or accepts losing every in-flight hand. **Verdict: discontinuity, and the crate's only one.** (Materially cheaper than in 0.3.2: all the target fields are now plain `pub` scalars, so it is transcription rather than reverse-engineering.)
+Path A does not compile. Path B round-trips but has no inverse into an engine. Path C is a real bidirectional bridge — `TryFrom<&Table> for Pluribus` (`nubibus.rs:631`) and `TryFrom<&Pluribus> for Table` (`:416`), exercised over 10,000 corpus hands by `tests/heavy_tests.rs` — but it declines a mid-hand table, and its inverse forces `STARTING_STACK` and a last-seat button. A service that must resume where it stopped has no call to make and must hand-maintain a parallel state model. **Verdict: discontinuity — the crate's headline finding, and the only one of the three carried forward from 0.8.2.**
 
-**3. Ship week — drive the same table through `Dealer` instead.**
+#### 3. Ship-week workaround — render the showdown before chips move
+
+As audited on `c24b3738`, the only escape was a full-table clone:
+
+```rust
+// … loop until SessionStep::HandComplete …
+let before = session.table.clone();      // the workaround
+let winnings = session.end_hand().unwrap();
+println!("pot before showdown: {}", before.pot);   // 200
+println!("winnings: {winnings}");                  // Winnings(equity=…, eval=FoursOverEights)
+// `session.table.showdown()` did not exist; showdown_* were private.
+```
+
+It ran and produced the right numbers, but only by cloning the entire `Table` (seventeen fields including three `Cards` collections and the full `event_log`) purely to hold a pre-showdown snapshot, because `end_hand` resets before returning. Cheap enough at two seats; bad with a spectator feed.
+
+Fixed in 0.11.0. The fine tier now exists, and the clone is gone:
+
+```rust
+// … loop until SessionStep::HandComplete …
+let winnings = session.table.showdown().unwrap();   // pot awarded, table NOT reset
+render(&session.table, &winnings);                  // board + hole cards still in play
+session.table.reset();
+session.table.audit_chip_total().unwrap();
+```
+
+**Verdict: was a bounded discontinuity; now an incremental step.**
+
+#### 4. Driver swap — moving a call site from `PokerSession` to `Dealer`
 
 ```rust
 let mut dealer = Dealer::new(ForcedBets::new(10, 20), 6);
 dealer.seat_player(Player::new_with_chips("A".to_string(), 1_000))?;
-dealer.seat_player(Player::new_with_chips("B".to_string(), 1_000))?;
-dealer.start_hand()?;
+dealer.start_hand()?;                                 // DealerError, not PKError
 let seat = dealer.next_to_act();
-dealer.act(DealerAction::Call { seat })?;   // DealerError, not PKError
+dealer.act(DealerAction::Call { seat })?;             // seat inside the enum
+dealer.advance_street()?;                             // explicit; no SessionStep to poll
+let legal = dealer.table.legal_actions(seat);         // reach through — Dealer has none
 ```
 
-Compiles. But: a different action enum (`DealerAction` carries the seat, `PlayerAction` does not), a different error type (`DealerError`), no `legal_actions` on `Dealer` — you reach through to the table for that — and no `SessionStep` to poll. Switching a codebase from one driver to the other is a rewrite of the call site, not a swap, and nothing tells you which to start with. Under `--no-default-features` this is one of only two drivers available, because `PokerSession` is gated on `bot-profiles`. **Verdict: incremental step, but only because the sketch chose `Dealer` first; arriving here *from* `PokerSession` is a rewrite.**
+Compiles. But every line differs from sketch 1: a different action enum (`DealerAction::Call { seat }` vs `PlayerAction::Call` plus a seat argument), a different error type (`DealerError` vs `PKError`), explicit `advance_street` where the session polls `SessionStep::StreetAdvanced`, and no `legal_actions` on `Dealer` at all. Switching a codebase from one driver to the other is still a rewrite of the call site, not a swap. What changed in 0.11.0 is that you are told before you commit: `src/casino/mod.rs` names `PokerSession` canonical and says outright that the move is a rewrite, and all three driver headers link to it. **Verdict: still a discontinuity if you chose wrong — but the API now helps you choose, which is the part that was actionable without breaking it.**
 
 ### Mechanical signals
 
 | Signal | Search | Result |
 |---|---|---|
-| Callbacks in public API | `rg 'dyn Fn\|impl Fn' src/` | 2 hits, both private (`lib.rs:450` `pub(crate)`, `pokerbench/parse.rs:211`) |
-| Public surface | `rg 'pub fn ' src/` / `rg '^pub trait ' src/` | 1,237 `pub fn`, 16 public traits, 19 `pub mod` in `lib.rs` |
-| Two-engine split | `rg 'TableCelled' src/` | 1 hit, a comment in a test — the engine is gone |
-| `pkstate` bridge direction | `rg 'From<.*PKState.*> for\|TryFrom<.*PKState' src/` | 2 hits, both `Table → PKState`; zero in the inverse direction |
-| Snapshot / restore | `rg 'pub fn snapshot\|pub fn restore' src/` | 0 hits |
-| Third-party types in public signatures | `rg 'pub fn .*(Combinations\|IterBridge\|IndexSet\|indexmap::\|rayon::)' src/` | 7 hits across `lib.rs`, `cards.rs`, `deck.rs`, `outs.rs` |
-| `wincounter` on public fields | `rg 'pub .*: (Wins\|WinResults)' src/` | 7 hits across `player_wins.rs`, `flop_eval.rs`, `turn_eval.rs`, `river_eval.rs` |
-| Env-var prerequisites | `rg 'env::var' src/` | 3 hits, all `store`-gated (`binary_card_map.rs:219,225`, `hup.rs:58`) |
-| YAML reachability | `cargo tree --no-default-features --features equity -i serde_yaml_bw` | `serde_yaml_bw v2.5.6 └── pkstate v0.1.2 └── pkcore v0.8.2` |
-| Lean build | `cargo check --no-default-features` | Succeeds, 20.4 s |
-| Feature-gated driver | `rg 'cfg\(feature = "bot-profiles"\)' src/casino/mod.rs src/prelude.rs` | `casino/mod.rs:14`, `prelude.rs:170` — both gate `session` |
+| Callbacks in public API | `grep -rn 'dyn Fn\|impl Fn' src/` | 2 hits, both private (`lib.rs:450` `pub(crate)`, `pokerbench/parse.rs:211`) |
+| Public surface | `grep -rho 'pub fn ' src/` / `grep -rh '^pub trait ' src/` | 1,243 `pub fn`, 18 public traits, 20 `pub mod` in `lib.rs` |
+| `pkstate` dependency | `grep -rln pkstate src/` / `grep -n pkstate Cargo.toml` | **0 files, 0 lines** — removed since 0.8.2 |
+| YAML reachability | `cargo tree --no-default-features -e normal \| grep -c serde_yaml_bw` | **0** (0.8.2: a live `serde_yaml_bw → pkstate → pkcore` path) |
+| Session gating | `grep -n session src/casino/mod.rs src/prelude.rs` | `casino/mod.rs:48`, `prelude.rs:170` — **neither carries a `cfg`** |
+| `casino` module doc | `sed -n '1,14p' src/casino/mod.rs` | as audited: 14 lines, all `pub mod`, **zero doc comments**. Fixed in 0.11.0 — a which-driver table naming `PokerSession` canonical |
+| `end_hand` decomposition | `grep -n 'pub fn showdown\|pub fn audit_chip_total\|pub fn end_hand' src/casino/table.rs` | as audited: showdown branches private. Fixed in 0.11.0 — `showdown` `:2801`, `audit_chip_total` `:2836`, `end_hand` `:2847` composes them with `reset` |
+| `Table` serializability | `cargo build` on `serde_json::to_string(&table)` | `error[E0277]: the trait bound Table: serde::Serialize is not satisfied` |
+| Snapshot / restore | `grep -rn 'pub fn snapshot\|pub fn restore' src/` | 0 hits |
+| Pluribus bridge direction | `grep -rn 'TryFrom<&Table> for Pluribus\|TryFrom<&Pluribus> for Table' src/` | 2 hits — `nubibus.rs:631` (write) and `:416` (read); **bidirectional, new since 0.8.2** |
+| Mid-hand export | run: `Pluribus::try_from(&session.table)` on an in-progress hand | `Err` — the round-trip covers finished hands only |
+| Third-party types in public signatures | `grep -rn 'pub fn .*(Combinations\|IterBridge\|IndexSet\|indexmap::\|rayon::)' src/` | 6 hits across `lib.rs`, `cards.rs`, `deck.rs`, `outs.rs` |
+| `wincounter` on public fields | `grep -rn 'pub .*: (Wins\|WinResults)' src/` | 7 hits across `player_wins.rs`, `flop_eval.rs`, `turn_eval.rs`, `river_eval.rs` |
+| `rusqlite` in public signatures | `grep -rn 'pub fn .*rusqlite\|pub .*: Connection' src/` | 4 hits, all `store`-gated (`store/db/hup.rs:233,245`, `store/db/sqlite.rs:4,56`) |
+| Env-var prerequisites | `grep -rn 'env::var' src/` | 3 hits, all `store`-gated (`binary_card_map.rs:219,225`, `hup.rs:58`) |
+| `TableManager` unknown-id handling | `sed -n '65,67p' src/casino/manager.rs` | `table_mut` → `PKError::TableNotFound`; **the 0.8.2 silent-`Ok(())` defect is fixed**, with a regression test at `:152` |
+| Lean build | `cargo check --no-default-features` | Succeeds, 20.9 s |
+| Purity gate | `make check-purity` | as audited: passed, but its success message cited the removed `pkstate`. Fixed in 0.11.0 — `serde_yaml_bw` added to the pattern (`Makefile:254`); re-verified passing |
 | Default features | `Cargo.toml [features] default` | 7, all on: `bot-profiles`, `hand-histories`, `player-stats`, `player-stats-persistence`, `equity`, `store`, `terminal` |
-| Docs shipped | `Cargo.toml exclude` | drops `examples/*`, `docs/*`, `benches/*`, `proto/*` from the published crate |
+| Docs shipped | `Cargo.toml exclude` (`:13`) | drops `examples/*`, `docs/*`, `benches/*`, `proto/*`, `perf/*` from the published crate |
 
 ## Notes (human)
 

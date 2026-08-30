@@ -1,5 +1,10 @@
 //! Multi-hand poker session runner built on [`Table`].
 //!
+//! This is the **canonical** driver — the one to reach for when integrating
+//! pkcore. See the [`casino`](crate::casino) module header for how it differs
+//! from [`Dealer`](crate::casino::dealer::Dealer) and
+//! [`TableManager`](crate::casino::manager::TableManager).
+//!
 //! [`PokerSession`] wraps a [`Table`] and orchestrates the hand lifecycle —
 //! dealing, street progression, and session management (eliminating busted players,
 //! advancing the button). It exposes two APIs:
