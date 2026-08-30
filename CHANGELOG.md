@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed (behaviour)
 
+- **`Card` deserialization now rejects an index it cannot parse.** It used to
+  return `Ok(0)` — a *blank card* — so a corrupt or truncated payload
+  deserialized into a structurally valid board full of blanks instead of
+  failing. `Table::restore` cannot be built on a codec with no way to say no.
+  Anything reading malformed card strings and relying on the blank fallback now
+  sees an error, which is the point.
+
+  One string is still accepted that `Card::from_str` rejects: `"__"`, the form
+  `Card::BLANK` writes itself as, now named by `Card::BLANK_INDEX`. That
+  asymmetry was load-bearing and invisible — blanks only ever round-tripped
+  *because* of the `Ok(0)` fallback, and an undealt seat is full of them. See
+  EPIC-88's corrigendum.
+
 - **`EquityOptions::max_samples` now defaults to 25,000, down from 100,000.**
   This is a **silent** change: nothing fails to compile, and every existing test
   sets the option explicitly, so callers who relied on the default now get a
@@ -48,6 +61,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md) recommendation 3 — granularity
   4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
   following `end_hand()` would resolve an empty one.
+
+- **`Table::snapshot` / `Table::restore` and `PokerSession::snapshot` /
+  `PokerSession::restore`** — a live, mid-hand table now writes down to compact
+  `postcard` bytes and comes back **byte-identical**
+  ([EPIC-88](docs/epics/EPIC-88_Table_Snapshot.md)). This closes the finding
+  `MURATORI_AUDIT.md` has carried since 0.3.2: *the game state cannot be written
+  down*. A hand interrupted mid-street and resumed from bytes produces the same
+  `Winnings` as one played straight through, so a service that must survive a
+  restart no longer keeps a second hand-maintained copy of the truth.
+  **Retention 3/5 → 4/5.**
+
+  The wire shape is a `TableState` / `SessionState` DTO
+  (`src/casino/table/snapshot.rs`), deliberately **not** `#[derive(Serialize)]`
+  on `Table`: that would freeze the engine's 21 public fields into a format
+  snapshots outlive. Also public: `SeatState`, `BettingState`,
+  `SNAPSHOT_VERSION`, and `PKError::{SnapshotCorrupt, SnapshotVersion}`.
+  `PlayerAction` and `ForcedBets` gained serde derives.
+
+  **Snapshot bytes carry the undealt deck — the future of the hand.** Store them
+  in the host's private storage; never send one to a player or a spectator. Use
+  `PokerSession::view` for anything a person may see.
+
+  20 tests cover it: byte-identical mid-hand round-trip, mid-street resume
+  against an uninterrupted control, deck order, blank seat slots, stud up-card
+  visibility, all five variants, determinism, and a `PKError` — never a
+  half-built table — for garbage bytes, an unknown version tag, or an
+  unparseable card.
 
 - **A `parallel` feature** (on by default) gating every `rayon` entry point:
   `Pile::par_combinations_remaining`, `Cards::par_combinations`,

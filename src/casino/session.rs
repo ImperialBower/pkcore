@@ -39,6 +39,7 @@ use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::principal::Principal;
 use crate::casino::table::Table;
+use crate::casino::table::snapshot::{SNAPSHOT_VERSION, TableState};
 use crate::casino::winnings::Winnings;
 use crate::games::{GamePhase, GameType};
 use serde::{Deserialize, Serialize};
@@ -601,6 +602,92 @@ impl PokerSession {
         self.table.abort_hand()
     }
 
+    /// Writes the whole session down as compact `postcard` bytes, mid-hand.
+    ///
+    /// This is the tier a host actually calls — a server persisting a table
+    /// across a restart, or a mobile app suspending. It wraps
+    /// [`Table::snapshot`](Table::snapshot) and adds the session's own
+    /// bookkeeping: the hand number, the recorded shuffle, and the forced-bet
+    /// state that survives a blind change mid-hand.
+    ///
+    /// # These bytes are the future of the hand
+    ///
+    /// The payload carries the **undealt deck, in order**. Store it in the
+    /// host's private storage; never send it to a player or a spectator. Use
+    /// [`view`](Self::view) for anything a person is allowed to see.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::SnapshotCorrupt`] if the state cannot be encoded.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::{PokerSession, SessionStep};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    /// );
+    /// session.start_hand().unwrap();
+    ///
+    /// // The pod is going down mid-hand. Write it out...
+    /// let bytes = session.snapshot().unwrap();
+    ///
+    /// // ...and come back, on a new process, holding only those bytes.
+    /// let resumed = PokerSession::restore(&bytes).unwrap();
+    /// assert_eq!(session.hand_number, resumed.hand_number);
+    /// assert_eq!(session.table, resumed.table);
+    ///
+    /// // Play continues from exactly where it stopped.
+    /// let mut resumed = resumed;
+    /// assert_eq!(session.next_step(), resumed.next_step());
+    /// ```
+    pub fn snapshot(&self) -> Result<Vec<u8>, PKError> {
+        let state = SessionState {
+            version: SNAPSHOT_VERSION,
+            table: TableState::from(&self.table),
+            hand_number: self.hand_number,
+            shuffled_deck_str: self.shuffled_deck_str.clone(),
+            forced_at_hand_start: self.forced_at_hand_start,
+            pending_forced: self.pending_forced,
+        };
+        postcard::to_allocvec(&state).map_err(|_| PKError::SnapshotCorrupt)
+    }
+
+    /// Rebuilds a session from [`snapshot`](Self::snapshot) bytes.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::SnapshotCorrupt`] if the bytes do not decode.
+    /// - [`PKError::SnapshotVersion`] if the version tag is not
+    ///   [`SNAPSHOT_VERSION`]. Checked before anything else is read.
+    /// - [`PKError::InvalidCardIndex`] if a card index does not parse.
+    pub fn restore(bytes: &[u8]) -> Result<Self, PKError> {
+        let state: SessionState = postcard::from_bytes(bytes).map_err(|_| PKError::SnapshotCorrupt)?;
+
+        if state.version != SNAPSHOT_VERSION {
+            return Err(PKError::SnapshotVersion {
+                found: state.version,
+                expected: SNAPSHOT_VERSION,
+            });
+        }
+
+        Ok(PokerSession {
+            table: Table::try_from(&state.table)?,
+            hand_number: state.hand_number,
+            shuffled_deck_str: state.shuffled_deck_str,
+            forced_at_hand_start: state.forced_at_hand_start,
+            pending_forced: state.pending_forced,
+        })
+    }
+
     /// Runs a complete hand using the provided action-resolution closure.
     ///
     /// Calls [`start_hand`](PokerSession::start_hand), then loops calling
@@ -812,6 +899,26 @@ pub struct SeatView {
     pub hole_cards: Option<String>,
 }
 
+/// The written-down form of a [`PokerSession`]: a [`TableState`] plus the
+/// session's own bookkeeping.
+///
+/// Its own `version` sits alongside the table's, so the session envelope can
+/// change without forcing a table-format bump.
+///
+/// The mirror image of [`SessionView`]: that type deliberately carries **no**
+/// deck so it is safe to hand to any viewer; this one carries the whole
+/// undealt deck and must never leave the host.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct SessionState {
+    pub version: u16,
+    pub table: TableState,
+    pub hand_number: u32,
+    pub shuffled_deck_str: Option<String>,
+    pub forced_at_hand_start: ForcedBets,
+    pub pending_forced: Option<ForcedBets>,
+}
+
 /// One owned, serializable snapshot of everything a UI renders for the
 /// whole table, redacted for one viewer (EPIC-37 Phase 2b).
 ///
@@ -872,6 +979,83 @@ mod tests {
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
         PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)))
+    }
+
+    // ── EPIC-88: snapshot / restore ───────────────────────────────────────
+
+    /// The private fields (`forced_at_hand_start`, `pending_forced`) have to
+    /// cross too, or a blind change queued mid-hand is lost on resume.
+    #[test]
+    fn session_snapshot_round_trips_mid_hand() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+        session.set_blinds(ForcedBets::new(100, 200));
+
+        let resumed = PokerSession::restore(&session.snapshot().unwrap()).unwrap();
+
+        assert_eq!(session.table, resumed.table);
+        assert_eq!(session.hand_number, resumed.hand_number);
+        assert_eq!(session.shuffled_deck_str, resumed.shuffled_deck_str);
+        assert_eq!(session.forced_at_hand_start, resumed.forced_at_hand_start);
+        assert_eq!(session.pending_forced, resumed.pending_forced);
+    }
+
+    /// The requirement at the session tier: interrupt the step loop, resume
+    /// from bytes, and land on the same payout as an uninterrupted control.
+    #[test]
+    fn session_restore_continues_the_step_loop() {
+        fn play_out(session: &mut PokerSession) -> Winnings {
+            loop {
+                match session.next_step() {
+                    SessionStep::PlayerToAct(seat) => {
+                        let legal = session.table.legal_actions(seat);
+                        let action = if legal.contains(&PlayerAction::Check) {
+                            PlayerAction::Check
+                        } else {
+                            PlayerAction::Call
+                        };
+                        session.apply_action(seat, action).unwrap();
+                    }
+                    SessionStep::StreetAdvanced => {}
+                    SessionStep::HandComplete => return session.end_hand().unwrap(),
+                    SessionStep::Failed(e) => panic!("hand could not complete: {e:?}"),
+                }
+            }
+        }
+
+        let mut control = two_player_session();
+        control.start_hand().unwrap();
+        if let SessionStep::PlayerToAct(seat) = control.next_step() {
+            control.apply_action(seat, PlayerAction::Call).unwrap();
+        }
+
+        let mut resumed = PokerSession::restore(&control.snapshot().unwrap()).unwrap();
+
+        assert_eq!(play_out(&mut control), play_out(&mut resumed));
+        assert_eq!(20_000, resumed.table.table_chip_count());
+    }
+
+    #[test]
+    fn session_restore_rejects_garbage_bytes() {
+        assert_eq!(
+            Err(PKError::SnapshotCorrupt),
+            PokerSession::restore(&[0xff, 0xfe]).err().map_or(Ok(()), Err)
+        );
+        assert!(PokerSession::restore(&[]).is_err());
+    }
+
+    /// A session payload is not a table payload; feeding one to the other's
+    /// `restore` must fail rather than decode something plausible.
+    #[test]
+    fn session_and_table_payloads_are_not_interchangeable() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let session_bytes = session.snapshot().unwrap();
+        let table_bytes = session.table.snapshot().unwrap();
+
+        assert!(PokerSession::restore(&table_bytes).is_err());
+        assert!(Table::restore(&session_bytes).is_err());
     }
 
     fn three_player_session() -> PokerSession {

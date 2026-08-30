@@ -624,6 +624,15 @@ pub enum PKError {
     NotEnoughCards,
     NotEnoughHands,
     PlayerOutOfHand,
+    /// EPIC-88: the bytes handed to a `restore` do not decode as a snapshot.
+    SnapshotCorrupt,
+    /// EPIC-88: a snapshot's `version` tag is not one this build understands.
+    /// Checked before any other field is read, so a mismatched payload can
+    /// never be half-applied.
+    SnapshotVersion {
+        found: u16,
+        expected: u16,
+    },
     SqlError,
     TableActionOutOfOrder(TableAction),
     TableFull,
@@ -730,6 +739,10 @@ impl Display for PKError {
             PKError::NotEnoughCards => "Not Enough Cards Error",
             PKError::NotEnoughHands => "Not Enough Hands Error",
             PKError::PlayerOutOfHand => "Player is out of hand Error",
+            PKError::SnapshotCorrupt => "Snapshot Corrupt Error",
+            PKError::SnapshotVersion { found, expected } => {
+                &*format!("Snapshot Version Error: found {found}, this build reads {expected}")
+            }
             PKError::SqlError => "SQL Error",
             PKError::TableActionOutOfOrder(table_action) => {
                 &*format!("Table Action Out of Order Error: {table_action}")

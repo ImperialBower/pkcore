@@ -51,6 +51,9 @@ impl Card {
     pub const FREQUENCY_MASK_FILTER: u32 = 0b0001_1111_1111_1111_1111_1111_1111_1111;
 
     pub(crate) const BLANK_NUMBER: u32 = 0;
+    /// The string form of [`Card::BLANK`]: what it `Display`s as, and the one
+    /// index `deserialize_card_index` accepts that `Card::from_str` rejects.
+    pub const BLANK_INDEX: &'static str = "__";
     //endregion
 
     //region cards
@@ -376,16 +379,38 @@ impl Serialize for Card {
     }
 }
 
+/// Parses the string form written by [`impl Serialize for Card`](Card#impl-Serialize-for-Card).
+///
+/// Two behaviours, both load-bearing and both discovered the hard way
+/// (EPIC-88 Phase 0):
+///
+/// 1. **`"__"` is [`Card::BLANK`]**, handled explicitly. `Card::BLANK` *writes*
+///    itself as `"__"` but [`Card::from_str`] refuses to *read* that back — a
+///    blank rank is an error there by design, because
+///    [`Cards::from_str`](crate::cards::Cards) must reject piles containing
+///    blanks. Until 0.11.0 the round-trip survived only by accident: parsing
+///    failed, and the fallback below turned the failure into `Card(0)`, which
+///    is `BLANK`. That accident matters — a mid-hand table is full of blanks
+///    (`BoxedCards::blanks`), so a snapshot that cannot carry one is useless.
+///
+/// 2. **Anything else that fails to parse is an error.** Until 0.11.0 it
+///    returned `Ok(0)`, so a corrupt or truncated payload deserialized into a
+///    structurally valid board full of blanks rather than failing.
+///    [`Table::restore`](crate::casino::table::Table::restore) cannot be built
+///    on a codec with no way to say no.
 fn deserialize_card_index<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
     let buf = String::deserialize(deserializer)?;
 
-    match Card::from_str(buf.as_str()) {
-        Ok(card) => Ok(card.as_u32()),
-        Err(_) => Ok(0),
+    if buf.trim() == Card::BLANK_INDEX {
+        return Ok(Card::BLANK_NUMBER);
     }
+
+    Card::from_str(buf.as_str())
+        .map(|card| card.as_u32())
+        .map_err(|_| serde::de::Error::custom(format!("invalid card index: {buf:?}")))
 }
 
 impl SuitShift for Card {
@@ -472,6 +497,54 @@ mod card_tests {
 
     use rstest::rstest;
     use serde_test::{Token, assert_tokens};
+
+    /// EPIC-88 Phase 0b. `Card` serializes as `serialize_newtype_struct("Card",
+    /// &String)` and deserializes by reading a `String`. That pairing has only
+    /// ever been exercised by **self-describing** formats (YAML, JSON), which
+    /// can recover from a shape mismatch. `postcard` cannot — it reads exactly
+    /// the bytes the writer's shape implies — and `Table::snapshot` is postcard,
+    /// so the pairing has to be proven against it directly.
+    #[test]
+    fn card__postcard_round_trips() {
+        // `Card::BLANK` is in the list deliberately: it is the case that broke,
+        // and a mid-hand table is full of blanks.
+        for card in [Card::TREY_CLUBS, Card::ACE_SPADES, Card::DEUCE_DIAMONDS, Card::BLANK] {
+            let bytes = postcard::to_allocvec(&card).unwrap();
+            let back: Card = postcard::from_bytes(&bytes).unwrap();
+            assert_eq!(card, back, "postcard round-trip failed for {card}");
+        }
+    }
+
+    /// A whole pile, so the length-prefixing of nested strings is exercised too.
+    #[test]
+    fn card__postcard_round_trips_a_vec() {
+        let cards: Vec<Card> = crate::Cards::deck().iter().copied().collect();
+        let bytes = postcard::to_allocvec(&cards).unwrap();
+        let back: Vec<Card> = postcard::from_bytes(&bytes).unwrap();
+        assert_eq!(cards, back);
+    }
+
+    /// EPIC-88 Phase 0a: a card index that does not parse is an **error**, not
+    /// a silent blank. Before 0.11.0 this returned `Card::BLANK`, which meant
+    /// corrupt bytes produced a structurally valid table full of blanks.
+    #[test]
+    fn card__deserialize_rejects_a_bad_index() {
+        assert!(serde_json::from_str::<Card>("\"NOT_A_CARD\"").is_err());
+        assert!(serde_json::from_str::<Card>("\"\"").is_err());
+        // The valid form still works.
+        assert_eq!(Card::ACE_SPADES, serde_json::from_str::<Card>("\"AS\"").unwrap());
+    }
+
+    /// The one string the codec accepts that [`Card::from_str`] rejects.
+    /// `Card::BLANK` writes itself as `"__"`, and a snapshot of a mid-hand
+    /// table carries blanks in every undealt seat slot, so this has to work.
+    #[test]
+    fn card__blank_round_trips_through_serde() {
+        assert!(Card::from_str(Card::BLANK_INDEX).is_err(), "from_str still rejects it");
+        assert_eq!(Card::BLANK, serde_json::from_str::<Card>("\"__\"").unwrap());
+        let bytes = postcard::to_allocvec(&Card::BLANK).unwrap();
+        assert_eq!(Card::BLANK, postcard::from_bytes::<Card>(&bytes).unwrap());
+    }
 
     #[test]
     fn new() {

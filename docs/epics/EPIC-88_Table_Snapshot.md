@@ -30,20 +30,24 @@ on a third. EPIC-37 keeps the mobile-specific work and consumes this.
 
 ## Status
 
-*As of 2026-08-29, `main` @ `cbae16d8` (the 0.11.0 Muratori fixes). No code for
-this EPIC has landed.*
+*Shipped in 0.11.0 on branch `muratori_fix`, 2026-08-30, on top of `cbae16d8`.*
 
 | Component | Status |
 |---|---|
-| `Card` deserialize hardening — reject a bad index instead of yielding a blank | Planned |
-| `Card` / `Cards` postcard round-trip proof | Planned |
-| `PlayerAction` + `Winnings` serde derives | Planned |
-| `TableState` DTO + `From<&Table>` / `TryFrom<&TableState>` | Planned |
-| `Table::snapshot` / `Table::restore` (postcard bytes) | Planned |
-| `PokerSession::snapshot` / `PokerSession::restore` | Planned |
-| Mid-hand resume acceptance test vs uninterrupted control | Planned |
-| Per-variant round-trip (NLHE / PLO / Stud-hi / Razz / FLHE) | Planned |
-| `MURATORI_AUDIT.md` retention row 3/5 → 4/5 | Planned |
+| `Card` deserialize hardening — reject a bad index instead of yielding a blank | **Complete** — `src/card.rs:390-412` |
+| `Card::BLANK_INDEX` — the blank sentinel the codec must accept | **Complete** — `src/card.rs:56` (see corrigendum 1) |
+| `Card` / `Cards` postcard round-trip proof | **Complete** — `card__postcard_round_trips`, `card__blank_round_trips_through_serde` |
+| `PlayerAction` serde derive | **Complete** — `src/casino/action.rs:41` |
+| `ForcedBets` serde derive | **Complete** — `src/casino/game.rs:23` (not in the original plan) |
+| `BettingState` — postcard-safe mirror of `BettingStructure` | **Complete** — `src/casino/table/snapshot.rs` (see corrigendum 2) |
+| `TableState` DTO + `From<&Table>` / `TryFrom<&TableState>` | **Complete** — `src/casino/table/snapshot.rs` |
+| `PKError::SnapshotCorrupt` / `SnapshotVersion` | **Complete** — `src/lib.rs:628,632` |
+| `Table::snapshot` / `Table::restore` (postcard bytes) | **Complete** — `src/casino/table.rs` |
+| `PokerSession::snapshot` / `PokerSession::restore` | **Complete** — `src/casino/session.rs` |
+| Mid-hand resume acceptance test vs uninterrupted control | **Complete** — `snapshot_mid_street_resumes_to_identical_winnings`, `session_restore_continues_the_step_loop` |
+| Per-variant round-trip (NLHE / PLO / Stud-hi / Razz / FLHE) | **Complete** — 5 tests, incl. `snapshot_preserves_stud_up_card_visibility` |
+| `Winnings` serde derive | **Deferred** — not needed; `Winnings` never crosses the snapshot boundary. Revisit with EPIC-37's FFI. |
+| `MURATORI_AUDIT.md` retention row 3/5 → 4/5 | **Complete** |
 | Mobile FFI surface, `SolveJob`, UniFFI targets | Out of scope — stays EPIC-37 |
 
 ---
@@ -529,3 +533,106 @@ Exit criteria:
    currently fails on.
 6. `RELEASE_AUDIT` confirms no downstream repo depended on the blank-card
    deserialization fallback.
+
+---
+
+## Implementation corrigendum
+
+*Written 2026-08-30, after shipping. What the design assumed, and what building
+it surfaced.*
+
+### 1. Hardening `Card`'s deserializer broke `Card::BLANK`
+
+The design called for `deserialize_card_index` to reject an unparseable index
+instead of returning `Ok(0)` (Phase 0a). Doing exactly that broke the very first
+postcard round-trip, and the reason is the interesting part.
+
+`Card::BLANK` **writes** itself as `"__"`, but `Card::from_str` **refuses to
+read that back** — a blank rank is an error there by design, because
+`Cards::from_str` must reject piles containing blanks. So blanks only ever
+round-tripped *by accident*: parsing failed, and the `Ok(0)` fallback turned the
+failure into `Card(0)`, which is `BLANK`. Removing the fallback removed the
+accident.
+
+That mattered more than it first looked: an undealt seat holds
+`BoxedCards::blanks(n)`, so a mid-hand table is **full** of blanks, and a
+snapshot that cannot carry one is useless. The resolution is a
+`Card::BLANK_INDEX` constant and an explicit branch in the deserializer — which
+is strictly better than either prior behaviour: the sentinel is accepted by
+name, and everything else that fails to parse is an error. Verified by
+`card__blank_round_trips_through_serde`, which also asserts `Card::from_str`
+still rejects `"__"`, so the asymmetry is pinned rather than papered over.
+
+**Phase 0b earned its place.** The EPIC called for proving the codec against a
+non-self-describing format *before* building on it, on the theory that YAML and
+JSON had been hiding something. They had.
+
+### 2. `BettingStructure` cannot be deserialized by postcard at all
+
+Not anticipated by the design. `BettingStructure` is
+`#[serde(rename_all = "snake_case", tag = "kind")]` — **internally tagged** —
+and serde can only deserialize that representation via `deserialize_any`, which
+a non-self-describing format cannot provide. Postcard's error says so outright:
+*"This is a feature that PostCard will never implement."*
+
+Changing the enum's representation was not an option: that tagged form is
+already on disk in every shipped bot profile (`data/bots/**/*.yaml`), so it is a
+compatibility obligation, not an implementation detail. The DTO carries its own
+externally-tagged `BettingState` mirror instead — which is precisely the reason
+to have a DTO. `snapshot_round_trips_fixed_limit_payload` covers the variant
+that actually carries data.
+
+This is the second finding that argues against the rejected alternative
+(`#[derive(Serialize)]` on `Table` directly): that route would have hit the same
+wall with no place to put the workaround.
+
+### 3. `SeatHand::seat` is dormant, and the snapshot carries it verbatim
+
+The first full-table equality check failed on one field: the engine stores
+`SeatHand { seat: 0 }` inside **every** seat, because `Seat::new` and its
+siblings all build `SeatHand::new(0)` (`src/casino/table/seat.rs:51,73,101`)
+regardless of position. Nothing in `src/` ever reads `hand.seat()` back — only
+its own unit tests do — so it is dormant rather than broken.
+
+Rebuilding it from the seat's index would have been *more* correct and was the
+obvious thing to write. It is the wrong thing: it would have made
+`snapshot` → `restore` something other than an identity, and quietly hidden an
+engine wart behind the serialization layer. `SeatState::hand_seat` carries the
+field verbatim. If that field is ever given real meaning, old snapshots stay
+faithful to what they captured, and the wart stays visible where it can be
+fixed on purpose.
+
+**Filed as a separate observation, not fixed here:** `Seat::new` hard-coding
+seat 0 is worth a `/defect-report` if `hand.seat()` is ever wired up.
+
+### 4. `Winnings` serde was not needed
+
+Phase 0c called for serde on both `PlayerAction` and `Winnings`. `PlayerAction`
+landed; `Winnings` did not, because nothing on the snapshot path carries it —
+it is `end_hand`'s *return value*, not table state. Deferred to EPIC-37, where
+an FFI boundary genuinely needs it.
+
+### 5. `ForcedBets` needed serde, and was not in the plan
+
+`TableState` carries `forced: ForcedBets` directly rather than mirroring it.
+Four plain `usize` fields, no engine layout, no on-disk precedent to preserve —
+so a derive is safe here in a way it is not for `Table`.
+
+### Phase status summary
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0 (Codec prerequisites) | Shipped | Both blockers real; a third (`BettingStructure`) found during Phase 1. `Winnings` serde deferred — corrigendum 4. |
+| 1 (The DTO) | Shipped | Plus `BettingState` and `hand_seat`, neither in the design — corrigenda 2 and 3. |
+| 2 (Bytes on the engine) | Shipped | |
+| 3 (The acceptance test) | Shipped | 5 variants; stud visibility covered. |
+| 4 (The session tier) | Shipped | Carries the two private fields (`forced_at_hand_start`, `pending_forced`) the design did not enumerate. |
+| 5 (Docs & registration) | Shipped | |
+
+### Pre-existing debt
+
+- `Seat::new` hard-codes `SeatHand::new(0)` (corrigendum 3). Out of scope here.
+- `Card::BLANK`'s write/read asymmetry is now *documented and tested* rather
+  than resolved: `to_string` emits `"__"`, `from_str` rejects it, and only the
+  serde path bridges the two. Unifying them would touch `Cards::from_str`'s
+  blank-rejection contract, which is load-bearing elsewhere.

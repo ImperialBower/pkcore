@@ -43,11 +43,13 @@ mod actions;
 mod player;
 mod seat;
 mod seats;
+pub mod snapshot;
 mod transition;
 
 pub use player::Player;
 pub use seat::Seat;
 pub use seats::Seats;
+pub use snapshot::{BettingState, SNAPSHOT_VERSION, SeatState, TableState};
 
 /// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
 /// `HighStud` picks the seat with the *best* visible hand (used by Stud
@@ -2829,6 +2831,77 @@ impl Table {
             });
         }
         Ok(())
+    }
+
+    /// Writes the whole table down as compact `postcard` bytes, mid-hand.
+    ///
+    /// # These bytes are the future of the hand
+    ///
+    /// The snapshot carries the **undealt deck, in order**. Anyone holding it
+    /// can read the runout before it happens. Store it in the host's private
+    /// storage; never send it to a player or a spectator. Use
+    /// [`PokerSession::view`](crate::casino::session::PokerSession::view) for
+    /// anything a person is allowed to see.
+    ///
+    /// The shape on the wire is [`TableState`], not `Table` itself, so the
+    /// engine's fields stay free to change — see [the module
+    /// docs](crate::casino::table::snapshot).
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::SnapshotCorrupt`] if the state cannot be encoded, which in
+    /// practice means an allocation failure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::action::PlayerAction;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    ///
+    /// // Stop mid-hand, write it down, and bring it back.
+    /// let bytes = table.snapshot().unwrap();
+    /// let restored = Table::restore(&bytes).unwrap();
+    ///
+    /// assert_eq!(table, restored);
+    /// assert_eq!(table.next_to_act(), restored.next_to_act());
+    /// ```
+    pub fn snapshot(&self) -> Result<Vec<u8>, PKError> {
+        let state = TableState::from(self);
+        postcard::to_allocvec(&state).map_err(|_| PKError::SnapshotCorrupt)
+    }
+
+    /// Rebuilds a table from [`snapshot`](Self::snapshot) bytes. Play continues
+    /// identically — the undealt deck order is preserved, so the runout is the
+    /// one the original table would have dealt.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::SnapshotCorrupt`] if the bytes do not decode.
+    /// - [`PKError::SnapshotVersion`] if the payload's version tag is not
+    ///   [`SNAPSHOT_VERSION`]. Checked before any other field is read, so a
+    ///   mismatched payload is never half-applied.
+    /// - [`PKError::InvalidCardIndex`] if a card index does not parse.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// // Garbage is refused, not silently accepted.
+    /// assert!(Table::restore(&[0xff, 0xff, 0xff]).is_err());
+    /// ```
+    pub fn restore(bytes: &[u8]) -> Result<Self, PKError> {
+        let state: TableState = postcard::from_bytes(bytes).map_err(|_| PKError::SnapshotCorrupt)?;
+        Table::try_from(&state)
     }
 
     /// Resolves the hand (showdown or fold-win) and resets the table.
