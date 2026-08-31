@@ -490,6 +490,11 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
         return None;
     }
     if state.phase.is_preflop() {
+        // preflop_charts knob: a real equity from the exact heads-up chart or
+        // the sampled engine. `None` means "no chart answer" — fall through.
+        if let Some(equity) = crate::bot::preflop_equity::preflop_equity(profile, state, rng) {
+            return Some(equity);
+        }
         // Ranges knob: position-aware playbook lookup or the flat range.
         let freq = preflop_open_frequency(profile, state);
         return Some(if rng.random::<f64>() < freq { 1.0 } else { 0.0 });
@@ -1871,5 +1876,60 @@ mod bot__decider_tests {
                 .all(|spec| matches!(spec, PlayerSpec::Random)),
             "the default `ranges: flat` profile still sees Random villains"
         );
+    }
+    /// EPIC-39 Phase 4: preflop hand strength is historically a coin flip —
+    /// `1.0` or `0.0` from a frequency roll. With `preflop_charts: hup` it
+    /// becomes a real number read from the exact heads-up chart.
+    #[test]
+    fn preflop_charts_replace_the_coin_flip_with_a_real_number() {
+        use crate::bot::decision_config::PreflopCharts;
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 0);
+        state.phase = GamePhase::BettingPreFlop;
+        state.hole_cards = Cards::from_str("AS AD").expect("legal hole cards");
+
+        let mut charted = BotProfile::gto();
+        charted.decision.preflop_charts = PreflopCharts::Hup;
+
+        let equity = hand_equity(&charted, &state, &mut SmallRng::seed_from_u64(11))
+            .expect("the chart answers for heads-up aces");
+        assert!(
+            equity > 0.7 && equity < 1.0,
+            "aces should price as a real number well above a coin flip, got {equity:.4}"
+        );
+    }
+
+    /// The compatibility guard for Phase 4: with the knob off, preflop equity
+    /// is still the binary roll it has always been.
+    #[test]
+    fn default_profile_preflop_equity_is_still_binary() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 0);
+        state.phase = GamePhase::BettingPreFlop;
+        state.hole_cards = Cards::from_str("AS AD").expect("legal hole cards");
+
+        let profile = BotProfile::gto();
+        for seed in 0..8 {
+            let equity =
+                hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(seed)).expect("the roll always answers");
+            assert!(
+                equity == 1.0 || equity == 0.0,
+                "the default preflop path is a coin flip, got {equity}"
+            );
+        }
     }
 }

@@ -8,10 +8,11 @@
 
 ## Status
 
-**Phases 1 and 2 shipped in `0.12.0`** (2026-08-30, against `main` @ `cf5f50f7`).
-Phases 3 and 4 — the `outs` and `preflop_charts` knobs — remain **Planned**.
-Three findings changed the design during the build; all three are recorded in
-the [Corrigendum](#corrigendum) rather than edited silently into the text below.
+**Phases 1, 2 and 4 shipped in `0.12.0`** (2026-08-30, against `main` @
+`a998c78a`). Phase 3 — the `outs` knob — remains **Planned**; it was deferred
+deliberately, see corrigendum 6. Findings that changed the design during the
+build are recorded in the [Corrigendum](#corrigendum) rather than edited
+silently into the text below.
 
 | Component | Status |
 |---|---|
@@ -20,7 +21,9 @@ the [Corrigendum](#corrigendum) rather than edited silently into the text below.
 | `villain_specs(profile, state) -> Vec<PlayerSpec>` — per-villain spec builder | **Complete** — `src/bot/range_model.rs`, `equity`-gated |
 | Wire villains as `PlayerSpec::Range` (not `Random`) in `real_equity` when a range is available | **Complete** — `src/bot/decider.rs`, gated on `ranges: position_aware` |
 | **`outs`** knob wired: draw equity vs the estimated range (flip EPIC-36 §5 Deferred) | Planned |
-| **`preflop_charts`** knob wired: preflop equity vs a position-appropriate range (flip EPIC-36 §6 Deferred) | Planned |
+| **`preflop_charts`** knob wired: preflop equity vs a position-appropriate range (flip EPIC-36 §6 Deferred) | **Complete** — `src/bot/preflop_equity.rs` |
+| `hup_equity_vs_range` — exact heads-up equity averaged over a range | **Complete** — `src/bot/preflop_equity.rs` (see corrigendum 7) |
+| `villain_range_specs` — ungated sibling of `villain_specs` | **Complete** — `src/bot/range_model.rs` |
 | No-opponent-awareness invariant preserved (range from state/aggregate stats, never identity) | **Complete** — position-derived only; `rule_based_decider_ignores_opponent_stats` still passes |
 | `ROADMAP.md` Epics row + EPIC-36 Status/corrigendum reconciled on ship | Planned — due with Phases 3–4 |
 
@@ -316,3 +319,66 @@ silently demoted the hero to the *hand-rank proxy* — a worse estimate than the
 `pkcore::bot::range_model::*` but are deliberately **not** re-exported from
 `prelude.rs`, which carries types rather than free functions. This keeps the
 public surface where the `0.11.0` Muratori work left it.
+
+### 6. Phase 3 (`outs`) deferred — it overlaps the `equity` knob
+
+`outs` was left Planned on purpose, not for want of time. With `equity: fast`
+and range-modelled villains, the engine **already prices draws** — a flop draw's
+value is exactly what the equity number measures. So `outs` only adds something
+on the *proxy* path (`equity: off`), where hand strength is a hand-rank snapshot
+that ignores draws entirely. That makes `outs` an augmentation of the cheap
+path, not of the range model, which is a different design question from the one
+this EPIC set out to answer. It needs its own decision before any code.
+
+### 7. `HUPResult::lookup` ignores argument order
+
+The single most dangerous thing found in this phase. `lookup(a, b)` sorts its
+arguments into a `SortedHeadsUp` and returns **the same record** as
+`lookup(b, a)`; `odds.wins` always belongs to the `higher` hand. Verified:
+`lookup(A♠A♦, K♥K♣)` and `lookup(K♥K♣, A♠A♦)` both report `wins = 0.8106`, which
+is the *aces'* share in both cases. Read naively, every result is inverted for
+half of all callers. `hup_equity_vs_range` compares `result.higher` against the
+hero's `Bard` and calls `flip_mode()` when they differ, and
+`hup_equity_is_symmetric_between_the_two_sides` is the regression test — two
+complementary equities must sum to exactly `1.0`.
+
+### 8. The embedded HUP table is complete, exact, and ungated
+
+Three assumptions in the EPIC-36 corrigendum were wrong:
+
+- **Not gated on `store`.** `analysis::store::embedded::hup_cache` carries no
+  `#[cfg]`, so the chart works under `--no-default-features`.
+- **Complete.** `generated/hups.bin` holds **812,175** entries, which is exactly
+  `(1326 × 1225) / 2` — every distinct heads-up preflop matchup, none missing.
+- **Exact.** Each record's `wins + losses + draws` is `1,712,304` = `C(48,5)`,
+  a full board enumeration rather than a sample.
+
+So `Hup` is exact where it applies, and cheaper than sampling: a range of 286
+hands costs 286 hash lookups.
+
+### 9. `Solver` no longer means "solver charts"
+
+`PreflopCharts::Solver` was specced as "offline-generated GTO charts". No such
+assets exist in the repo and none are planned here. Rather than ship a knob
+setting that silently does nothing, `Solver` now runs the equity engine against
+the villain ranges. The division is by **table size**, not by data source:
+`Hup` is exact but strictly heads-up; `Solver` is sampled and works at any table
+size. The variant name is now a misnomer and should be revisited if real solver
+charts ever land.
+
+### 10. Preflop equity was a coin flip
+
+Worth stating plainly because it changes how the knob feels. `hand_equity`
+returned exactly `1.0` or `0.0` preflop — a roll against the hand's frequency in
+an opening range, not an equity. The decider then compares that against
+`pot_odds * 2.0`. Turning `preflop_charts` on replaces the binary signal with a
+real number, so a hand that always raised at `1.0` may now call at `0.62`.
+**Preflop play changes noticeably for profiles that opt in**; the default `Off`
+keeps the roll, guarded by `default_profile_preflop_equity_is_still_binary`.
+
+### 11. `Board::try_from` rejects an empty board
+
+The `Solver` path builds its preflop request with `Board::default()`, not
+`Board::try_from(state.board.clone())`. The latter returns
+`PKError::NotEnoughCards` for `0..=2` cards (`src/play/board.rs:215`), which is
+correct for the postflop path it was written for and fatal preflop.

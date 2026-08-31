@@ -11,6 +11,7 @@ pub mod playbook;
 pub mod player_action;
 pub mod position_ranges;
 pub mod positional_betting;
+pub mod preflop_equity;
 pub mod profile;
 pub mod range_model;
 pub mod range_strategy;

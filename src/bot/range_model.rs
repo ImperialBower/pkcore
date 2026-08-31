@@ -149,19 +149,63 @@ pub fn villain_specs(profile: &BotProfile, state: &TableSnapshot) -> Vec<crate::
     use crate::analysis::equity::PlayerSpec;
     use crate::bot::decision_config::RangeMode;
 
-    let position_aware = matches!(profile.decision.ranges, RangeMode::PositionAware);
+    if matches!(profile.decision.ranges, RangeMode::PositionAware) {
+        return villain_range_specs(profile, state);
+    }
+    state
+        .stacks
+        .iter()
+        .filter(|villain| villain.is_active && villain.seat != state.seat)
+        .map(|_| PlayerSpec::Random)
+        .collect()
+}
+
+/// Builds one [`PlayerSpec`] per active villain, always preferring a range.
+///
+/// This is [`villain_specs`] without the `ranges` knob gate, for callers whose
+/// own knob already means "model villains as ranges" — the `preflop_charts`
+/// solver path is the one in tree. A seat whose range cannot be resolved is
+/// still [`PlayerSpec::Random`].
+///
+/// [`PlayerSpec`]: crate::analysis::equity::PlayerSpec
+/// [`PlayerSpec::Random`]: crate::analysis::equity::PlayerSpec::Random
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::equity::PlayerSpec;
+/// use pkcore::bot::playbook::Playbook;
+/// use pkcore::bot::profile::BotProfile;
+/// use pkcore::bot::range_model::villain_range_specs;
+/// use pkcore::bot::table_snapshot::TableSnapshot;
+/// use pkcore::casino::game::ForcedBets;
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
+///
+/// let seats = Seats::new(
+///     (0..6)
+///         .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 1_000)))
+///         .collect(),
+/// );
+/// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+/// let state = TableSnapshot::from_table(&table, 3);
+/// let profile = BotProfile::gto().with_playbook(Playbook::gto());
+///
+/// // Ranged even though the profile is on the default `ranges: flat`.
+/// let specs = villain_range_specs(&profile, &state);
+/// assert_eq!(5, specs.len());
+/// assert!(specs.iter().all(|spec| matches!(spec, PlayerSpec::Range(_))));
+/// ```
+#[cfg(feature = "equity")]
+#[must_use]
+pub fn villain_range_specs(profile: &BotProfile, state: &TableSnapshot) -> Vec<crate::analysis::equity::PlayerSpec> {
+    use crate::analysis::equity::PlayerSpec;
+
     state
         .stacks
         .iter()
         .enumerate()
         .filter(|(_, villain)| villain.is_active && villain.seat != state.seat)
-        .map(|(index, _)| {
-            if position_aware {
-                villain_range(profile, state, index).map_or(PlayerSpec::Random, PlayerSpec::Range)
-            } else {
-                PlayerSpec::Random
-            }
-        })
+        .map(|(index, _)| villain_range(profile, state, index).map_or(PlayerSpec::Random, PlayerSpec::Range))
         .collect()
 }
 

@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The estimate is derived from **position alone** — never from opponent
   identity — so EPIC-36's no-opponent-awareness constraint still holds.
 
+- **`bot::preflop_equity` — real preflop equity ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 4).**
+  The `preflop_charts` knob is no longer schema-only. Two new public functions:
+
+  - `hup_equity_vs_range(&Two, &Combos) -> Option<f64>` averages the embedded
+    heads-up chart over a range. Each entry enumerates all `C(48,5)` boards, so
+    the per-matchup number is **exact**, and the table is **complete** — 812,175
+    entries, every distinct heads-up preflop matchup.
+  - `preflop_equity(&BotProfile, &TableSnapshot, &mut R) -> Option<f64>`
+    dispatches on the knob: `Hup` reads the chart (heads-up only), `Solver` runs
+    the equity engine against the villain ranges (any table size), `Off` returns
+    `None`.
+
+- **`bot::range_model::villain_range_specs`** — `villain_specs` without the
+  `ranges` knob gate, for callers whose own knob already means "model villains
+  as ranges".
+
 ### Changed (behaviour, opt-in only)
 
 - **`equity` now sharpens against ranges when `ranges: position_aware` is set.**
@@ -38,12 +54,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   opts in. A range that cannot be resolved falls back to `Random` rather than to
   an empty range, which the equity engine rejects.
 
+- **Preflop hand strength stops being a coin flip when `preflop_charts` is set.**
+  `hand_equity` returned exactly `1.0` or `0.0` preflop — a roll against the
+  hand's frequency in an opening range, not an equity — and the decider compares
+  that against `pot_odds * 2.0`. With the knob on it returns a real number, so a
+  hand that always raised at `1.0` may now call at `0.62`. **Preflop play changes
+  noticeably for profiles that opt in.** The default `Off` keeps the historical
+  roll, and every failure path — not heads-up under `Hup`, no resolvable range,
+  a non-NLHE hand, the `equity` feature absent — falls back to it too.
+
+- **`PreflopCharts::Solver` no longer means "solver charts".** It was specced
+  for offline-generated GTO charts, which do not exist in this repo. Rather than
+  leave a knob setting that silently does nothing, it now runs the equity engine
+  against the villain ranges. The split is by table size: `Hup` is exact but
+  strictly heads-up, `Solver` is sampled and works multi-way.
+
 ### Known limitations
 
 Recorded in full in the EPIC-39 corrigendum:
 
-- **Postflop only.** The preflop path returns before the equity engine is
-  reached, so this release does not change any preflop decision.
+- **The `outs` knob is still schema-only.** EPIC-39 Phase 3 was deferred: with
+  `equity: fast` and range villains the engine already prices draws, so `outs`
+  only adds value on the proxy path — a different design question, recorded in
+  the EPIC-39 corrigendum.
 - **Position, not action.** `TableSnapshot` carries no event log, so postflop
   the decider cannot tell who raised preflop. Every villain is given its
   position's `open_raise` range, which overstates a caller's strength.

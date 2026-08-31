@@ -19,7 +19,7 @@ Status as of branch `EPIC-36` (see `## Implementation corrigendum` for deltas).
 | Capability: **pot_odds** — graded `discipline` 0..1 | **Complete** (`decider.rs`, `call_threshold`) |
 | Capability: **outs** — draw equity via `Outs`/`CaseEvals` (`off`/`on`) | **Deferred** — schema present (`Toggle::Off`); wiring deferred (corrigendum §5) |
 | Capability: **exploit** — internal `adjust_profile` (`off`/`light`/`heavy`) | **Complete** (`decider.rs::exploit_profile`; corrigendum §4) |
-| Capability: **preflop_charts** — HUP / offline GTO (`off`/`hup`/`solver`) | **Deferred** — schema present (`PreflopCharts::Off`); wiring deferred (corrigendum §6) |
+| Capability: **preflop_charts** — HUP / offline GTO (`off`/`hup`/`solver`) | **Complete** — wired in `0.12.0` by [EPIC-39](EPIC-39_Decider_Range_Model.md) Phase 4 (`src/bot/preflop_equity.rs`). §6 below is superseded; see the note under it. |
 | Arena bench: chips/100 comparison of YAML configs via `SimTable` | **Complete** (`examples/bot_capability_bench.rs`) |
 | Cash-mode (fixed-stack reset) for fair chips/100 in `SimTable` | **Complete** (`sim.rs::with_cash_mode` / `run_n_hands_cash`) |
 | Example weak/strong configs under `data/bots/` | **Complete** (`strong_all_on.yaml`, `weak_all_off.yaml`) |
@@ -321,7 +321,7 @@ this comparison.
   corrigendum §5.)*
 - [x] 2e. **exploit** — internal `adjust_profile` for `light`/`heavy` when stats
   present. *(light/heavy mapped to sample-gate intensity — corrigendum §4.)*
-- [ ] 2f. **preflop_charts** — `hup` / `solver`. *(Deferred — corrigendum §6.)*
+- [x] 2f. **preflop_charts** — `hup` / `solver`. **Done** in `0.12.0` via [EPIC-39](EPIC-39_Decider_Range_Model.md) Phase 4.
 - [x] 2g. Per-capability unit + doc tests proving each level changes behavior.
 
 ### Phase 3 — Measurement & example configs
@@ -483,6 +483,16 @@ ship as assets, and live per-spot CFR is out of the question for runtime. The
 `PreflopCharts` enum (`Off`/`Hup`/`Solver`, default `Off`) is retained so
 downstream YAML is forward-compatible, but only `Off` is wired.
 
+> **Superseded 2026-08-30 by [EPIC-39](EPIC-39_Decider_Range_Model.md) Phase 4.**
+> Two of the three premises above turned out to be wrong. HUP *is* usable
+> without fabricating a villain hand — you average it over the villain's
+> estimated range, which EPIC-39 Phase 1 supplies — and the embedded table is
+> complete (812,175 entries, every heads-up matchup) and exact (`C(48,5)` boards
+> each), with no `store` feature required. The third premise holds: no solver
+> charts exist, so `Solver` was repurposed to run the equity engine against the
+> ranges, which is what makes it work multi-way where `Hup` cannot. See
+> EPIC-39 corrigendum 7–9.
+
 ### 7. Cash mode is an opt-in `SimTable` branch
 
 `with_cash_mode(buy_in)` sets a field; `run_n_hands` branches to
@@ -500,12 +510,13 @@ hands, seed 42).
 |---|---|---|
 | 1 | `DecisionConfig` schema + `BotProfile.decision` + backward-compat | **Complete** |
 | 2 | equity, ranges, pot_odds, exploit wired | **Complete** |
-| 2 | outs, preflop_charts | **Deferred** (§5, §6) |
+| 2 | outs | **Deferred** (§5) — still open, see [EPIC-39](EPIC-39_Decider_Range_Model.md) corrigendum 6 |
+| 2 | preflop_charts | **Complete** in `0.12.0` — §6 superseded |
 | 3 | cash-mode `SimTable`, arena bench, weak/strong configs | **Complete** |
 
 ### Inherited debt / follow-ons
 
-- **outs** and **preflop_charts** remain to wire if a future EPIC introduces an
+- **outs** remains to wire if a future EPIC introduces an
   opponent-range model (villain hands/ranges) the decider may consult without
   violating the no-opponent-awareness constraint — e.g. range-vs-range equity.
 - **equity memoization** is a performance follow-on if large-budget `exact`
