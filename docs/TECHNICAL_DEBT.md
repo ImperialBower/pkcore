@@ -7,23 +7,27 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-22** against `main` @ `14245b53`, pkcore `0.7.1`.
-> The last automated review pass ran 2026-08-18 (see the 🤖 section); nine of
-> its eleven findings shipped as `DEFECT_015` – `DEFECT_023` in `0.6.0`, and
-> the panic sweep closed the rest in `0.7.0`. Only documentation and the epub
-> build script have landed since, so nothing below moved.
-> Marker census in `src/` (re-counted 2026-08-22): 70 `TODO`, of which 11
-> `TODO RF` and 3 `TODO TD`. **0 `TODO DEFECT`** — the last one was retired on
-> 2026-08-21. No `FIXME`, `HACK`, or `XXX` markers remain.
+> Last refreshed **2026-08-30** against `main` @ `cf5f50f7`, pkcore `0.11.0`
+> (tagged and published). Four releases landed since the previous pass —
+> `0.8.x`, `0.9.x`, `0.10.0`, `0.11.0` — including the removal of `TableCelled`
+> and of the `pkstate` dependency, the EPIC-88 snapshot work, and the `0.11.0`
+> public-surface cleanup. Line numbers below were re-verified against this
+> commit; the marker set itself is unchanged apart from `TableCelled`'s markers
+> disappearing with the code.
+> Marker census in `src/` (re-counted 2026-08-30): **46 `TODO`**, of which
+> **10 `TODO RF`** and **3 `TODO TD`** — down from 70/11/3. **0 `TODO DEFECT`**.
+> No `FIXME`, `HACK`, or `XXX` markers remain.
 >
-> The automated review pass is now 4 days old and predates `0.7.0`'s signature
-> changes. Ask for a re-run before trusting the 🤖 section as current.
+> The automated review pass below ran **2026-08-18** and is now 12 days and four
+> releases old; it predates the `TableCelled` removal, the `pkstate` retirement
+> and every `0.11.0` signature change. **Do not trust the 🤖 section as
+> current** — ask for a re-run.
 
 ## Tracked debt
 
 _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase._
 
-- [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:514`)
+- [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:613`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
 - [x] ~~**`unimplemented!()` sweep (DEFECT_023's "next sweep")**~~ — **DONE 2026-08-21** in `0.7.0`. Nine public methods whose body was a descriptive `unimplemented!("…")` now do what the message said (`CardsCell::swap`/`card_at`, `Bard::swap`, `HoleCards`/`SortedHeadsUp`/`Board::clean`, `Board::the_nuts`, `Twos::percentage`, `SevenFiveBCM::exists`/`insert_many`/`select_all`, `TestData::deck_the_hand_dealable`); `Cards::swap` gained a bounds guard on the way. **What remains is deliberate**: `Pile::add`/`card_at`/`swap` on fixed-size hands (`Card`, `Two`…`Seven`, `Board`, `HoleCards`, `OmahaHigh`, `StartingHands`, `SortedHeadsUp`, `BoxedCards`) and `the_nuts` on bare card sets (`Cards`, `CardsCell`, `Bard`, `Card`, `HoleCards`, `SortedHeadsUp`, `Five`…`Seven`). The `Pile` trait gives them no error channel and the operations have no meaning there; each is documented and `#[should_panic]`-tested. Changing that means redesigning `Pile` — a separate decision, not debt.
@@ -41,7 +45,7 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 
 - [ ] **`analysis/store/heads_up.rs`** — `TODO: Write tests!!!` (`src/analysis/store/heads_up.rs:150`)
 - [ ] **`play/game.rs`** — `TODO: Write some fucking tests.` (`src/play/game.rs:345`)
-- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` (`src/play/game.rs:885`)
+- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` (`src/play/game.rs:903`)
 - [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. (`src/lib.rs:467`, `:495`)
 
 ### Missing `# Errors` documentation
@@ -51,19 +55,19 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 
 ### Refactor backlog (`TODO RF`)
 
-_11 `TODO RF` markers in `src/`. The author flagged these as restructuring work;
+_10 `TODO RF` markers in `src/` (re-counted 2026-08-30). The author flagged these as restructuring work;
 most are localized clean-ups, not behavior changes._
 
 - [ ] **`arrays/two.rs` trait sorting** — sorting wanted for these traits "is starting to feel too complicated"; second marker notes a universal-method extraction. (`src/arrays/two.rs:1513`, `:1555`)
 - [ ] **`arrays/five.rs` hacks** — three stacked `RF`/"Hack" markers around hand evaluation, one labelled "MEGA Hack". (`src/arrays/five.rs:252`, `:258`, `:267`)
-- [ ] **`casino/state.rs` cleanup** — "This sucks" marker on state handling. (`src/casino/state.rs:119`)
-- [ ] **`play/board.rs` clunky path** — `RF? Clunky`. (`src/play/board.rs:152`)
+- [x] ~~**`casino/state.rs` cleanup**~~ — **GONE 2026-08-30.** The "This sucks" marker is no longer in `src/casino/state.rs`; verified by `grep TODO` at `cf5f50f7`.
+- [ ] **`play/board.rs` clunky path** — `RF? Clunky`. (`src/play/board.rs:213`)
 - [ ] **`flop_eval.rs` → trait** — extract into a trait. (`src/play/stages/flop_eval.rs:226`)
 - [ ] **`case_eval.rs` case param** — change case parameter to `Two` to facilitate range calculations. (`src/analysis/case_eval.rs:99`)
-- [ ] **`cards.rs` markers** — two unexplained `RF`/"Hack" notes. (`src/cards.rs:80`, `:868`)
+- [ ] **`cards.rs` markers** — two unexplained `RF`/"Hack" notes. (`src/cards.rs:78`, `:874`)
 - [ ] **`matchups/sorted_heads_up.rs` struct pollution** — "Refactor out this pollution of the struct space". (`src/arrays/matchups/sorted_heads_up.rs:126`)
-- [ ] **`table_celled/showdown.rs`** — `TODO: refactor me`. (`src/casino/table_celled/showdown.rs:208`)
-- [ ] **`table_celled/seats.rs`** — "This feels like stupid over architecting." (`src/casino/table_celled/seats.rs:1036`, `:993`)
+- [x] ~~**`table_celled/showdown.rs`**~~ — **GONE.** File deleted with `TableCelled` ([EPIC-83](epics/EPIC-83_Table_Decelled.md), `ba1dd3fc`).
+- [x] ~~**`table_celled/seats.rs`**~~ — **GONE.** File deleted with `TableCelled` ([EPIC-83](epics/EPIC-83_Table_Decelled.md), `ba1dd3fc`).
 
 ### Non-library shortcuts
 

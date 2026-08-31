@@ -12,6 +12,7 @@ pub mod player_action;
 pub mod position_ranges;
 pub mod positional_betting;
 pub mod profile;
+pub mod range_model;
 pub mod range_strategy;
 pub mod sim;
 pub mod table_size;

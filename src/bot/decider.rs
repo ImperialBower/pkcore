@@ -508,8 +508,10 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
     // active villain, non-NLHE hole size, or the `equity` feature is disabled).
     match profile.decision.equity {
         EquityMode::Off => proxy_equity(state),
-        EquityMode::Fast { samples } => real_equity(state, u64::from(samples), rng).or_else(|| proxy_equity(state)),
-        EquityMode::Exact => real_equity(state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state)),
+        EquityMode::Fast { samples } => {
+            real_equity(profile, state, u64::from(samples), rng).or_else(|| proxy_equity(state))
+        }
+        EquityMode::Exact => real_equity(profile, state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state)),
     }
 }
 
@@ -566,11 +568,19 @@ fn preflop_open_frequency(profile: &BotProfile, state: &TableSnapshot) -> f64 {
 }
 
 /// Real multi-way equity for the hero via the [`crate::analysis::equity`]
-/// engine: hero as `Exact`, each active villain as `Random`. Returns `None`
-/// (so the caller falls back to the proxy) when the hero is not a 2-card NLHE
-/// hand, no active villain remains, or the seat count is out of range.
+/// engine: hero as `Exact`, each active villain as whatever
+/// [`villain_specs`](crate::bot::range_model::villain_specs) resolves — a
+/// position range when the profile sets `ranges: position_aware`, `Random`
+/// otherwise. Returns `None` (so the caller falls back to the proxy) when the
+/// hero is not a 2-card NLHE hand, no active villain remains, or the seat
+/// count is out of range.
 #[cfg(feature = "equity")]
-fn real_equity<R: rand::Rng + ?Sized>(state: &TableSnapshot, max_samples: u64, rng: &mut R) -> Option<f64> {
+fn real_equity<R: rand::Rng + ?Sized>(
+    profile: &BotProfile,
+    state: &TableSnapshot,
+    max_samples: u64,
+    rng: &mut R,
+) -> Option<f64> {
     use crate::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
     use crate::arrays::two::Two;
     use crate::play::board::Board;
@@ -581,18 +591,14 @@ fn real_equity<R: rand::Rng + ?Sized>(state: &TableSnapshot, max_samples: u64, r
     }
     let hero = Two::from_str(&state.hole_cards.to_string()).ok()?;
     let board = Board::try_from(state.board.clone()).ok()?;
-    let villains = state
-        .stacks
-        .iter()
-        .filter(|s| s.is_active && s.seat != state.seat)
-        .count();
-    let total = villains + 1;
+    let villains = crate::bot::range_model::villain_specs(profile, state);
+    let total = villains.len() + 1;
     if !(2..=10).contains(&total) {
         return None;
     }
     let mut players = Vec::with_capacity(total);
     players.push(PlayerSpec::Exact(hero));
-    players.extend(std::iter::repeat_with(|| PlayerSpec::Random).take(villains));
+    players.extend(villains);
     let opts = EquityOptions {
         max_samples,
         seed: Some(rng.random::<u64>()),
@@ -605,7 +611,12 @@ fn real_equity<R: rand::Rng + ?Sized>(state: &TableSnapshot, max_samples: u64, r
 /// Feature-off stub: without the `equity` feature the real engine is absent,
 /// so the equity knob transparently falls back to the proxy.
 #[cfg(not(feature = "equity"))]
-fn real_equity<R: rand::Rng + ?Sized>(_state: &TableSnapshot, _max_samples: u64, _rng: &mut R) -> Option<f64> {
+fn real_equity<R: rand::Rng + ?Sized>(
+    _profile: &BotProfile,
+    _state: &TableSnapshot,
+    _max_samples: u64,
+    _rng: &mut R,
+) -> Option<f64> {
     None
 }
 
@@ -1780,6 +1791,85 @@ mod bot__decider_tests {
         assert!(
             exploit_profile(&p, &snap).is_none(),
             "exploit knob must no-op when no stats registry is attached"
+        );
+    }
+    /// EPIC-39 Phase 2: with `ranges: position_aware` the villains stop being
+    /// "any two cards" and become their position's opening range, which must
+    /// move the hero's postflop equity. With `ranges: flat` nothing changes.
+    #[cfg(feature = "equity")]
+    #[test]
+    fn position_aware_ranges_change_postflop_equity() {
+        use crate::bot::decision_config::{EquityMode, RangeMode};
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(
+            (0..6)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 1_000)))
+                .collect(),
+        );
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 3);
+        state.phase = GamePhase::BettingFlop;
+        state.board = Cards::from_str("2C 7D JH").expect("a legal flop");
+        state.hole_cards = Cards::from_str("AH QD").expect("a legal hand");
+
+        let mut flat = BotProfile::gto();
+        flat.decision.equity = EquityMode::Fast { samples: 20_000 };
+        flat.decision.ranges = RangeMode::Flat;
+        let mut aware = flat.clone();
+        aware.decision.ranges = RangeMode::PositionAware;
+
+        let random_villains = hand_equity(&flat, &state, &mut SmallRng::seed_from_u64(42))
+            .expect("the engine answers for a 2-card hero on a flop");
+        let ranged_villains = hand_equity(&aware, &state, &mut SmallRng::seed_from_u64(42))
+            .expect("the engine answers for a 2-card hero on a flop");
+
+        // Ace-queen has missed this board. Against five opening ranges — which
+        // are full of the pairs and broadways that hit it — it is worth much
+        // less than against five hands drawn at random.
+        assert!(
+            ranged_villains < random_villains,
+            "tight villain ranges must cost an unmade hand equity: \
+             random {random_villains:.4} vs ranged {ranged_villains:.4}"
+        );
+        assert!(
+            (random_villains - ranged_villains) > 0.03,
+            "the gap must be far larger than Monte Carlo noise: \
+             random {random_villains:.4} vs ranged {ranged_villains:.4}"
+        );
+    }
+
+    /// The compatibility guard: a profile that has not opted in must be
+    /// bit-for-bit unchanged by EPIC-39.
+    #[cfg(feature = "equity")]
+    #[test]
+    fn default_profile_postflop_equity_is_unchanged_by_the_range_model() {
+        use crate::analysis::equity::PlayerSpec;
+        use crate::bot::decision_config::EquityMode;
+        use crate::bot::range_model::villain_specs;
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(
+            (0..6)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 1_000)))
+                .collect(),
+        );
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 3);
+        state.phase = GamePhase::BettingFlop;
+        state.board = Cards::from_str("AS KD 7C").expect("a legal flop");
+        state.hole_cards = Cards::from_str("2H 3D").expect("a legal hand");
+
+        let mut profile = BotProfile::gto();
+        profile.decision.equity = EquityMode::Fast { samples: 5_000 };
+
+        assert!(
+            villain_specs(&profile, &state)
+                .iter()
+                .all(|spec| matches!(spec, PlayerSpec::Random)),
+            "the default `ranges: flat` profile still sees Random villains"
         );
     }
 }

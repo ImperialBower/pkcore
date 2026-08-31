@@ -5,6 +5,52 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-08-30
+
+### Added
+
+- **`bot::range_model` — villain range estimation ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phases 1–2).**
+  The decider can now model an opponent as a *range* instead of any two cards.
+  Three new public functions:
+
+  - `combos_from_weighted(&WeightedRange) -> Option<Combos>` flattens the
+    existing position-range data into a `Combos` set.
+  - `villain_range(&BotProfile, &TableSnapshot, usize) -> Option<Combos>`
+    estimates what the villain at a given seat is representing.
+  - `villain_specs(&BotProfile, &TableSnapshot) -> Vec<PlayerSpec>`
+    (behind the `equity` feature) builds the per-villain specs the equity
+    engine consumes.
+
+  The estimate is derived from **position alone** — never from opponent
+  identity — so EPIC-36's no-opponent-awareness constraint still holds.
+
+### Changed (behaviour, opt-in only)
+
+- **`equity` now sharpens against ranges when `ranges: position_aware` is set.**
+  `real_equity` used to push `PlayerSpec::Random` for every villain. With the
+  `ranges` knob on `position_aware` it pushes that villain's positional opening
+  range instead, which materially moves postflop equity: ace-queen on a `2c 7d
+  Jh` flop at a full six-max table drops from `0.149` against random hands to
+  `0.061` against five opening ranges.
+
+  **Profiles on the default `ranges: flat` are unchanged** — every villain is
+  still `Random`, so no existing bot, bench or self-play result moves unless it
+  opts in. A range that cannot be resolved falls back to `Random` rather than to
+  an empty range, which the equity engine rejects.
+
+### Known limitations
+
+Recorded in full in the EPIC-39 corrigendum:
+
+- **Postflop only.** The preflop path returns before the equity engine is
+  reached, so this release does not change any preflop decision.
+- **Position, not action.** `TableSnapshot` carries no event log, so postflop
+  the decider cannot tell who raised preflop. Every villain is given its
+  position's `open_raise` range, which overstates a caller's strength.
+- **Weights are flattened.** `PlayerSpec::Range` samples uniformly, so a combo
+  at frequency `0.3` counts the same as one at `1.0`. Entries at frequency
+  `0.0` are dropped.
+
 ## [0.11.0] - 2026-08-29
 
 ### Changed (breaking)

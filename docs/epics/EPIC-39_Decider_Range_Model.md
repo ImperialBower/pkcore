@@ -8,17 +8,21 @@
 
 ## Status
 
-All **Planned** — no work has started. This EPIC unblocks the two knobs EPIC-36
-shipped as schema-only (`Toggle`/`PreflopCharts`, default `Off`).
+**Phases 1 and 2 shipped in `0.12.0`** (2026-08-30, against `main` @ `cf5f50f7`).
+Phases 3 and 4 — the `outs` and `preflop_charts` knobs — remain **Planned**.
+Three findings changed the design during the build; all three are recorded in
+the [Corrigendum](#corrigendum) rather than edited silently into the text below.
 
 | Component | Status |
 |---|---|
-| `villain_range(state) -> Combos` — position/action-derived range estimate | Planned |
-| Wire villains as `PlayerSpec::Range` (not `Random`) in `real_equity` when a range is available | Planned |
+| `villain_range(profile, state, villain_index) -> Option<Combos>` — position-derived range estimate | **Complete** — `src/bot/range_model.rs` |
+| `combos_from_weighted(&WeightedRange) -> Option<Combos>` — the `PositionRanges` → `Combos` adapter | **Complete** — `src/bot/range_model.rs` (not in the original plan; see corrigendum 3) |
+| `villain_specs(profile, state) -> Vec<PlayerSpec>` — per-villain spec builder | **Complete** — `src/bot/range_model.rs`, `equity`-gated |
+| Wire villains as `PlayerSpec::Range` (not `Random`) in `real_equity` when a range is available | **Complete** — `src/bot/decider.rs`, gated on `ranges: position_aware` |
 | **`outs`** knob wired: draw equity vs the estimated range (flip EPIC-36 §5 Deferred) | Planned |
 | **`preflop_charts`** knob wired: preflop equity vs a position-appropriate range (flip EPIC-36 §6 Deferred) | Planned |
-| No-opponent-awareness invariant preserved (range from state/aggregate stats, never identity) | Planned |
-| `ROADMAP.md` Epics row + EPIC-36 Status/corrigendum reconciled on ship | Planned |
+| No-opponent-awareness invariant preserved (range from state/aggregate stats, never identity) | **Complete** — position-derived only; `rule_based_decider_ignores_opponent_stats` still passes |
+| `ROADMAP.md` Epics row + EPIC-36 Status/corrigendum reconciled on ship | Planned — due with Phases 3–4 |
 
 ---
 
@@ -246,3 +250,69 @@ unit/doc test; (2) the no-opponent-awareness tripwire still passes for default
 profiles; (3) `outs: off` / `preflop_charts: off` are behavior-identical to
 post-EPIC-36; (4) EPIC-36 Status rows §5/§6 flipped from Deferred to Complete
 with cited code.
+
+---
+
+## Corrigendum
+
+Written during the Phase 1–2 build (2026-08-30, pkcore `0.12.0`). Each item is
+a place where the code above turned out to be wrong or incomplete.
+
+### 1. `real_equity` is only ever reached postflop
+
+The Design section reads as though wiring `PlayerSpec::Range` sharpens the
+decider generally. It does not. `hand_equity` (`src/bot/decider.rs`) returns on
+the preflop branch — a frequency roll against the open-raise range — before the
+equity engine is consulted at all. **Phases 1–2 therefore change postflop
+decisions only.** This does not weaken Phase 4: `preflop_charts` was always
+going to need its own path into the preflop branch.
+
+### 2. Position only — the snapshot has no action history
+
+The estimator was specified as `(position, action context, board, optional
+stats) -> Combos`. `TableSnapshot` carries no event log, and its
+`raises_this_street` refers to the *current* street, so postflop the decider
+cannot tell which villain raised preflop and which merely called. Every villain
+is given its position's `open_raise` range, which **overstates a caller's
+strength**. Recorded as a known limitation rather than papered over with an
+invented continuation heuristic; `PositionRanges` only ever populates two action
+keys (`open_raise`, `three_bet`), so there is no continuing-range data to use.
+
+### 3. `Combos` stores notation, not hands — and drops weights
+
+Two discoveries about the conversion path:
+
+- `Combos::from_str("QQ+")` yields **one** `Combo` carrying a `plus` flag, not
+  three. Expansion to concrete hands happens later, in `Twos::from(&Combos)`,
+  which the equity engine already calls. Tests assert on the expanded hand count
+  (`QQ+` → 18) rather than on `Combos::len()`.
+- `Combos` has no frequency channel and `PlayerSpec::Range` samples its
+  combinations **uniformly**, so a `WeightedRange` entry at frequency `0.3` is
+  indistinguishable from one at `1.0`. `combos_from_weighted` therefore drops
+  entries at frequency `0.0` and keeps everything else at full weight. Weighted
+  sampling is a genuine refinement, not a bug — it needs an engine change.
+
+### 4. Villain positions are derivable — the "field range" was unnecessary
+
+The Design proposed "a single combined range for the field (uniform across
+active villains)", calling per-seat ranges a later refinement. This turned out
+to be free: `TableSnapshot::stacks` holds exactly the occupied seats in seat
+order, so **an index into `stacks` is the logical seat**, and
+`Position::from_seat(index, dealer_button, seat_count)` gives each villain its
+own position. Every villain gets its own range from the start.
+
+### 5. Fallback is to `Random`, never to an empty range
+
+The equity engine filters range combinations against the dead cards itself and
+returns `PKError::InvalidHand` when nothing survives (`engine.rs:115`). Since
+`real_equity` swallows that with `.ok()?`, an unresolvable range would have
+silently demoted the hero to the *hand-rank proxy* — a worse estimate than the
+`Random` villains it replaced. `villain_specs` therefore degrades to
+`PlayerSpec::Random` whenever `villain_range` returns `None`.
+
+### Not exported through the prelude
+
+`range_model`'s three functions are reachable at
+`pkcore::bot::range_model::*` but are deliberately **not** re-exported from
+`prelude.rs`, which carries types rather than free functions. This keeps the
+public surface where the `0.11.0` Muratori work left it.
