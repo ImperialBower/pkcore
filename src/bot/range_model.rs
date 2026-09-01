@@ -105,7 +105,49 @@ pub fn villain_range(profile: &BotProfile, state: &TableSnapshot, villain_index:
     let logical = u8::try_from(villain_index).ok()?;
     let position = Position::from_seat(logical, state.dealer_button?, state.seat_count)?;
     let range = profile.range_for_or_default(state.seat_count, position, VILLAIN_ACTION);
-    combos_from_weighted(&range)
+    let charted = combos_from_weighted(&range)?;
+    Some(widen_by_reads(state, villain_index, charted))
+}
+
+/// Minimum hands observed before a VPIP read overrides the position chart.
+///
+/// Matches `ExploitConfig::min_hands_light`, so the two read-driven features
+/// start trusting a sample at the same point.
+pub const MIN_HANDS_FOR_READ: u64 = 30;
+
+/// Replaces the charted width with the villain's *observed* width.
+///
+/// A position chart is a prior; an observed VPIP is evidence. Once enough
+/// hands have been seen, the evidence wins: a villain who voluntarily plays
+/// 45% of hands is given the strongest 45% of starting hands
+/// ([`range_of_width`](crate::bot::hand_order::range_of_width)), which widens
+/// a loose player's range and tightens a nit's.
+///
+/// This reads **aggregate** statistics only — never the opponent's identity,
+/// type, or actual holding — which is what EPIC-36's design constraint
+/// permits, and is the same data `bot::exploit` already consults.
+///
+/// **Known limitation:** VPIP is a whole-table average, so the observed width
+/// is applied at every position. A villain who opens tight under the gun and
+/// wide on the button is modelled at their average in both seats.
+#[cfg(feature = "player-stats")]
+fn widen_by_reads(state: &TableSnapshot, villain_index: usize, charted: Combos) -> Combos {
+    let observed = state
+        .stacks
+        .get(villain_index)
+        .and_then(|villain| state.opponent_stats?.get(villain.id))
+        .filter(|stats| stats.hands_dealt >= MIN_HANDS_FOR_READ)
+        .and_then(super::super::analysis::player_stats::PlayerStats::vpip)
+        .and_then(crate::bot::hand_order::range_of_width);
+
+    observed.unwrap_or(charted)
+}
+
+/// Feature-off stub: with no statistics there is nothing to read, so the
+/// charted range stands.
+#[cfg(not(feature = "player-stats"))]
+fn widen_by_reads(_state: &TableSnapshot, _villain_index: usize, charted: Combos) -> Combos {
+    charted
 }
 
 /// Builds one [`PlayerSpec`] per active villain, in seat order.
@@ -341,5 +383,88 @@ mod bot__range_model_tests {
             specs.iter().all(|spec| matches!(spec, PlayerSpec::Random)),
             "an unresolvable range must degrade to Random, never to an empty range"
         );
+    }
+    #[cfg(feature = "player-stats")]
+    mod reads {
+        use super::*;
+        use crate::analysis::player_stats::{PlayerStats, StatsRegistry};
+
+        /// A villain observed over `hands` hands who voluntarily played
+        /// `vpip` of them.
+        fn registry_for(id: uuid::Uuid, hands: u64, vpip: f64) -> StatsRegistry {
+            #[allow(
+                clippy::cast_precision_loss,
+                clippy::cast_possible_truncation,
+                clippy::cast_sign_loss
+            )]
+            let played = (hands as f64 * vpip) as u64;
+            let mut stats = PlayerStats::default();
+            stats.hands_dealt = hands;
+            stats.hands_voluntarily_played = played;
+            let mut registry = StatsRegistry::new();
+            registry.insert(id, stats);
+            registry
+        }
+
+        fn width(profile: &BotProfile, state: &TableSnapshot, index: usize) -> usize {
+            villain_range(profile, state, index).map_or(0, |range| hands(&range).len())
+        }
+
+        #[test]
+        fn a_read_is_ignored_below_the_hand_count_gate() {
+            let profile = gto_profile();
+            let bare = six_max_snapshot(3);
+            let baseline = width(&profile, &bare, 0);
+
+            let mut state = six_max_snapshot(3);
+            // The UUID must come from *this* snapshot: every table deals fresh
+            // players, so ids differ between two separately built snapshots.
+            let registry = registry_for(state.stacks[0].id, 5, 0.60);
+            state.opponent_stats = Some(&registry);
+
+            assert_eq!(
+                baseline,
+                width(&profile, &state, 0),
+                "five hands is not a read; the position range must stand"
+            );
+        }
+
+        #[test]
+        fn a_loose_villain_gets_a_wider_range() {
+            let profile = gto_profile();
+            let bare = six_max_snapshot(3);
+            let baseline = width(&profile, &bare, 0);
+
+            let mut state = six_max_snapshot(3);
+            // The UUID must come from *this* snapshot: every table deals fresh
+            // players, so ids differ between two separately built snapshots.
+            let registry = registry_for(state.stacks[0].id, 200, 0.60);
+            state.opponent_stats = Some(&registry);
+
+            let observed = width(&profile, &state, 0);
+            assert!(
+                observed > baseline,
+                "a 60% VPIP villain over 200 hands should widen past the {baseline}-hand chart, got {observed}"
+            );
+        }
+
+        #[test]
+        fn a_nit_gets_a_tighter_range() {
+            let profile = gto_profile();
+            let bare = six_max_snapshot(3);
+            let baseline = width(&profile, &bare, 0);
+
+            let mut state = six_max_snapshot(3);
+            // The UUID must come from *this* snapshot: every table deals fresh
+            // players, so ids differ between two separately built snapshots.
+            let registry = registry_for(state.stacks[0].id, 200, 0.06);
+            state.opponent_stats = Some(&registry);
+
+            let observed = width(&profile, &state, 0);
+            assert!(
+                observed < baseline,
+                "a 6% VPIP nit should tighten inside the {baseline}-hand chart, got {observed}"
+            );
+        }
     }
 }

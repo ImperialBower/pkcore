@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The estimate is derived from **position alone** — never from opponent
   identity — so EPIC-36's no-opponent-awareness constraint still holds.
 
+- **`bot::hand_order` — a starting-hand ordering ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 3a).**
+  `hand_ordering()` returns the 169 canonical classes strongest-first, each
+  scored by its **exact** equity against a uniformly random hand, derived from
+  the embedded heads-up chart. `range_of_width(fraction)` returns the strongest
+  share of hands as a `Combos`, nested so a wider range always contains a
+  narrower one. Built lazily on first use — roughly a second in debug, a tenth
+  of that in release — and never at all unless a profile uses reads.
+
+  This filled a real gap: `Combos::PERCENT_33` actually expands to **20.7%** of
+  hands, `PERCENT_20` to 13.4%, and the widest range anywhere in the repo was
+  21.6% — so there was no way to express a 45%-VPIP opponent.
+
+- **`bot::draw_equity` — outs that mean something ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 3b).**
+  `outs_against` counts the hero's outs on a flop or turn **against a villain
+  range**, and `outs_equity` converts a count with the rule of four and two. An
+  out is a card that makes you *win*, not merely one that improves your hand, so
+  the count depends on the range: the same holding shows more outs against a
+  loose opponent than a tight one.
+
 - **`bot::preflop_equity` — real preflop equity ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 4).**
   The `preflop_charts` knob is no longer schema-only. Two new public functions:
 
@@ -63,6 +82,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   roll, and every failure path — not heads-up under `Hup`, no resolvable range,
   a non-NLHE hand, the `equity` feature absent — falls back to it too.
 
+- **A villain's range now reflects observed play.** Once a seat has been seen
+  for 30 hands (matching `ExploitConfig::min_hands_light`), its observed VPIP
+  **replaces** the charted width: a 60% VPIP opponent is given the strongest 60%
+  of starting hands, a 6% nit the strongest 6%. Below the gate, or with no
+  `opponent_stats` attached, the position chart stands unchanged. This reads
+  aggregate statistics only — never opponent identity — which is what EPIC-36's
+  constraint permits and what `bot::exploit` already did.
+
+- **`outs: on` rescues draws the proxy throws away.** The hand-rank proxy scores
+  an open-ended straight draw at `0.0021` — below total air at `0.1635` — because
+  a draw is not a made hand. With the knob on, hand strength becomes the better
+  of the proxy and the draw equity, so a made hand keeps its score and a drawing
+  hand stops being valued as though it had missed.
+
 - **`PreflopCharts::Solver` no longer means "solver charts".** It was specced
   for offline-generated GTO charts, which do not exist in this repo. Rather than
   leave a knob setting that silently does nothing, it now runs the equity engine
@@ -73,10 +106,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Recorded in full in the EPIC-39 corrigendum:
 
-- **The `outs` knob is still schema-only.** EPIC-39 Phase 3 was deferred: with
-  `equity: fast` and range villains the engine already prices draws, so `outs`
-  only adds value on the proxy path — a different design question, recorded in
-  the EPIC-39 corrigendum.
+- **`outs: on` is a no-op alongside `equity: fast` or `exact`.** Those paths
+  enumerate runouts and already price draws, so a bonus on top would
+  double-count. The knob acts on the proxy path (`equity: off`) only.
+- **A read is one width for every position.** VPIP is a whole-table average, so
+  a villain who opens tight under the gun and wide on the button is modelled at
+  their average in both seats.
+- **Multi-way, `outs` assumes one shared range.** The draw count is taken
+  against the first active villain's range and applied to the pot as a whole.
 - **Position, not action.** `TableSnapshot` carries no event log, so postflop
   the decider cannot tell who raised preflop. Every villain is given its
   position's `open_raise` range, which overstates a caller's strength.

@@ -17,7 +17,7 @@ Status as of branch `EPIC-36` (see `## Implementation corrigendum` for deltas).
 | Capability: **equity** — real `EquityRequest` postflop (`off`/`fast`/`exact`) | **Complete** (`decider.rs::real_equity`) |
 | Capability: **ranges** — position-aware via `playbook` (`flat`/`position_aware`) | **Complete** (`decider.rs::preflop_open_frequency`) |
 | Capability: **pot_odds** — graded `discipline` 0..1 | **Complete** (`decider.rs`, `call_threshold`) |
-| Capability: **outs** — draw equity via `Outs`/`CaseEvals` (`off`/`on`) | **Deferred** — schema present (`Toggle::Off`); wiring deferred (corrigendum §5) |
+| Capability: **outs** — draw equity via `Outs`/`CaseEvals` (`off`/`on`) | **Complete** — wired in `0.12.0` by [EPIC-39](EPIC-39_Decider_Range_Model.md) Phase 3 (`src/bot/draw_equity.rs`), on the proxy path. §5 superseded. (was: schema present (`Toggle::Off`); wiring deferred (corrigendum §5) |
 | Capability: **exploit** — internal `adjust_profile` (`off`/`light`/`heavy`) | **Complete** (`decider.rs::exploit_profile`; corrigendum §4) |
 | Capability: **preflop_charts** — HUP / offline GTO (`off`/`hup`/`solver`) | **Complete** — wired in `0.12.0` by [EPIC-39](EPIC-39_Decider_Range_Model.md) Phase 4 (`src/bot/preflop_equity.rs`). §6 below is superseded; see the note under it. |
 | Arena bench: chips/100 comparison of YAML configs via `SimTable` | **Complete** (`examples/bot_capability_bench.rs`) |
@@ -510,13 +510,13 @@ hands, seed 42).
 |---|---|---|
 | 1 | `DecisionConfig` schema + `BotProfile.decision` + backward-compat | **Complete** |
 | 2 | equity, ranges, pot_odds, exploit wired | **Complete** |
-| 2 | outs | **Deferred** (§5) — still open, see [EPIC-39](EPIC-39_Decider_Range_Model.md) corrigendum 6 |
+| 2 | outs | **Complete** in `0.12.0` — §5 superseded |
 | 2 | preflop_charts | **Complete** in `0.12.0` — §6 superseded |
 | 3 | cash-mode `SimTable`, arena bench, weak/strong configs | **Complete** |
 
 ### Inherited debt / follow-ons
 
-- **outs** remains to wire if a future EPIC introduces an
+- ~~**outs** remains to wire~~ — **done** in `0.12.0`. Original note: if a future EPIC introduces an
   opponent-range model (villain hands/ranges) the decider may consult without
   violating the no-opponent-awareness constraint — e.g. range-vs-range equity.
 - **equity memoization** is a performance follow-on if large-budget `exact`

@@ -512,12 +512,54 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
     // Fast/Exact fall back to the proxy when the real engine can't answer (no
     // active villain, non-NLHE hole size, or the `equity` feature is disabled).
     match profile.decision.equity {
-        EquityMode::Off => proxy_equity(state),
+        // outs knob: the proxy is blind to draws, so give it an out count.
+        // The engine paths already enumerate runouts and price draws, so a
+        // bonus there would double-count.
+        EquityMode::Off => proxy_equity(state).map(|proxy| apply_outs(profile, state, proxy)),
         EquityMode::Fast { samples } => {
             real_equity(profile, state, u64::from(samples), rng).or_else(|| proxy_equity(state))
         }
         EquityMode::Exact => real_equity(profile, state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state)),
     }
+}
+
+/// Raises the proxy to the hero's draw equity when the `outs` knob is on.
+///
+/// Takes the better of the two rather than adding them: a made hand keeps its
+/// proxy score, and a drawing hand stops being valued as though it had missed.
+/// A no-op when the knob is `Off`, when the street has no cards left to come,
+/// or when no villain range resolves.
+fn apply_outs(profile: &BotProfile, state: &TableSnapshot, proxy: f64) -> f64 {
+    use crate::arrays::two::Two;
+    use crate::bot::decision_config::Toggle;
+    use std::str::FromStr;
+
+    if profile.decision.outs != Toggle::On {
+        return proxy;
+    }
+    let cards_to_come = match state.board.len() {
+        3 => 2,
+        4 => 1,
+        _ => return proxy,
+    };
+    let Ok(hero) = Two::from_str(&state.hole_cards.to_string()) else {
+        return proxy;
+    };
+    // The field's range, taken from the first active villain. Multi-way this
+    // is a simplification: every villain is assumed to hold the same range.
+    let Some(range) = state
+        .stacks
+        .iter()
+        .enumerate()
+        .find(|(_, villain)| villain.is_active && villain.seat != state.seat)
+        .and_then(|(index, _)| crate::bot::range_model::villain_range(profile, state, index))
+    else {
+        return proxy;
+    };
+    let Some(outs) = crate::bot::draw_equity::outs_against(hero, &state.board, &range) else {
+        return proxy;
+    };
+    proxy.max(crate::bot::draw_equity::outs_equity(outs, cards_to_come))
 }
 
 /// Sample budget used for `EquityMode::Exact`.
@@ -1931,5 +1973,67 @@ mod bot__decider_tests {
                 "the default preflop path is a coin flip, got {equity}"
             );
         }
+    }
+    /// EPIC-39 Phase 3: the proxy rates an open-ended straight draw at 0.0021,
+    /// below total air. With `outs: on` the draw is priced by its outs.
+    #[test]
+    fn outs_on_rescues_a_draw_the_proxy_throws_away() {
+        use crate::bot::decision_config::{EquityMode, RangeMode, Toggle};
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 0);
+        state.phase = GamePhase::BettingFlop;
+        state.board = Cards::from_str("6D 5C 2H").expect("a legal flop");
+        state.hole_cards = Cards::from_str("8S 7S").expect("a legal hand");
+
+        let mut off = BotProfile::gto();
+        off.decision.equity = EquityMode::Off;
+        off.decision.ranges = RangeMode::PositionAware;
+        off.decision.outs = Toggle::Off;
+        let mut on = off.clone();
+        on.decision.outs = Toggle::On;
+
+        let proxy = hand_equity(&off, &state, &mut SmallRng::seed_from_u64(3)).expect("proxy answers");
+        let with_outs = hand_equity(&on, &state, &mut SmallRng::seed_from_u64(3)).expect("outs answer");
+
+        assert!(proxy < 0.05, "the proxy throws this draw away, got {proxy:.4}");
+        assert!(
+            with_outs > 0.20,
+            "an open-ended straight draw is worth far more than the proxy says, got {with_outs:.4}"
+        );
+    }
+
+    /// The compatibility guard for Phase 3: `outs: off` is the default and
+    /// must leave the proxy exactly as it was.
+    #[test]
+    fn outs_off_leaves_the_proxy_untouched() {
+        use crate::bot::decision_config::EquityMode;
+        use crate::cards::Cards;
+        use std::str::FromStr;
+
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut state = TableSnapshot::from_table(&table, 0);
+        state.phase = GamePhase::BettingFlop;
+        state.board = Cards::from_str("6D 5C 2H").expect("a legal flop");
+        state.hole_cards = Cards::from_str("8S 7S").expect("a legal hand");
+
+        let mut profile = BotProfile::gto();
+        profile.decision.equity = EquityMode::Off;
+
+        let equity = hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(3)).expect("answers");
+        assert!(
+            equity < 0.05,
+            "the default profile still gets the untouched proxy, got {equity:.4}"
+        );
     }
 }

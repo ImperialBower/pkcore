@@ -8,9 +8,9 @@
 
 ## Status
 
-**Phases 1, 2 and 4 shipped in `0.12.0`** (2026-08-30, against `main` @
-`a998c78a`). Phase 3 — the `outs` knob — remains **Planned**; it was deferred
-deliberately, see corrigendum 6. Findings that changed the design during the
+**All phases shipped in `0.12.0`** (2026-08-31, against `main` @ `a998c78a`).
+Phase 3 — the `outs` knob — was deferred mid-build and then un-deferred; see
+corrigenda 6 and 12. Findings that changed the design during the
 build are recorded in the [Corrigendum](#corrigendum) rather than edited
 silently into the text below.
 
@@ -20,12 +20,14 @@ silently into the text below.
 | `combos_from_weighted(&WeightedRange) -> Option<Combos>` — the `PositionRanges` → `Combos` adapter | **Complete** — `src/bot/range_model.rs` (not in the original plan; see corrigendum 3) |
 | `villain_specs(profile, state) -> Vec<PlayerSpec>` — per-villain spec builder | **Complete** — `src/bot/range_model.rs`, `equity`-gated |
 | Wire villains as `PlayerSpec::Range` (not `Random`) in `real_equity` when a range is available | **Complete** — `src/bot/decider.rs`, gated on `ranges: position_aware` |
-| **`outs`** knob wired: draw equity vs the estimated range (flip EPIC-36 §5 Deferred) | Planned |
+| **`outs`** knob wired: draw equity vs the estimated range (flip EPIC-36 §5 Deferred) | **Complete** — `src/bot/draw_equity.rs` |
+| `hand_order` — starting-hand ordering derived from the HUP chart | **Complete** — `src/bot/hand_order.rs` (not in the original plan; see corrigendum 13) |
+| Reads: `villain_range` widens/tightens on observed VPIP | **Complete** — `src/bot/range_model.rs` `widen_by_reads` |
 | **`preflop_charts`** knob wired: preflop equity vs a position-appropriate range (flip EPIC-36 §6 Deferred) | **Complete** — `src/bot/preflop_equity.rs` |
 | `hup_equity_vs_range` — exact heads-up equity averaged over a range | **Complete** — `src/bot/preflop_equity.rs` (see corrigendum 7) |
 | `villain_range_specs` — ungated sibling of `villain_specs` | **Complete** — `src/bot/range_model.rs` |
-| No-opponent-awareness invariant preserved (range from state/aggregate stats, never identity) | **Complete** — position-derived only; `rule_based_decider_ignores_opponent_stats` still passes |
-| `ROADMAP.md` Epics row + EPIC-36 Status/corrigendum reconciled on ship | Planned — due with Phases 3–4 |
+| No-opponent-awareness invariant preserved (range from state/aggregate stats, never identity) | **Complete** — position **and** aggregate stats as specified; identity never consulted |
+| `ROADMAP.md` Epics row + EPIC-36 Status/corrigendum reconciled on ship | **Complete** — `ROADMAP.md:141` and EPIC-36 §5/§6 both flipped |
 
 ---
 
@@ -171,30 +173,30 @@ position charts if/when they exist.
 ## Work Items
 
 ### Phase 0 — Prerequisites (verify, no code)
-- [ ] 0a. Confirm `PlayerSpec::Range(Combos)` + `EquityRequest` accept a range
+- [x] 0a. Confirm `PlayerSpec::Range(Combos)` + `EquityRequest` accept a range
   seat end to end (`src/analysis/equity/spec.rs`, `engine.rs`).
-- [ ] 0b. Confirm `PositionRanges` → `Combos` conversion path exists (or add a
+- [x] 0b. Confirm `PositionRanges` → `Combos` conversion path exists (or add a
   thin adapter).
 
 ### Phase 1 — Range estimator
-- [ ] 1a. `villain_range(profile, state) -> Option<Combos>` (position/action
+- [x] 1a. `villain_range(profile, state) -> Option<Combos>` (position/action
   seeded from `PositionRanges`); unit tests for a few spots.
-- [ ] 1b. No-identity regression: extend/keep `rule_based_decider_ignores_opponent_stats`.
+- [x] 1b. No-identity regression: extend/keep `rule_based_decider_ignores_opponent_stats`.
 
 ### Phase 2 — Sharpen `equity`
-- [ ] 2a. `real_equity` models villains as `Range` when available, `Random`
+- [x] 2a. `real_equity` models villains as `Range` when available, `Random`
   otherwise; test that a range-modeled equity differs from the random-modeled one
   in a spot where the range is clearly narrower.
 
 ### Phase 3 — Wire `outs`
-- [ ] 3a. Draw equity vs the range; flip `DecisionConfig.outs` from schema-only.
-- [ ] 3b. Per-level test: `outs: on` demonstrably changes a drawing-hand decision.
-- [ ] 3c. Reconcile EPIC-36 Status/corrigendum §5.
+- [x] 3a. Draw equity vs the range; flip `DecisionConfig.outs` from schema-only.
+- [x] 3b. Per-level test: `outs: on` demonstrably changes a drawing-hand decision.
+- [x] 3c. Reconcile EPIC-36 Status/corrigendum §5.
 
 ### Phase 4 — Wire `preflop_charts`
-- [ ] 4a. Preflop equity vs a position range for `hup` (and `solver` if charts
+- [x] 4a. Preflop equity vs a position range for `hup` (and `solver` if charts
   exist); flip `DecisionConfig.preflop_charts` from schema-only.
-- [ ] 4b. Per-level test; reconcile EPIC-36 Status/corrigendum §6.
+- [x] 4b. Per-level test; reconcile EPIC-36 Status/corrigendum §6.
 
 ---
 
@@ -382,3 +384,71 @@ The `Solver` path builds its preflop request with `Board::default()`, not
 `Board::try_from(state.board.clone())`. The latter returns
 `PKError::NotEnoughCards` for `0..=2` cards (`src/play/board.rs:215`), which is
 correct for the postflop path it was written for and fatal preflop.
+
+### 12. Retraction of corrigendum 6 — `outs` is not redundant, and it is range-dependent
+
+Corrigendum 6 deferred `outs` on the grounds that "counting the hero's own outs
+needs no villain information" and that the knob merely duplicated `equity`.
+**Both halves were wrong**, and the error was caught in review, not in code.
+
+An **out is not a card that improves your hand — it is a card that makes you
+win.** Whether pairing a four is an out depends entirely on what the villain
+holds. So `outs` is range-dependent after all, and Phase 3 genuinely does build
+on Phases 1–2 rather than being independent of them. `outs_against` reduces the
+range to its median made-hand strength on the board and counts only the cards
+that clear it, which is why the same hand shows 6 outs against `QQ+, AK` and
+more against a wide range.
+
+The redundancy half stands, but only for the engine paths: `equity: fast` and
+`exact` enumerate runouts and already price draws, so `apply_outs` runs on the
+**proxy path only**. `outs: on` alongside `equity: fast` is a documented no-op.
+
+### 13. Ranges must reflect observed play, and Phase 1 only did half the job
+
+The Phase 1 status row claimed a range derived from "state/aggregate stats".
+**It was position-only; the stats half was never built**, and the row overclaimed.
+EPIC-39's own Design section had specified "an optional widen/tighten from
+aggregate `opponent_stats` (VPIP/PFR)".
+
+`widen_by_reads` closes it. Once a seat has been observed for
+`MIN_HANDS_FOR_READ` hands (30, matching `ExploitConfig::min_hands_light`), the
+observed VPIP **replaces** the charted width: a 60% VPIP villain is given the
+strongest 60% of starting hands, a 6% nit the strongest 6%. A chart is a prior;
+an observation is evidence.
+
+This stays inside EPIC-36's constraint, which bans opponent *identity or type*
+but explicitly permits "aggregate `opponent_stats` a runner chooses to collect"
+— the same data `bot::exploit` has always read.
+
+**Known limitation:** VPIP is a whole-table average, so one width is applied at
+every position. A villain who opens tight under the gun and wide on the button
+is modelled at their average in both seats.
+
+### 14. The percent-range constants are mislabelled
+
+`Combos::PERCENT_33` expands to 274 hands — **20.7%** of the 1,326 distinct
+starting hands, not 33%. `PERCENT_20` is 13.4%. Only `PERCENT_2_5`, `PERCENT_5`
+and `PERCENT_10` are accurate. They are therefore unusable as a VPIP ladder, and
+the widest range anywhere in the repo (the BTN opening chart) is 21.6% — with no
+way to express the 45%-VPIP villain the reads feature exists to model.
+
+`bot::hand_order` fills the gap: every canonical class scored by its exact
+equity against a uniformly random hand, read from the embedded chart. It is
+built lazily on first use — about a second in a debug build, a tenth of that in
+release — and never at all for profiles that do not use reads. Sanity checks:
+AA tops the list at `0.8575`, 72o sits last at `0.3209`, and the 45% cut falls
+on J3o at `0.5088`, right at break-even, exactly where a 45%-wide range should
+end.
+
+### 15. Two poker errors in the tests, caught by the code
+
+Both were mine, and in both cases the implementation was right:
+
+- **A♥K♥ on 7♥2♣3♦ is not a flush draw.** Three hearts plus one board heart is
+  four to a flush — a *backdoor* draw. The code returned 6 outs (three aces,
+  three kings) and I had asserted 9+. Moving the board to `7♥2♥3♦` gives the
+  textbook **15**: nine flush outs plus six to top pair. Both boards are now
+  tested, precisely because the distinction is easy to lose.
+- **AA versus KK is 81.95%, not 81.06%** (Phase 4). The lower figure is a single
+  suit pairing; the average over all six king combinations is the quoted one.
+  Confirmed against the equity engine, an independent path, on three seeds.

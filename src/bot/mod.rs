@@ -3,10 +3,12 @@
 pub mod betting_strategy;
 pub mod decider;
 pub mod decision_config;
+pub mod draw_equity;
 #[cfg(feature = "player-stats")]
 pub mod exploit;
 #[cfg(feature = "player-stats")]
 pub mod exploitative_decider;
+pub mod hand_order;
 pub mod playbook;
 pub mod player_action;
 pub mod position_ranges;
