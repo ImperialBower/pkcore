@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.11.0"
+version = "0.12.0"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -42,6 +42,7 @@ default = [
     "player-stats-persistence",
     "equity",
     "parallel",
+    "hup-charts",
 ]
 ## Enables the on-disk storage layer.
 store = ["dep:rusqlite", "dep:zstd"]
@@ -74,6 +75,19 @@ player-stats = []
 player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
 ## Enables `ExploitConfig` YAML serialisation
 bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
+## Links the embedded heads-up preflop chart (`generated/hups.bin`) into the
+## binary, which is what `preflop_charts: hup` reads.
+##
+## On by default. It is a separate axis because the chart is **15.8 MB** and the
+## knob that reads it is a *runtime* value, so the linker cannot drop the blob
+## on the strength of a profile setting alone — a WASM consumer measured an
+## 8x larger download for it. Turning it off removes `hup_equity_vs_range` from
+## the public API and makes `preflop_charts: hup` return no answer, so the
+## decider falls back to the preflop frequency roll. `preflop_charts: solver`
+## does not read the chart and is unaffected; multi-way tables need `solver`
+## anyway. See EPIC-39 corrigendum 16.
+hup-charts = []
+
 ## Enables the HuggingFace `pokerbench` module.
 pokerbench = []
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct

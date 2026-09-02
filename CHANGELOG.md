@@ -5,6 +5,143 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-08-30
+
+### Added
+
+- **`hup-charts` cargo feature (default on).** Links `generated/hups.bin`, the
+  15.8 MB embedded heads-up preflop chart that `preflop_charts: hup` reads.
+  Default-on, so nothing changes for existing consumers. Turning it off removes
+  `hup_equity_vs_range` from the public API and makes `preflop_charts: hup` fall
+  back to the preflop frequency roll — the option exists for size-sensitive
+  builds, WASM in particular. `preflop_charts: solver` needs no chart.
+
+- **`bot::range_model` — villain range estimation ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phases 1–2).**
+  The decider can now model an opponent as a *range* instead of any two cards.
+  Three new public functions:
+
+  - `combos_from_weighted(&WeightedRange) -> Option<Combos>` flattens the
+    existing position-range data into a `Combos` set.
+  - `villain_range(&BotProfile, &TableSnapshot, usize) -> Option<Combos>`
+    estimates what the villain at a given seat is representing.
+  - `villain_specs(&BotProfile, &TableSnapshot) -> Vec<PlayerSpec>`
+    (behind the `equity` feature) builds the per-villain specs the equity
+    engine consumes.
+
+  The estimate is derived from **position alone** — never from opponent
+  identity — so EPIC-36's no-opponent-awareness constraint still holds.
+
+- **`bot::hand_order` — a starting-hand ordering ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 3a).**
+  `hand_ordering()` returns the 169 canonical classes strongest-first, each
+  scored by its **exact** equity against a uniformly random hand, derived from
+  the embedded heads-up chart. `range_of_width(fraction)` returns the strongest
+  share of hands as a `Combos`, nested so a wider range always contains a
+  narrower one. The values are precomputed into `src/bot/hand_order_table.rs`
+  by the new `export_hand_order` example, so nothing on the reads path opens
+  the 15.8 MB chart — see below.
+
+  This filled a real gap: `Combos::PERCENT_33` actually expands to **20.7%** of
+  hands, `PERCENT_20` to 13.4%, and the widest range anywhere in the repo was
+  21.6% — so there was no way to express a 45%-VPIP opponent.
+
+- **`bot::draw_equity` — outs that mean something ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 3b).**
+  `outs_against` counts the hero's outs on a flop or turn **against a villain
+  range**, and `outs_equity` converts a count with the rule of four and two. An
+  out is a card that makes you *win*, not merely one that improves your hand, so
+  the count depends on the range: the same holding shows more outs against a
+  loose opponent than a tight one.
+
+- **`bot::preflop_equity` — real preflop equity ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phase 4).**
+  The `preflop_charts` knob is no longer schema-only. Two new public functions:
+
+  - `hup_equity_vs_range(&Two, &Combos) -> Option<f64>` averages the embedded
+    heads-up chart over a range. Each entry enumerates all `C(48,5)` boards, so
+    the per-matchup number is **exact**, and the table is **complete** — 812,175
+    entries, every distinct heads-up preflop matchup.
+  - `preflop_equity(&BotProfile, &TableSnapshot, &mut R) -> Option<f64>`
+    dispatches on the knob: `Hup` reads the chart (heads-up only), `Solver` runs
+    the equity engine against the villain ranges (any table size), `Off` returns
+    `None`.
+
+- **`bot::range_model::villain_range_specs`** — `villain_specs` without the
+  `ranges` knob gate, for callers whose own knob already means "model villains
+  as ranges".
+
+### Changed (behaviour, opt-in only)
+
+- **`equity` now sharpens against ranges when `ranges: position_aware` is set.**
+  `real_equity` used to push `PlayerSpec::Random` for every villain. With the
+  `ranges` knob on `position_aware` it pushes that villain's positional opening
+  range instead, which materially moves postflop equity: ace-queen on a `2c 7d
+  Jh` flop at a full six-max table drops from `0.149` against random hands to
+  `0.061` against five opening ranges.
+
+  **Profiles on the default `ranges: flat` are unchanged** — every villain is
+  still `Random`, so no existing bot, bench or self-play result moves unless it
+  opts in. A range that cannot be resolved falls back to `Random` rather than to
+  an empty range, which the equity engine rejects.
+
+- **Preflop hand strength stops being a coin flip when `preflop_charts` is set.**
+  `hand_equity` returned exactly `1.0` or `0.0` preflop — a roll against the
+  hand's frequency in an opening range, not an equity — and the decider compares
+  that against `pot_odds * 2.0`. With the knob on it returns a real number, so a
+  hand that always raised at `1.0` may now call at `0.62`. **Preflop play changes
+  noticeably for profiles that opt in.** The default `Off` keeps the historical
+  roll, and every failure path — not heads-up under `Hup`, no resolvable range,
+  a non-NLHE hand, the `equity` feature absent — falls back to it too.
+
+- **A villain's range now reflects observed play.** Once a seat has been seen
+  for 30 hands (matching `ExploitConfig::min_hands_light`), its observed VPIP
+  **replaces** the charted width: a 60% VPIP opponent is given the strongest 60%
+  of starting hands, a 6% nit the strongest 6%. Below the gate, or with no
+  `opponent_stats` attached, the position chart stands unchanged. This reads
+  aggregate statistics only — never opponent identity — which is what EPIC-36's
+  constraint permits and what `bot::exploit` already did.
+
+- **`outs: on` rescues draws the proxy throws away.** The hand-rank proxy scores
+  an open-ended straight draw at `0.0021` — below total air at `0.1635` — because
+  a draw is not a made hand. With the knob on, hand strength becomes the better
+  of the proxy and the draw equity, so a made hand keeps its score and a drawing
+  hand stops being valued as though it had missed.
+
+- **The 15.8 MB heads-up chart no longer lands in every consumer.** As first
+  written, EPIC-39 made `generated/hups.bin` reachable two ways, and merely
+  upgrading — with **every new knob still off** — grew the `pkarena0-web` WASM
+  download from 478 KB to 3.84 MB brotli. It is now 498 KB — the whole feature
+  set costs 20.3 KB compressed, 4.2%.
+
+  `hand_order` only ever wanted 169 numbers from the chart, so they are now
+  precomputed into a checked-in table by the new `export_hand_order` example;
+  `derive_hand_ordering` stays the source of truth and `table_matches_the_chart`
+  fails if the table drifts. `preflop_charts: hup` genuinely needs the chart and
+  is selected by a *runtime* knob no linker can see past, so it moved behind the
+  new default-on `hup-charts` feature. See EPIC-39 corrigendum 16.
+
+- **`PreflopCharts::Solver` no longer means "solver charts".** It was specced
+  for offline-generated GTO charts, which do not exist in this repo. Rather than
+  leave a knob setting that silently does nothing, it now runs the equity engine
+  against the villain ranges. The split is by table size: `Hup` is exact but
+  strictly heads-up, `Solver` is sampled and works multi-way.
+
+### Known limitations
+
+Recorded in full in the EPIC-39 corrigendum:
+
+- **`outs: on` is a no-op alongside `equity: fast` or `exact`.** Those paths
+  enumerate runouts and already price draws, so a bonus on top would
+  double-count. The knob acts on the proxy path (`equity: off`) only.
+- **A read is one width for every position.** VPIP is a whole-table average, so
+  a villain who opens tight under the gun and wide on the button is modelled at
+  their average in both seats.
+- **Multi-way, `outs` assumes one shared range.** The draw count is taken
+  against the first active villain's range and applied to the pot as a whole.
+- **Position, not action.** `TableSnapshot` carries no event log, so postflop
+  the decider cannot tell who raised preflop. Every villain is given its
+  position's `open_raise` range, which overstates a caller's strength.
+- **Weights are flattened.** `PlayerSpec::Range` samples uniformly, so a combo
+  at frequency `0.3` counts the same as one at `1.0`. Entries at frequency
+  `0.0` are dropped.
+
 ## [0.11.0] - 2026-08-29
 
 ### Changed (breaking)
@@ -285,6 +422,18 @@ unexplained residue.
   variant is not a breaking change for downstream `match` arms.
 
 ### Fixed
+
+- **`bot::hand_order` scored weak hands far too high.** The ordering keyed the
+  embedded chart with its own higher/lower comparison instead of the
+  `SortedHeadsUp` order the chart is actually keyed by. Disagreeing keys missed
+  and were skipped, so the average was built from part of the field: `72o`
+  resolved only 820 of its 1,225 matchups and read `0.3845` where the true value
+  is `0.3469`; `KK` read `0.8372` against `0.8205`. Since the skipped matchups
+  were mostly losses, the error grew as hands got weaker — exactly where a VPIP
+  read needs the ordering to be right. Now routed through `HUPResult::lookup`,
+  which owns the sorting, and `equity_vs_field` returns nothing at all rather
+  than a partial average. Verified against the equity engine on four hands.
+
 
 - `Dealer::start_hand` printed the entire table to stdout on every hand
   (`println!("Dealer.start_hand() called. ...")`). Library code must not write
