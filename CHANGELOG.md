@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-09-02
+
+### Fixed
+
+- **`preflop_charts: solver` ignored the profile's Monte Carlo budget.** The
+  `Solver` path built its request with `EquityOptions::default()`, whose
+  `max_samples` is **25,000** — 50x a profile asking for `equity: fast` with 500
+  samples, and spent on the most frequent decision in a hand, since preflop has
+  no board to narrow the runouts. A downstream tier bench that had been running
+  in minutes did not finish in two hours. The budget now comes from the `equity`
+  knob, exactly as `real_equity` does postflop: `fast { samples }` spends that
+  many, `exact` spends 100,000 to match `EXACT_EQUITY_SAMPLES`, and `off` — legal,
+  since `solver` runs without the engine knob — spends `DecisionConfig`'s own
+  default of 2,000. Recorded in the [EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md)
+  corrigendum 18.
+
 ## [0.12.0] - 2026-08-30
 
 ### Added

@@ -166,6 +166,35 @@ fn active_villain_indices(state: &TableSnapshot) -> Vec<usize> {
         .collect()
 }
 
+/// The Monte Carlo budget for the `Solver` path, taken from the `equity` knob.
+///
+/// Preflop has no board, so a request left on `EquityOptions::default()` runs
+/// `max_samples` of **25,000** — 50x a profile asking for 500, on the most
+/// frequent decision in a hand. The `equity` knob is where a profile states
+/// what it is willing to spend, so the preflop path spends the same, exactly as
+/// `real_equity` does postflop. `Off` still needs a number, since `Solver` runs
+/// without the engine knob: it gets `DecisionConfig`'s own default.
+///
+/// See EPIC-39 corrigendum 18.
+#[cfg(feature = "equity")]
+fn solver_sample_budget(profile: &BotProfile) -> u64 {
+    use crate::bot::decision_config::EquityMode;
+    match profile.decision.equity {
+        EquityMode::Fast { samples } => u64::from(samples),
+        EquityMode::Exact => SOLVER_EXACT_SAMPLES,
+        EquityMode::Off => SOLVER_DEFAULT_SAMPLES,
+    }
+}
+
+/// Budget for `equity: exact`, matching `decider::EXACT_EQUITY_SAMPLES`.
+#[cfg(feature = "equity")]
+const SOLVER_EXACT_SAMPLES: u64 = 100_000;
+
+/// Budget when `equity` is `off` but `preflop_charts` is `solver`, matching
+/// `decision_config`'s own default sample count.
+#[cfg(feature = "equity")]
+const SOLVER_DEFAULT_SAMPLES: u64 = 2_000;
+
 /// Sampled preflop equity against the villain ranges, for any table size.
 ///
 /// Unlike the HUP chart this works multi-way, at the cost of Monte Carlo error.
@@ -185,6 +214,7 @@ fn solver_equity<R: rand::Rng + ?Sized>(
         return None;
     }
     let opts = EquityOptions {
+        max_samples: solver_sample_budget(profile),
         seed: Some(rng.random::<u64>()),
         ..EquityOptions::default()
     };
@@ -297,6 +327,33 @@ mod bot__preflop_equity_tests {
     #[test]
     fn hup_equity_is_none_for_an_empty_range() {
         assert!(hup_equity_vs_range(&two("AS AD"), &Combos::default()).is_none());
+    }
+
+    /// The regression for the 50x over-budget preflop request. A profile states
+    /// its Monte Carlo budget on the `equity` knob; the `Solver` path used to
+    /// ignore it and take `EquityOptions::default()`'s 25,000 samples on the
+    /// most frequent decision in a hand.
+    #[cfg(feature = "equity")]
+    #[test]
+    fn solver_budget_comes_from_the_equity_knob() {
+        use crate::bot::decision_config::EquityMode;
+
+        let mut fast = BotProfile::gto();
+        fast.decision.equity = EquityMode::Fast { samples: 500 };
+        assert_eq!(500, solver_sample_budget(&fast), "a profile asking for 500 gets 500");
+
+        let mut exact = BotProfile::gto();
+        exact.decision.equity = EquityMode::Exact;
+        assert_eq!(SOLVER_EXACT_SAMPLES, solver_sample_budget(&exact));
+
+        let mut off = BotProfile::gto();
+        off.decision.equity = EquityMode::Off;
+        assert_eq!(SOLVER_DEFAULT_SAMPLES, solver_sample_budget(&off));
+
+        assert!(
+            solver_sample_budget(&fast) < 25_000,
+            "the point of the fix: a browser budget must not silently become the engine default"
+        );
     }
 
     #[test]
