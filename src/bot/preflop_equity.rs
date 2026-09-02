@@ -4,13 +4,18 @@
 //! rolls against the hand's frequency in an opening range and returns `1.0` or
 //! `0.0`. The `preflop_charts` knob replaces that with a real number.
 
+#[cfg(feature = "hup-charts")]
 use crate::analysis::gto::combos::Combos;
+#[cfg(feature = "hup-charts")]
 use crate::analysis::gto::twos::Twos;
+#[cfg(feature = "hup-charts")]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
+#[cfg(feature = "hup-charts")]
 use crate::bard::Bard;
 use crate::bot::decision_config::PreflopCharts;
 use crate::bot::profile::BotProfile;
+#[cfg(feature = "hup-charts")]
 use crate::bot::range_model::villain_range;
 use crate::bot::table_snapshot::TableSnapshot;
 use std::str::FromStr;
@@ -43,6 +48,7 @@ use std::str::FromStr;
 /// let equity = hup_equity_vs_range(&aces, &kings).unwrap();
 /// assert!((equity - 0.8195).abs() < 0.001);
 /// ```
+#[cfg(feature = "hup-charts")]
 #[must_use]
 pub fn hup_equity_vs_range(hero: &Two, range: &Combos) -> Option<f64> {
     let hero_bard: Bard = (*hero).into();
@@ -79,6 +85,7 @@ pub fn hup_equity_vs_range(hero: &Two, range: &Combos) -> Option<f64> {
 }
 
 /// Returns `true` when the two hands cannot be dealt at the same time.
+#[cfg(feature = "hup-charts")]
 fn shares_a_card(hero: Two, villain: Two) -> bool {
     let (first, second) = (hero.first(), hero.second());
     villain.first() == first || villain.first() == second || villain.second() == first || villain.second() == second
@@ -124,17 +131,31 @@ pub fn preflop_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &Table
 
     match profile.decision.preflop_charts {
         PreflopCharts::Off => None,
-        PreflopCharts::Hup => {
-            let mut villains = active_villain_indices(state);
-            let only = villains.pop().filter(|_| villains.is_empty())?;
-            let range = villain_range(profile, state, only)?;
-            hup_equity_vs_range(&hero, &range)
-        }
+        PreflopCharts::Hup => hup_chart_equity(profile, state, hero),
         PreflopCharts::Solver => solver_equity(profile, state, hero, rng),
     }
 }
 
+/// The chart path: exact, but strictly heads-up.
+#[cfg(feature = "hup-charts")]
+fn hup_chart_equity(profile: &BotProfile, state: &TableSnapshot, hero: Two) -> Option<f64> {
+    let mut villains = active_villain_indices(state);
+    let only = villains.pop().filter(|_| villains.is_empty())?;
+    let range = villain_range(profile, state, only)?;
+    hup_equity_vs_range(&hero, &range)
+}
+
+/// Without `hup-charts` the 15.8 MB chart is not linked, so there is no answer
+/// to give and the decider falls back to the preflop frequency roll. This is a
+/// build-time choice by the consumer, documented on the feature in `Cargo.toml`;
+/// `preflop_charts: solver` is the multi-way path and needs no chart.
+#[cfg(not(feature = "hup-charts"))]
+fn hup_chart_equity(_profile: &BotProfile, _state: &TableSnapshot, _hero: Two) -> Option<f64> {
+    None
+}
+
 /// Indices into [`TableSnapshot::stacks`] for every active villain.
+#[cfg(feature = "hup-charts")]
 fn active_villain_indices(state: &TableSnapshot) -> Vec<usize> {
     state
         .stacks
@@ -203,10 +224,12 @@ mod bot__preflop_equity_tests {
     use rand::rngs::SmallRng;
     use std::str::FromStr;
 
+    #[allow(dead_code)]
     fn two(s: &str) -> Two {
         Two::from_str(s).expect("a legal two-card hand")
     }
 
+    #[cfg(feature = "hup-charts")]
     fn range(s: &str) -> Combos {
         Combos::from_str(s).expect("a legal range")
     }
@@ -235,6 +258,7 @@ mod bot__preflop_equity_tests {
     /// as A♠A♦ vs K♥K♣ is 81.06% — averaging the six is what gives 0.8195.)
     /// Cross-checked against the equity engine, an independent code path,
     /// which returns 0.8195 on three separate seeds.
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn hup_equity_matches_the_known_aces_versus_kings_number() {
         let equity = hup_equity_vs_range(&two("AS AD"), &range("KK")).expect("KK is in the table");
@@ -247,6 +271,7 @@ mod bot__preflop_equity_tests {
     /// The load-bearing test. `HUPResult::lookup` ignores argument order and
     /// always reports from the *higher* hand's side, so a missing perspective
     /// flip inverts every answer. Two complementary equities must sum to one.
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn hup_equity_is_symmetric_between_the_two_sides() {
         let hero = hup_equity_vs_range(&two("AS AD"), &range("KK")).expect("a result");
@@ -257,6 +282,7 @@ mod bot__preflop_equity_tests {
         );
     }
 
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn hup_equity_skips_hands_that_share_a_card_with_the_hero() {
         // Only A♥A♣ avoids the hero's A♠ and A♦, and aces against aces chop.
@@ -267,6 +293,7 @@ mod bot__preflop_equity_tests {
         );
     }
 
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn hup_equity_is_none_for_an_empty_range() {
         assert!(hup_equity_vs_range(&two("AS AD"), &Combos::default()).is_none());
@@ -289,6 +316,7 @@ mod bot__preflop_equity_tests {
         );
     }
 
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn preflop_equity_hup_prices_aces_far_above_a_coin_flip() {
         let state = snapshot(2, 0, "AS AD");
@@ -316,6 +344,21 @@ mod bot__preflop_equity_tests {
         assert!(
             equity > 0.3 && equity < 0.8,
             "aces against five opening ranges sit well inside the middle, got {equity:.4}"
+        );
+    }
+
+    /// Without `hup-charts` the chart is not linked, so the exact path has no
+    /// answer to give and the decider falls back to the preflop frequency roll.
+    /// The consumer chose this in their manifest; see the feature's `Cargo.toml`
+    /// note and EPIC-39 corrigendum 16.
+    #[cfg(not(feature = "hup-charts"))]
+    #[test]
+    fn preflop_equity_hup_is_none_without_the_chart_feature() {
+        let state = snapshot(2, 0, "AS AD");
+        let mut rng = SmallRng::seed_from_u64(1);
+        assert!(
+            preflop_equity(&profile_with(PreflopCharts::Hup), &state, &mut rng).is_none(),
+            "no chart linked means no chart answer"
         );
     }
 }

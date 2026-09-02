@@ -1922,6 +1922,7 @@ mod bot__decider_tests {
     /// EPIC-39 Phase 4: preflop hand strength is historically a coin flip —
     /// `1.0` or `0.0` from a frequency roll. With `preflop_charts: hup` it
     /// becomes a real number read from the exact heads-up chart.
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn preflop_charts_replace_the_coin_flip_with_a_real_number() {
         use crate::bot::decision_config::PreflopCharts;

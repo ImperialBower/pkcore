@@ -9,6 +9,7 @@ pub mod exploit;
 #[cfg(feature = "player-stats")]
 pub mod exploitative_decider;
 pub mod hand_order;
+mod hand_order_table;
 pub mod playbook;
 pub mod player_action;
 pub mod position_ranges;

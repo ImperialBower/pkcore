@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`hup-charts` cargo feature (default on).** Links `generated/hups.bin`, the
+  15.8 MB embedded heads-up preflop chart that `preflop_charts: hup` reads.
+  Default-on, so nothing changes for existing consumers. Turning it off removes
+  `hup_equity_vs_range` from the public API and makes `preflop_charts: hup` fall
+  back to the preflop frequency roll — the option exists for size-sensitive
+  builds, WASM in particular. `preflop_charts: solver` needs no chart.
+
 - **`bot::range_model` — villain range estimation ([EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) Phases 1–2).**
   The decider can now model an opponent as a *range* instead of any two cards.
   Three new public functions:
@@ -29,8 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scored by its **exact** equity against a uniformly random hand, derived from
   the embedded heads-up chart. `range_of_width(fraction)` returns the strongest
   share of hands as a `Combos`, nested so a wider range always contains a
-  narrower one. Built lazily on first use — roughly a second in debug, a tenth
-  of that in release — and never at all unless a profile uses reads.
+  narrower one. The values are precomputed into `src/bot/hand_order_table.rs`
+  by the new `export_hand_order` example, so nothing on the reads path opens
+  the 15.8 MB chart — see below.
 
   This filled a real gap: `Combos::PERCENT_33` actually expands to **20.7%** of
   hands, `PERCENT_20` to 13.4%, and the widest range anywhere in the repo was
@@ -95,6 +103,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a draw is not a made hand. With the knob on, hand strength becomes the better
   of the proxy and the draw equity, so a made hand keeps its score and a drawing
   hand stops being valued as though it had missed.
+
+- **The 15.8 MB heads-up chart no longer lands in every consumer.** As first
+  written, EPIC-39 made `generated/hups.bin` reachable two ways, and merely
+  upgrading — with **every new knob still off** — grew the `pkarena0-web` WASM
+  download from 478 KB to 3.84 MB brotli. It is now 498 KB — the whole feature
+  set costs 20.3 KB compressed, 4.2%.
+
+  `hand_order` only ever wanted 169 numbers from the chart, so they are now
+  precomputed into a checked-in table by the new `export_hand_order` example;
+  `derive_hand_ordering` stays the source of truth and `table_matches_the_chart`
+  fails if the table drifts. `preflop_charts: hup` genuinely needs the chart and
+  is selected by a *runtime* knob no linker can see past, so it moved behind the
+  new default-on `hup-charts` feature. See EPIC-39 corrigendum 16.
 
 - **`PreflopCharts::Solver` no longer means "solver charts".** It was specced
   for offline-generated GTO charts, which do not exist in this repo. Rather than
@@ -401,6 +422,18 @@ unexplained residue.
   variant is not a breaking change for downstream `match` arms.
 
 ### Fixed
+
+- **`bot::hand_order` scored weak hands far too high.** The ordering keyed the
+  embedded chart with its own higher/lower comparison instead of the
+  `SortedHeadsUp` order the chart is actually keyed by. Disagreeing keys missed
+  and were skipped, so the average was built from part of the field: `72o`
+  resolved only 820 of its 1,225 matchups and read `0.3845` where the true value
+  is `0.3469`; `KK` read `0.8372` against `0.8205`. Since the skipped matchups
+  were mostly losses, the error grew as hands got weaker — exactly where a VPIP
+  read needs the ordering to be right. Now routed through `HUPResult::lookup`,
+  which owns the sorting, and `equity_vs_field` returns nothing at all rather
+  than a partial average. Verified against the equity engine on four hands.
+
 
 - `Dealer::start_hand` printed the entire table to stdout on every hand
   (`println!("Dealer.start_hand() called. ...")`). Library code must not write

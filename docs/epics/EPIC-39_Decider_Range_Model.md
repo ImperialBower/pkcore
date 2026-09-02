@@ -433,12 +433,12 @@ the widest range anywhere in the repo (the BTN opening chart) is 21.6% — with 
 way to express the 45%-VPIP villain the reads feature exists to model.
 
 `bot::hand_order` fills the gap: every canonical class scored by its exact
-equity against a uniformly random hand, read from the embedded chart. It is
-built lazily on first use — about a second in a debug build, a tenth of that in
-release — and never at all for profiles that do not use reads. Sanity checks:
-AA tops the list at `0.8575`, 72o sits last at `0.3209`, and the 45% cut falls
-on J3o at `0.5088`, right at break-even, exactly where a 45%-wide range should
-end.
+equity against a uniformly random hand, read from the embedded chart. AA tops
+the list at `0.8520` — the textbook 85.2% — and the 45% cut falls on Q6o,
+covering 604 of the 1,326 hands (45.6%).
+
+Every figure originally quoted here was wrong; the corrected ones are above, and
+corrigendum 17 explains why they were wrong.
 
 ### 15. Two poker errors in the tests, caught by the code
 
@@ -452,3 +452,95 @@ Both were mine, and in both cases the implementation was right:
 - **AA versus KK is 81.95%, not 81.06%** (Phase 4). The lower figure is a single
   suit pairing; the average over all six king combinations is the quoted one.
   Confirmed against the equity engine, an independent path, on three seeds.
+
+
+### 16. Two doors to the 15.8 MB chart, needing two different fixes
+
+Measured against `pkarena0-web`, the downstream WASM consumer, by building its
+bundle with every new knob still `off`:
+
+| Build | Raw `.wasm` | gzip | brotli |
+|---|---|---|---|
+| pkcore `0.11.0` | 2,154,853 | 675,114 | 478,009 |
+| `0.12.0`, as first written | 18,148,529 | 4,971,191 | **3,843,010** |
+| `0.12.0`, both fixes | 2,312,310 | 715,890 | **498,295** |
+
+An 8x larger download for **no behaviour change at all**. Fixed, the whole
+EPIC-39 feature set costs **20.3 KB compressed**, 4.2% over `0.11.0`.
+
+`HUP_CACHE` is `pub` and always has been, but nothing called it, so the linker
+dropped the `include_bytes!` blob — which is why the chart had never appeared in
+a WASM bundle before. `0.12.0` opened two doors to it, and the first fix
+attempted only closed one; the rebuild that was supposed to prove it came back
+at 18.1 MB, unchanged.
+
+**Door one — `hand_order`, which only wanted numbers.** It read the chart to
+derive 169 equities. `widen_by_reads` calls it and `villain_range` calls
+`widen_by_reads` unconditionally, so any consumer with `player-stats` and
+`ranges: position_aware` reached it. The 169 values are now precomputed into
+`src/bot/hand_order_table.rs` (6.2 KB) by `examples/export_hand_order.rs`,
+following the `export_hups_bin` pattern. `derive_hand_ordering` stays the source
+of truth and is still the only code that reads the chart; it is now called by
+the generator and by `table_matches_the_chart`, which re-derives all 169 values
+and demands an exact match so the table cannot drift. Both callers are a test or
+an example, never the reads path. The lazy first-use cost (about a second in
+debug) is gone as a side effect.
+
+**Door two — `preflop_equity`, which genuinely needs the chart.** `hand_equity`
+calls `preflop_equity` unconditionally (`src/bot/decider.rs:495`) and the
+`PreflopCharts::Hup` arm reads the chart. **A knob is a runtime value, so no
+linker can drop the arm on the strength of a profile setting** — dead-code
+elimination cannot see that far. Precomputation is no answer here either: `Hup`
+wants arbitrary hand-vs-hand lookups, which *is* the chart. Only a build-time
+`cfg` can decide it, so `hup-charts` is a new cargo feature, **on by default**.
+Without it `hup_equity_vs_range` leaves the public API and `preflop_charts: hup`
+returns no answer, falling back to the preflop frequency roll.
+
+That fallback is the "knob that silently does nothing" that corrigendum 9 argues
+against. It is accepted here because the choice is the consumer's own, made in
+their manifest and documented on the feature, rather than a setting that quietly
+never worked. `preflop_charts: solver` reads no chart (corrigendum 9), and
+multi-way tables need `solver` regardless, so a browser table of bots loses
+nothing.
+
+
+### 17. `72o` is not the worst hand here, and finding out why exposed a bug
+
+The table was reviewed against poker folklore — *72o is the worst hand* — and
+the ordering disagreed. The folklore is sound and the ordering was, at that
+point, wrong, for two unrelated reasons.
+
+**The bug.** `equity_vs_field` decided which of two hands was "higher" with a
+raw `as_u64()` comparison and keyed `HUP_CACHE` with the result. The chart is
+keyed by [`SortedHeadsUp`], which does not sort that way, so disagreeing keys
+simply **missed** — and the loop did `continue`, averaging over whatever
+survived. The miss rate is not uniform: AA resolved all 1,225 of its matchups,
+`72o` only **820**. The skipped matchups were disproportionately the ones a weak
+hand loses, so weak hands were scored far too high — `72o` read `0.3845` against
+a true `0.3469`, and KK read `0.8372` against `0.8205`.
+
+This is corrigendum 7's perspective trap in a second location. The fix is to go
+through `HUPResult::lookup`, the API that owns the sorting, and to return `None`
+unless every eligible matchup resolves — a partial average is worse than no
+answer, because it is silently biased. Verified against the equity engine, an
+independent path: AA `0.8506`, 72o `0.3461`, 72s `0.3819`, 32o `0.3218`, all
+matching the corrected table to within Monte Carlo error.
+`ordering_matches_independently_computed_equities` is the regression; a
+structural test alone would not have caught this, since 169 well-formed and
+correctly-sorted entries came out either way.
+
+**The folklore.** Even corrected, `72o` sits 165th of 169, not last; **32o** is
+last at `0.3234`. Both facts are true because they answer different questions.
+This module measures *all-in equity against one uniformly random hand*, where
+what matters is showdown value and a 3-high loses more often than a 7-high. The
+famous claim is about *playability*: 7-2 is the lowest pair of cards that cannot
+make a straight, which is what makes it the worst hand to actually play — a
+metric that depends on folding, position, and multiway pots, none of which exist
+in an all-in-versus-random measurement.
+
+**Known limitation this exposes.** Equity-versus-random is a defensible proxy
+for "which hands would a 45%-VPIP villain hold", but it is not what a human
+loose player does. A real wide range keeps suited connectors and small suited
+aces over the offsuit trash the ordering ranks above them, precisely because
+straight and flush potential pays off in multiway pots. Refining the ordering to
+a playability metric is a change to `range_of_width` and nothing else.
