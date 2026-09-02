@@ -544,3 +544,32 @@ loose player does. A real wide range keeps suited connectors and small suited
 aces over the offsuit trash the ordering ranks above them, precisely because
 straight and flush potential pays off in multiway pots. Refining the ordering to
 a playability metric is a change to `range_of_width` and nothing else.
+
+
+### 18. The `Solver` path spent 50x what the profile asked for
+
+Caught by `pkarena0-web`'s `bench-tiers`, which compares chips/100 across the
+weak, standard and strong tiers. The standard-vs-weak leg finished as usual;
+`strong_tier_beats_standard_tier` was still running after **two hours** and had
+to be killed.
+
+`solver_equity` built its `EquityRequest` with `EquityOptions::default()` and
+set only the seed. That default carries `max_samples: 25_000`. The strong tier
+asks for `equity: fast { samples: 500 }`, and `real_equity` honours it postflop
+— but the preflop path never read the knob, so every preflop decision ran a
+25,000-sample multi-way simulation. Preflop is the most frequent decision in a
+hand, and it is also the most expensive place to sample, because an empty board
+leaves the whole runout to simulate.
+
+The fix is `solver_sample_budget`, a small pure function mapping the `equity`
+knob to a sample count, tested directly rather than through a timing assertion:
+`fast { samples }` spends `samples`, `exact` spends 100,000 to match
+`decider::EXACT_EQUITY_SAMPLES`, and `off` spends `DecisionConfig`'s own default
+of 2,000 — `off` is reachable because `preflop_charts: solver` does not require
+the `equity` knob to be on.
+
+**What this says about the knobs.** `equity` was specified as the postflop
+engine control, and Phase 4 added a second, unrelated caller of the same engine
+without extending that contract. A profile has exactly one statement of what it
+is willing to spend per decision, and both engine paths must read it. Worth
+checking against any future path that calls `compute()`.
