@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.12.1"
+version = "0.12.3"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -18,6 +18,27 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "benches/*", "examples/*",
 # debug-json, generators) render with their "available on feature X" banners.
 [package.metadata.docs.rs]
 all-features = true
+
+# Package-wide lint configuration. These lived as `#![warn(...)]` /
+# `#![allow(...)]` at the top of `src/lib.rs`, which only covered the lib
+# target; here they cover every target in the package (lib, examples, tests,
+# benches). `pedantic` needs `priority = -1` so the individual `allow`s below
+# still win against the group. `perf/` is a separate workspace and does not
+# inherit any of this.
+[lints.rust]
+non_upper_case_globals = "allow"
+macro_expanded_macro_exports_accessed_by_absolute_paths = "allow"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+iter_without_into_iter = "allow"
+module_inception = "allow"
+should_implement_trait = "allow"
+similar_names = "allow"
+unreadable_literal = "allow"
+upper_case_acronyms = "allow"
 
 [features]
 ## Default features enable the full EPIC-26 stack (player-stats and the

@@ -26,3 +26,13 @@ disallowed-types = [
 disallowed-macros = [
     { path = "std::todo", reason = "no unfinished todo!() may ship; use a messaged unimplemented!(\"...\") or return PKError::NotImplemented" },
 ]
+
+# Tests are allowed to panic. `#![warn(clippy::unwrap_used)]`/`expect_used` is a
+# library-code rule — a test that unwraps is stating an expectation, and the
+# panic *is* the failure report. These two keys exempt anything clippy sees as a
+# test (a `#[cfg(test)]` module or a `#[test]` function, which covers both the
+# colocated modules in `src/` and the `tests/` integration targets). They matter
+# because the lints now live in `Cargo.toml`'s `[lints]` table and so bind every
+# target in the package, not just the lib.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

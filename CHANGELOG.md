@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3] - 2026-09-04
+
+### Changed
+
+- **`clippy.toml` now exempts tests from the `unwrap`/`expect` ban**
+  (`allow-unwrap-in-tests`, `allow-expect-in-tests`). The ban is a library-code
+  rule: a test that unwraps is asserting an expectation, and the resulting panic
+  *is* the failure report, so the lint has nothing useful to say there. This
+  became worth stating in 0.12.2, when the lints moved into `Cargo.toml`'s
+  `[lints]` table and so began binding every target rather than only the lib.
+  Measured against `cargo clippy --all-targets --features pokerbench`, the
+  exemptions take the colocated `#[cfg(test)]` modules under `src/` to **zero**
+  `unwrap_used`/`expect_used` warnings; what remains is 93 in `examples/`
+  (not tests, and correctly still flagged), 27 in `tests/` helper functions that
+  carry no `#[test]` attribute, and 2 in `benches/`. Nothing changes for the
+  default `cargo clippy` run, which still builds only lib and bins.
+
+## [0.12.2] - 2026-09-04
+
+### Changed
+
+- **Lint configuration moved from `src/lib.rs` to `Cargo.toml`.** The
+  crate-level `#![warn(clippy::pedantic, clippy::unwrap_used,
+  clippy::expect_used)]` and its companion `#![allow(...)]` list are now the
+  `[lints.rust]` and `[lints.clippy]` tables in the manifest. The attribute form
+  only bound the **lib** target, so the 48 examples, 16 integration tests and the
+  bench target were never subject to the `unwrap`/`expect` ban or to pedantic;
+  the manifest form binds every target in the package, which is what the rules
+  were always meant to say. `clippy::pedantic` carries `priority = -1` so the
+  individual allows still override the group. No warning that fires today
+  changes: `cargo clippy` builds only lib and bins unless `--all-targets` is
+  passed, so this is a like-for-like move that additionally covers the other
+  targets the moment they are linted. The standalone `perf/` crate is a separate
+  workspace and is unaffected.
+- **`make clippy` no longer passes `-W clippy::pedantic`.** The flag duplicated
+  the crate attribute and is now redundant against the manifest's `[lints]`.
+
 ## [0.12.1] - 2026-09-02
 
 ### Fixed

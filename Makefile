@@ -122,7 +122,7 @@ fmt:
 
 # Run clippy linter
 clippy:
-	cargo clippy -- -W clippy::pedantic
+	cargo clippy
 
 test-nightly:
 	cargo +nightly test --all-targets --all-features
