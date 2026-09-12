@@ -104,8 +104,7 @@ fn main() {
 
         println!("│  ─────────────────────────────────────────────────────────────────");
         println!(
-            "│  Deal EV (conditional on this deal):  P0 {:+.4}  P1 {:+.4}",
-            deal_ev_p0, deal_ev_p1
+            "│  Deal EV (conditional on this deal):  P0 {deal_ev_p0:+.4}  P1 {deal_ev_p1:+.4}"
         );
         println!("└───────────────────────────────────────────────────────────────────");
         println!();
@@ -157,7 +156,7 @@ fn main() {
             }
             let (a0, p0) = probs[0];
             let (a1, p1) = probs[1];
-            println!("  {info:<28}  {a0:<6}  {p0:.3}  {a1:<6}  {p1:.3}", p0 = p0, p1 = p1);
+            println!("  {info:<28}  {a0:<6}  {p0:.3}  {a1:<6}  {p1:.3}");
         }
     }
     println!();

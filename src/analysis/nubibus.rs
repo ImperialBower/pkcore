@@ -437,7 +437,7 @@ impl TryFrom<&Pluribus> for Table {
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
         let mut seats = Seats::from(pluribus.players.clone());
-        for seat in seats.iter_mut() {
+        for seat in &mut seats {
             seat.player.chips = Pluribus::STARTING_STACK;
             seat.cards = BoxedCards::blanks(2);
         }
@@ -672,7 +672,7 @@ impl TryFrom<&Table> for Pluribus {
         let mut players = Vec::with_capacity(size);
         let mut winnings = Vec::with_capacity(size);
 
-        for seat in table.seats.iter() {
+        for seat in &table.seats {
             players.push(seat.player.handle.clone());
             // Net for the hand: what the seat has left against the fixed stack
             // every Pluribus seat starts each hand with.
@@ -1528,7 +1528,7 @@ mod store_pluribus_tests {
 
         let table = Table::try_from(&pluribus).unwrap();
 
-        for seat in table.seats.iter() {
+        for seat in &table.seats {
             assert_eq!(10_000, seat.player.chips, "{}", seat.player.handle);
         }
     }
@@ -1698,7 +1698,7 @@ mod store_pluribus_tests {
 
     #[test]
     fn log_to_string_vec() {
-        assert!(Pluribus::parse_string(LOG).is_ok())
+        assert!(Pluribus::parse_string(LOG).is_ok());
     }
 
     #[rstest]
@@ -1903,7 +1903,7 @@ mod store_pluribus_tests {
         let s = "STATE:14:fr200cfff/cc/cc/cc:4cJs|5s9h|Kh7h|9sQs|2d2h|5dTh/3s3dAd/Qc/Td:-50|-100|0|350|-200|0:MrWhite|MrPink|MrBrown|Pluribus|MrBlue|MrBlonde";
         let pl = Pluribus::from_str(s).unwrap();
         let nub = Nubificus::try_from(pl).unwrap().play_hand_display().unwrap();
-        println!("{:?}", nub);
+        println!("{nub:?}");
     }
 }
 
@@ -1961,7 +1961,7 @@ mod analysis__nubibus__unum_tests {
         amnesiac.rounds.clear();
         amnesiac.raw.clear();
 
-        assert!(amnesiac.rounds.is_empty());
+        assert_eq!(amnesiac.rounds, [] as [std::string::String; 0]);
         assert_eq!(
             amnesiac.actions_to_pluribus().unwrap(),
             hand.actions_to_pluribus().unwrap()

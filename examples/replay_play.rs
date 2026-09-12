@@ -80,9 +80,7 @@ fn print_hand(hand: &HandHistory) {
     // Header
     let btn = hand
         .table
-        .button
-        .map(|b| b.to_string())
-        .unwrap_or_else(|| "?".to_string());
+        .button.map_or_else(|| "?".to_string(), |b| b.to_string());
     let ts = hand.hand.timestamp.as_deref().unwrap_or("");
     println!(
         "─── {}  btn={}  blinds={}/{}  {} ───",
@@ -167,13 +165,13 @@ fn print_hand(hand: &HandHistory) {
 fn format_action(action: &Action, players: &[PlayerEntry]) -> String {
     let name = player_name(action.seat, players);
     let verb = match action.action {
-        ActionType::Post => format!("posts {}", action.amount.map(|a| a as usize).unwrap_or(0)),
+        ActionType::Post => format!("posts {}", action.amount.map_or(0, |a| a as usize)),
         ActionType::Fold => "folds".to_string(),
         ActionType::Check => "checks".to_string(),
-        ActionType::Call => format!("calls {}", action.amount.map(|a| a as usize).unwrap_or(0)),
-        ActionType::Bet => format!("bets {}", action.amount.map(|a| a as usize).unwrap_or(0)),
-        ActionType::Raise => format!("raises to {}", action.amount.map(|a| a as usize).unwrap_or(0)),
-        ActionType::AllIn => format!("ALL-IN ({})", action.amount.map(|a| a as usize).unwrap_or(0)),
+        ActionType::Call => format!("calls {}", action.amount.map_or(0, |a| a as usize)),
+        ActionType::Bet => format!("bets {}", action.amount.map_or(0, |a| a as usize)),
+        ActionType::Raise => format!("raises to {}", action.amount.map_or(0, |a| a as usize)),
+        ActionType::AllIn => format!("ALL-IN ({})", action.amount.map_or(0, |a| a as usize)),
         // ActionType is #[non_exhaustive] as of 0.2.0.
         _ => "acts".to_string(),
     };
@@ -189,12 +187,11 @@ fn format_result(r: &ResultEntry, players: &[PlayerEntry]) -> String {
     format!("{name:<22}  {outcome:<5}  net={net:>7}  {hand}")
 }
 
-fn player_name<'a>(seat: u8, players: &'a [PlayerEntry]) -> &'a str {
+fn player_name(seat: u8, players: &[PlayerEntry]) -> &str {
     players
         .iter()
         .find(|p| p.seat == seat)
-        .map(|p| p.name.as_str())
-        .unwrap_or("?")
+        .map_or("?", |p| p.name.as_str())
 }
 
 // ── File resolution ────────────────────────────────────────────────────────────
@@ -213,7 +210,7 @@ fn resolve_path() -> PathBuf {
 fn most_recent_yaml(dir: &str) -> Option<PathBuf> {
     let entries = std::fs::read_dir(dir).ok()?;
     entries
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "yaml"))
         .filter_map(|e| {
             let mtime = e.metadata().ok()?.modified().ok()?;

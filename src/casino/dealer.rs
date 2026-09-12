@@ -707,7 +707,7 @@ impl Dealer {
             return Err(DealerError::HandInProgress);
         }
 
-        for seat in self.table.seats.iter_mut() {
+        for seat in &mut self.table.seats {
             if seat.is_empty() || seat.player.is_tapped_out() {
                 continue;
             }

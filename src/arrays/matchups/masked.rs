@@ -634,7 +634,7 @@ mod arrays__matchups__masked_tests {
     #[test]
     #[ignore = "initializes 812k-element MASKED_UNIQUE set; run explicitly with -- --ignored"]
     fn unique() {
-        assert_eq!(812175, MASKED_UNIQUE.len());
+        assert_eq!(812_175, MASKED_UNIQUE.len());
     }
 
     /// Not sure what the point of these tests are other than to tell me when things change.
@@ -667,7 +667,7 @@ mod arrays__matchups__masked_tests {
         // Test 10 random type 1 values.
         let mut types = MASKED_UNIQUE_TYPE_ONE.clone();
         for _ in 0..10 {
-            let elem = types.iter().next().unwrap().clone();
+            let elem = *types.iter().next().unwrap();
             types.remove(&elem);
             shifts_check(
                 format!("{} {}", elem.shu.higher, elem.shu.lower).as_str(),

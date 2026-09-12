@@ -56,7 +56,7 @@ fn main() {
     let config = SolverConfig::new(
         oop_range.clone(),
         ip_range.clone(),
-        board.clone(),
+        board,
         1_000, // effective stack (chips)
         200,   // pot (chips)
     )
@@ -74,7 +74,7 @@ fn main() {
             .bet_sizings
             .river
             .iter()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect::<Vec<_>>()
             .join(", ")
     );
@@ -118,7 +118,7 @@ fn main() {
 
     // build_turn fans out at every showdown continuation on the turn into a
     // ChanceNode with 48 possible river runout cards.
-    let turn_config = SolverConfig::new(oop_range.clone(), ip_range.clone(), board.clone(), 1_000, 200);
+    let turn_config = SolverConfig::new(oop_range.clone(), ip_range.clone(), board, 1_000, 200);
     let turn_tree = GameTree::build_turn(&turn_config);
     println!("Turn+river tree nodes : {}", turn_tree.len());
     println!("  Chance nodes        : {}", turn_tree.count_chance_nodes());
@@ -214,7 +214,7 @@ fn main() {
     let turn_solve_config = SolverConfig::new(
         Combos::from_str("AA").unwrap_or_default(),
         Combos::from_str("KK").unwrap_or_default(),
-        board.clone(),
+        board,
         1_000,
         200,
     )
@@ -236,7 +236,7 @@ fn main() {
 
     // Binary (bincode) — compact, fast, default format
     result.save_binary(&bin_path).expect("save_binary failed");
-    let bin_size = std::fs::metadata(&bin_path).map(|m| m.len()).unwrap_or(0);
+    let bin_size = std::fs::metadata(&bin_path).map_or(0, |m| m.len());
     let loaded = SolverResult::load_binary(&bin_path).expect("load_binary failed");
     assert_eq!(loaded.iterations, result.iterations);
     println!("Binary save  : {} ({} bytes)", bin_path.display(), bin_size);
@@ -247,7 +247,7 @@ fn main() {
 
     // JSON — human-readable, useful for debugging
     result.save_json(&json_path).expect("save_json failed");
-    let json_size = std::fs::metadata(&json_path).map(|m| m.len()).unwrap_or(0);
+    let json_size = std::fs::metadata(&json_path).map_or(0, |m| m.len());
     let loaded_j = SolverResult::load_json(&json_path).expect("load_json failed");
     assert_eq!(loaded_j.iterations, result.iterations);
     println!("JSON save    : {} ({} bytes)", json_path.display(), json_size);

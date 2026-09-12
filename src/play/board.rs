@@ -264,7 +264,7 @@ mod play_board_tests {
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap().to_string()
-        )
+        );
     }
 
     #[test]

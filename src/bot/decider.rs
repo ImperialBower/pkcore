@@ -1266,7 +1266,7 @@ mod bot__decider_tests {
         }
     }
 
-    /// bluff_frequency is never applied preflop — always Check with 0 % aggression.
+    /// `bluff_frequency` is never applied preflop — always Check with 0 % aggression.
     #[test]
     fn bluff_never_fires_preflop() {
         use rand::SeedableRng;
@@ -1286,7 +1286,7 @@ mod bot__decider_tests {
         }
     }
 
-    /// 100 % check-raise frequency always raises when checked_this_street and facing a bet.
+    /// 100 % check-raise frequency always raises when `checked_this_street` and facing a bet.
     #[test]
     fn check_raise_100_always_raises() {
         use rand::SeedableRng;
@@ -1312,7 +1312,7 @@ mod bot__decider_tests {
     }
 
     /// 0 % check-raise never raises via the check-raise path (falls through to
-    /// call/fold based on aggression_factor).
+    /// call/fold based on `aggression_factor`).
     #[test]
     fn check_raise_0_never_check_raises() {
         use rand::SeedableRng;
@@ -1384,7 +1384,7 @@ mod bot__decider_tests {
     }
 
     /// Check-raise frequency 40 % raises roughly 40 % of the time when
-    /// checked_this_street is true and facing a bet.
+    /// `checked_this_street` is true and facing a bet.
     #[test]
     fn check_raise_40_raises_approximately_40_percent() {
         // aggression 0 so raises only come from the check-raise path
@@ -1408,8 +1408,8 @@ mod bot__decider_tests {
     // ── Position-aware routing tests ─────────────────────────────────────────
 
     /// GTO profile has a Playbook giving BTN higher aggression than the flat default.
-    /// With 100 % BTN aggression from the Playbook (verified via betting_for), the
-    /// decider should bet on every turn when seat == button and seat_count == 6.
+    /// With 100 % BTN aggression from the Playbook (verified via `betting_for`), the
+    /// decider should bet on every turn when seat == button and `seat_count` == 6.
     #[test]
     fn rule_based_decider_uses_playbook_aggression_for_btn() {
         use crate::casino::position::Position;
@@ -1507,7 +1507,7 @@ mod bot__decider_tests {
         snap
     }
 
-    /// AA preflop facing a bet: equity(1.0) > pot_odds * 2 → always Raise or Call.
+    /// AA preflop facing a bet: equity(1.0) > `pot_odds` * 2 → always Raise or Call.
     #[test]
     fn calls_with_equity_above_pot_odds() {
         use rand::SeedableRng;
@@ -1526,7 +1526,7 @@ mod bot__decider_tests {
         }
     }
 
-    /// 72o preflop facing a bet with bluff_frequency=0: equity(0.0) < pot_odds → always Fold.
+    /// 72o preflop facing a bet with `bluff_frequency=0`: equity(0.0) < `pot_odds` → always Fold.
     #[test]
     fn folds_below_pot_odds_no_bluff() {
         use rand::SeedableRng;
@@ -1545,7 +1545,7 @@ mod bot__decider_tests {
         }
     }
 
-    /// 72o on K-Q-J flop with bluff_frequency=100 and no outstanding bet: always Bet.
+    /// 72o on K-Q-J flop with `bluff_frequency=100` and no outstanding bet: always Bet.
     #[test]
     fn bluffs_despite_weak_hand() {
         use rand::SeedableRng;
@@ -1566,7 +1566,7 @@ mod bot__decider_tests {
     }
 
     /// The raise gate must be probabilistic: with AA preflop (equity=1.0) and
-    /// pot_odds=0.25, the bot enters the strong-hand branch but should sometimes
+    /// `pot_odds=0.25`, the bot enters the strong-hand branch but should sometimes
     /// Raise and sometimes Call across different RNG seeds.
     ///
     /// This test catches the regression where two bots with strong hands escalate
@@ -1678,7 +1678,7 @@ mod bot__decider_tests {
 
     use crate::bot::decision_config::RangeMode;
 
-    /// pot_odds discipline scales the call threshold. With `discipline = 1.0`
+    /// `pot_odds` discipline scales the call threshold. With `discipline = 1.0`
     /// (default) a weak made hand below break-even folds; with `discipline = 0.0`
     /// pot odds are ignored and the same hand calls.
     #[test]

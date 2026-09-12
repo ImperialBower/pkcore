@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.12.4"
+version = "0.12.5"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -33,11 +33,7 @@ macro_expanded_macro_exports_accessed_by_absolute_paths = "allow"
 pedantic = { level = "warn", priority = -1 }
 unwrap_used = "warn"
 expect_used = "warn"
-iter_without_into_iter = "allow"
 module_inception = "allow"
-should_implement_trait = "allow"
-similar_names = "allow"
-unreadable_literal = "allow"
 upper_case_acronyms = "allow"
 
 [features]
@@ -116,7 +112,6 @@ pokerbench = []
 generators = []
 
 [dependencies]
-bint = "0.1.15"
 cardpack = "0.6.9"
 bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"

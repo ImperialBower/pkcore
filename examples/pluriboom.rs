@@ -19,12 +19,12 @@ fn main() -> Result<(), PKError> {
     let concurrency: usize = std::env::args()
         .nth(1)
         .and_then(|s| s.parse().ok())
-        .unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4));
+        .unwrap_or_else(|| std::thread::available_parallelism().map_or(4, std::num::NonZero::get));
 
     let logs = Nubificus::get_log_files("data/pluribus/raw/")?;
 
     let mut all_games: Vec<Pluribus> = Vec::new();
-    for log in logs.iter() {
+    for log in &logs {
         for plur in Pluribus::read_in_log(log.as_str())? {
             all_games.push(plur);
         }
@@ -46,7 +46,7 @@ fn main() -> Result<(), PKError> {
             .enumerate()
             .filter(
                 |(idx, plur)| match Nubificus::try_from(plur).and_then(|mut n| n.play_hand()) {
-                    Ok(_) => false,
+                    Ok(()) => false,
                     Err(e) => {
                         eprintln!("Game #{idx} failed: {e}");
                         true

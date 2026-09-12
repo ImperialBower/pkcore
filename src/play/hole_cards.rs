@@ -109,11 +109,6 @@ impl HoleCards {
         self.0.iter()
     }
 
-    #[must_use]
-    pub fn into_iter(self) -> IntoIter<Two> {
-        self.0.into_iter()
-    }
-
     // pub fn par_iter(&self) -> rayon::vec::IntoIter<Two> {
     //     self.0.into_par_iter()
     // }
@@ -173,7 +168,7 @@ impl HoleCards {
     #[must_use]
     pub fn realize_case_at_flop(&self, flop: Three, case: &[Card]) -> Vec<Eval> {
         let mut cases: Vec<Eval> = Vec::default();
-        for hand in self.iter() {
+        for hand in self {
             match Seven::from_case_at_flop_old(*hand, flop, case) {
                 Ok(seven) => cases.push(Eval::from(seven)),
                 Err(e) => error!("{e:?} from realize_case_at_flop({self}, {flop}, {case:?})"),
@@ -186,7 +181,7 @@ impl HoleCards {
     #[must_use]
     pub fn river_case_eval(&self, board: &Board) -> CaseEval {
         let mut case_eval = CaseEval::default();
-        for hand in self.iter() {
+        for hand in self {
             // Added this to deal with Table mechanics when I have many players who already folded,
             // and I need to get the winning hands based on their seat.
             if hand.is_blank() {
@@ -220,7 +215,7 @@ impl HoleCards {
     fn bcm_case_eval(&self, case: Five) -> CaseEval {
         let mut case_eval = CaseEval::default();
 
-        for player in self.iter() {
+        for player in self {
             if let Ok(seven) = Seven::from_case_at_deal(*player, case) {
                 let eval = Eval::from(seven);
                 case_eval.push(eval);
@@ -228,6 +223,24 @@ impl HoleCards {
         }
 
         case_eval
+    }
+}
+
+impl<'a> IntoIterator for &'a HoleCards {
+    type Item = &'a Two;
+    type IntoIter = Iter<'a, Two>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl IntoIterator for HoleCards {
+    type Item = Two;
+    type IntoIter = IntoIter<Two>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -255,7 +268,7 @@ impl From<&Seats> for HoleCards {
     /// ```
     fn from(seats: &Seats) -> Self {
         let mut hands = HoleCards::with_capacity(seats.size() as usize);
-        for seat in seats.iter() {
+        for seat in seats {
             if seat.is_in_hand() {
                 hands.push(Two::try_from(seat.cards.as_slice()).unwrap_or_default());
             } else {
@@ -331,7 +344,7 @@ impl Pile for HoleCards {
         let other_cards = Cards::from(other.to_vec());
 
         if let Ok(other_hands) = HoleCards::try_from(other_cards) {
-            for two in other_hands.iter() {
+            for two in &other_hands {
                 combined.push(*two);
             }
         }
@@ -437,7 +450,7 @@ mod play__hold_cards_tests {
 
         let hands = the_fold_hands.three_into_evals(the_flop);
 
-        assert_eq!(&antonius, hands.get(0).unwrap());
+        assert_eq!(&antonius, hands.first().unwrap());
         assert_eq!(&phil, hands.get(1).unwrap());
         assert_eq!(&daniel, hands.get(2).unwrap());
     }
@@ -452,7 +465,7 @@ mod play__hold_cards_tests {
 
         let hands = the_fold_hands.three_into_fives(the_flop);
 
-        assert_eq!(&antonius, hands.get(0).unwrap());
+        assert_eq!(&antonius, hands.first().unwrap());
         assert_eq!(&phil, hands.get(1).unwrap());
         assert_eq!(&daniel, hands.get(2).unwrap());
     }
@@ -474,7 +487,7 @@ mod play__hold_cards_tests {
 
         let cases = the_hand.realize_case_at_flop(flop, &TestData::case_985());
 
-        assert_eq!(cases.get(0).unwrap().hand, Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap());
+        assert_eq!(cases.first().unwrap().hand, Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap());
         assert_eq!(cases.get(1).unwrap().hand, Five::from_str("5♥ 5♦ 5♣ 6♦ 6♣").unwrap());
     }
 

@@ -119,7 +119,7 @@ impl CaseEval {
             if case.is_dealt() {
                 let mut case_eval = CaseEval::default();
 
-                for player in hands.iter() {
+                for player in hands {
                     if player.is_blank() {
                         case_eval.push(Eval::default());
                         continue;
@@ -145,7 +145,7 @@ impl CaseEval {
         if case.is_dealt() {
             let mut case_eval = CaseEval::default();
 
-            for player in hands.iter() {
+            for player in hands {
                 if !player.is_dealt() {
                     return Err(PKError::InvalidHand);
                 }
@@ -572,6 +572,15 @@ impl CaseEval {
     }
 }
 
+impl<'a> IntoIterator for &'a CaseEval {
+    type Item = &'a Eval;
+    type IntoIter = Iter<'a, Eval>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl std::fmt::Display for CaseEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_empty() {
@@ -642,7 +651,7 @@ mod hand_rank__case_eval_tests {
 
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
-        assert!(!sut.is_ok());
+        assert!(sut.is_err());
         assert_eq!(PKError::NotDealt, sut.unwrap_err());
     }
 
@@ -654,7 +663,7 @@ mod hand_rank__case_eval_tests {
 
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
-        assert!(!sut.is_ok());
+        assert!(sut.is_err());
         assert_eq!(PKError::BlankCard, sut.unwrap_err());
     }
 

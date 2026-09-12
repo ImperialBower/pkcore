@@ -115,7 +115,7 @@ impl PlayOut for PlayerWins {
 
         let case_evals = self.case_evals_flop(hands, flop);
 
-        for case_eval in case_evals.iter() {
+        for case_eval in &case_evals {
             self.wins.add(case_eval.flags_win());
         }
 
@@ -127,7 +127,7 @@ impl PlayOut for PlayerWins {
 
         let case_evals = self.case_evals_turn(hands, flop, turn);
 
-        for case_eval in case_evals.iter() {
+        for case_eval in &case_evals {
             self.wins.add(case_eval.flags_win());
         }
     }

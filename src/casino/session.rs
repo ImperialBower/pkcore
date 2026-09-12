@@ -1095,7 +1095,7 @@ mod tests {
     fn poker_session_run_hand_fold_preflop() {
         let mut session = two_player_session();
         let winnings = session.run_hand(|_, _| PlayerAction::Fold).unwrap();
-        assert!(!winnings.vec().is_empty());
+        assert_ne!(winnings.vec().as_slice(), []);
     }
 
     #[test]
@@ -1163,10 +1163,10 @@ mod tests {
         let mut session = two_player_session();
         // Both players call every street — hand runs to showdown.
         let winnings = session.run_hand(|_, _| PlayerAction::Call).unwrap();
-        assert!(!winnings.vec().is_empty());
+        assert_ne!(winnings.vec().as_slice(), []);
     }
 
-    /// Regression test: when all active players go AllIn before the river,
+    /// Regression test: when all active players go `AllIn` before the river,
     /// `next_actor()` must return `None` (no stale actor) and the hand must
     /// complete correctly via `end_hand()`.
     ///
@@ -1275,7 +1275,7 @@ mod tests {
             "no chips created or destroyed"
         );
         assert_eq!(0, session.table.pot);
-        for seat in session.table.seats.0.iter() {
+        for seat in &session.table.seats.0 {
             assert_eq!(0, seat.player.chips_in_play);
             assert_eq!(10_000, seat.player.chips);
         }
@@ -1432,7 +1432,7 @@ mod tests {
         assert_eq!(street_count, 3, "expected flop+turn+river, got {street_count}");
 
         let winnings = session.end_hand().unwrap();
-        assert!(!winnings.vec().is_empty());
+        assert_ne!(winnings.vec().as_slice(), []);
     }
 
     #[test]
@@ -1456,7 +1456,7 @@ mod tests {
         }
         assert!(hand_complete, "hand never reached HandComplete");
         let winnings = session.end_hand().unwrap();
-        assert!(!winnings.vec().is_empty());
+        assert_ne!(winnings.vec().as_slice(), []);
     }
 
     // ── is_hand_in_progress() ─────────────────────────────────────────────────
@@ -1481,7 +1481,7 @@ mod tests {
         assert!(!session.is_hand_in_progress());
     }
 
-    /// start_hand must capture the full shuffled deck as a space-separated string
+    /// `start_hand` must capture the full shuffled deck as a space-separated string
     /// immediately after shuffling — before any cards are drawn for the hand.
     #[test]
     fn test_start_hand_captures_shuffled_deck_str() -> Result<(), crate::PKError> {
@@ -1579,7 +1579,7 @@ mod tests {
         // The owned seat's cards are revealed and non-empty...
         let own = view.seats.iter().find(|s| s.seat == 0).unwrap();
         assert!(own.hole_cards.is_some());
-        assert!(!own.hole_cards.as_deref().unwrap().is_empty());
+        assert_ne!(own.hole_cards.as_deref().unwrap(), "");
 
         // ...and no other seat's are.
         assert!(
@@ -1659,7 +1659,7 @@ mod tests {
         // A pot has been seeded by the blinds.
         assert!(view.pot > 0);
         // Preflop: the board is still empty.
-        assert!(view.board.is_empty());
+        assert_eq!(view.board, "");
     }
 
     #[test]

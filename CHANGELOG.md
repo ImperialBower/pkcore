@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.5] - 2026-09-12
+
+### Changed
+
+- **`cargo clippy -- -Dclippy::all -Dclippy::pedantic` is clean** for the
+  `lib`/`bins` targets (the same scope `make clippy` and CI check). Roughly
+  8,500 numeric literals were reformatted with digit separators
+  (`unreadable_literal`); `IntoIterator` was implemented for `&CaseEval`,
+  `&CaseEvals`, `&Five`, `&Cards`, `&Seats`/`&mut Seats`, `&HandCollection`,
+  `&HoleCards`/`HoleCards` (owned), and `&SeatHand` so their existing `iter`
+  helpers satisfy `iter_without_into_iter`; `Twos::into_iter` and
+  `HoleCards::into_iter` moved from inherent methods to real
+  `IntoIterator` impls (`should_implement_trait`); and a handful of local
+  bindings were renamed to resolve `similar_names` warnings. No behavior
+  change.
+- **`make ayce` now actually enforces the lints above.** `Cargo.toml`'s
+  `[lints.clippy]` table explicitly allowed `iter_without_into_iter`,
+  `should_implement_trait`, `similar_names`, and `unreadable_literal` — an
+  explicit `allow` wins over the `RUSTFLAGS=-Dwarnings` that `ayce` exports,
+  so `make ayce`/`make clippy` silently let all of the above back in. Those
+  four are removed from the allow-list now that the codebase is clean for
+  them, so a regression fails `make ayce` going forward.
+
 ## [0.12.4] - 2026-09-12
 
 ### Fixed

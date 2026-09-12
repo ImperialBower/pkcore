@@ -1,7 +1,7 @@
 //! EPIC-36 arena bench: rank YAML-configured `BotProfile`s by chips per 100
 //! hands in a seeded, fixed-stack cash game.
 //!
-//! Each profile's graded `decision:` knobs (equity, ranges, pot_odds, exploit)
+//! Each profile's graded `decision:` knobs (equity, ranges, `pot_odds`, exploit)
 //! drive its play; strength is measured purely by arena result — no external
 //! dataset is consulted.
 //!

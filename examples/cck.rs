@@ -35,11 +35,11 @@ fn main() -> Result<(), PKError> {
         5 => show(Five::try_from(cards)?),
         6 => show(Six::try_from(cards)?),
         7 => show(Seven::try_from(cards)?),
-        _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
-    };
+        _ => println!("{cards}"), // https://stackoverflow.com/a/23977218/1245251
+    }
 
     let elapsed = now.elapsed();
-    println!("Elapsed: {:.2?}", elapsed);
+    println!("Elapsed: {elapsed:.2?}");
 
     Ok(())
 }
@@ -55,7 +55,7 @@ where
         cards, hand, hand_rank.value, hand_rank.class,
     );
 
-    let sorts = hand.iter().counts_by(|card| card.get_rank());
+    let sorts = hand.iter().counts_by(pkcore::card::Card::get_rank);
 
-    println!("{:?}", sorts);
+    println!("{sorts:?}");
 }

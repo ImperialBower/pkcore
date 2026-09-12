@@ -63,13 +63,13 @@ mod ranks_tests {
     fn sum_or() {
         let ranks = Ranks::from(vec![Rank::ACE, Rank::ACE, Rank::KING, Rank::QUEEN]);
 
-        assert_eq!(ranks.sum_or(), 0b1110000000000);
+        assert_eq!(ranks.sum_or(), 0b1_1100_0000_0000);
     }
 
     #[test]
     fn pile__ranks() {
         let wheel = Cards::from_str("AS 2C 3D 4h 5c").unwrap().ranks();
 
-        assert_eq!(wheel.sum_or(), 0b1000000001111);
+        assert_eq!(wheel.sum_or(), 0b1_0000_0000_1111);
     }
 }

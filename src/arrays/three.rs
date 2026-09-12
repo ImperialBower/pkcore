@@ -159,7 +159,7 @@ mod arrays__three_tests {
     use crate::Evals;
     use crate::util::data::TestData;
 
-    /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
+    /// <<https://www.youtube.com/watch?v=vjM60lqRhPg> />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
 
     /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates

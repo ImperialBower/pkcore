@@ -724,7 +724,7 @@ mod casino__state_tests {
         assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::AllIn(100)));
     }
 
-    /// DIARY: Too tired to write unit tests. Hey CoPilot, write some unit tests for me.
+    /// DIARY: Too tired to write unit tests. Hey `CoPilot`, write some unit tests for me.
     /// Of course, most of them are wrong, but they help save me some typing.
     #[test]
     fn partial_eq_distinguishes_variants() {
@@ -749,14 +749,12 @@ mod casino__state_tests {
 
     #[test]
     fn partial_ord_matches_ord() {
-        let states = vec![
-            PlayerState::YetToAct,
+        let states = [PlayerState::YetToAct,
             PlayerState::Check,
             PlayerState::Bet(50),
             PlayerState::Bet(100),
             PlayerState::Call(100),
-            PlayerState::Fold,
-        ];
+            PlayerState::Fold];
 
         for i in 0..states.len() {
             for j in 0..states.len() {

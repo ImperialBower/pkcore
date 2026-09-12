@@ -30,7 +30,7 @@ impl Five {
     /// The number of leading and trailing zeroes from the `Five.or_rank_bits()` of a straight
     /// if it's not a wheel (5♥ 4♥ 3♥ 2♠ A♠).
     pub const STRAIGHT_PADDING: u32 = 27;
-    pub const WHEEL_OR_BITS: u32 = 0b0001000000001111;
+    pub const WHEEL_OR_BITS: u32 = 0b0001_0000_0000_1111;
 
     #[must_use]
     pub fn from_2and3(hole_cards: Two, flop: Three) -> Five {
@@ -173,6 +173,15 @@ impl Five {
         crate::lookups::unique5::UNIQUE_5[index]
     }
     //endregion
+}
+
+impl<'a> IntoIterator for &'a Five {
+    type Item = &'a Card;
+    type IntoIter = Iter<'a, Card>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
 }
 
 impl Display for Five {
@@ -533,7 +542,7 @@ mod arrays__five_tests {
             "00000001000000001000100000010111",
             format!("{:032b}", hand.fifth().as_u32())
         );
-        assert_eq!("00000000000000001000100000000001", format!("{:032b}", and_bits));
+        assert_eq!("00000000000000001000100000000001", format!("{and_bits:032b}"));
     }
 
     #[test]
@@ -551,8 +560,8 @@ mod arrays__five_tests {
     fn or_rank_bits() {
         let or = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().or_rank_bits();
 
-        assert_eq!("0001111100000000", format!("{:016b}", or));
-        assert_eq!("00000000000000000001111100000000", format!("{:032b}", or));
+        assert_eq!("0001111100000000", format!("{or:016b}"));
+        assert_eq!("00000000000000000001111100000000", format!("{or:032b}"));
         assert_eq!(8, or.trailing_zeros());
         assert_eq!(19, or.leading_zeros());
         assert_eq!(or, 7936);

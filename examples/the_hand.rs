@@ -89,12 +89,11 @@ fn setup(table: &mut Table) -> Result<(), PKError> {
     println!();
     // The event log is a plain Vec<TableAction>; walk it directly.
     for action in &table.event_log {
-        if let Some(seat_num) = action.get_seat() {
-            if let Some(seat) = table.seats.get_seat(seat_num) {
+        if let Some(seat_num) = action.get_seat()
+            && let Some(seat) = table.seats.get_seat(seat_num) {
                 println!("--- {} {action}", seat.player.handle);
                 continue;
             }
-        }
         println!("--- {action}");
     }
 
@@ -140,11 +139,10 @@ fn flop(table: &mut Table, _preflop_pot: usize) -> Result<usize, PKError> {
     table.deal_flop().expect("no flop");
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_flop_display().
-    if let Ok(game) = table.build_game() {
-        if let Ok(fe) = FlopEval::try_from(game) {
+    if let Ok(game) = table.build_game()
+        && let Ok(fe) = FlopEval::try_from(game) {
             println!("{fe}");
         }
-    }
 
     println!();
     println!("The Nuts @ Flop:");
@@ -165,11 +163,10 @@ fn turn(table: &mut Table, _flop_pot: usize) -> Result<usize, PKError> {
     table.deal_turn().expect("no turn");
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_turn_display().
-    if let Ok(game) = table.build_game() {
-        if let Ok(te) = TurnEval::try_from(&game) {
+    if let Ok(game) = table.build_game()
+        && let Ok(te) = TurnEval::try_from(&game) {
             println!("{te}");
         }
-    }
 
     let _gus = table.act_bet(3, 24_000)?;
     commentary_action_to(table);
@@ -195,16 +192,13 @@ fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
         println!("\n=== River Hand Breakdown ===");
         print!("{re}");
 
-        match (re.rank_for_player(0), re.rank_for_player(1)) {
-            (Ok(daniel), Ok(gus)) => {
-                let winner = if gus > daniel {
-                    "Gus Hansen (quads)"
-                } else {
-                    "Daniel Negreanu (full house)"
-                };
-                println!("  Winner: {winner}");
-            }
-            _ => {}
+        if let (Ok(daniel), Ok(gus)) = (re.rank_for_player(0), re.rank_for_player(1)) {
+            let winner = if gus > daniel {
+                "Gus Hansen (quads)"
+            } else {
+                "Daniel Negreanu (full house)"
+            };
+            println!("  Winner: {winner}");
         }
     }
 
@@ -222,7 +216,7 @@ fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
     let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
     let gus_vs_fullhouse = Versus::new_with_board(Two::HAND_5D_5C, Combos::from_str("66").unwrap_or_default(), board);
 
-    println!("\n=== Gus Hansen's Decision (facing {} chip bet) ===", daniel_bet);
+    println!("\n=== Gus Hansen's Decision (facing {daniel_bet} chip bet) ===");
     println!("{pot_odds}");
 
     if let Ok(river_odds) = gus_vs_fullhouse.combined_odds_at_river() {
@@ -279,11 +273,10 @@ fn commentary_action_to(table: &Table) {
     // Last player action: walk the log backwards for the first player-action event.
     for action in table.event_log.iter().rev() {
         if action.is_player_action() {
-            if let Some(seat_num) = action.get_seat() {
-                if let Some(seat) = table.seats.get_seat(seat_num) {
+            if let Some(seat_num) = action.get_seat()
+                && let Some(seat) = table.seats.get_seat(seat_num) {
                     println!("{} {action}", seat.player.handle);
                 }
-            }
             break;
         }
     }

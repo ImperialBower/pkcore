@@ -1077,8 +1077,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7D_7C.bard(),
             lower: Two::HAND_6S_6H.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }
@@ -1089,8 +1089,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7S_7C.bard(),
             lower: Two::HAND_6H_6D.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }
@@ -1101,8 +1101,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7S_7H.bard(),
             lower: Two::HAND_6D_6C.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }
@@ -1113,8 +1113,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7H_7D.bard(),
             lower: Two::HAND_6S_6C.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }
@@ -1125,8 +1125,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7H_7C.bard(),
             lower: Two::HAND_6S_6D.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }
@@ -1137,8 +1137,8 @@ mod analysis__store__db__hupresult_tests {
             higher: Two::HAND_7S_7D.bard(),
             lower: Two::HAND_6H_6C.bard(),
             odds: WinLoseDraw {
-                wins: 1375342,
-                losses: 315362,
+                wins: 1_375_342,
+                losses: 315_362,
                 draws: 21600,
             },
         }

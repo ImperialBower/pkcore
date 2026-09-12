@@ -1228,6 +1228,15 @@ fn hand_has_position(hand: &HandHistory, pos: Position) -> bool {
     })
 }
 
+impl<'a> IntoIterator for &'a HandCollection {
+    type Item = &'a HandHistory;
+    type IntoIter = std::slice::Iter<'a, HandHistory>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl Default for HandCollection {
     /// Returns an empty [`HandCollection`] via [`HandCollection::new`].
     ///
@@ -2778,7 +2787,7 @@ mod tests {
     /// old-style player count these records used to carry, kept here so the
     /// tests exercise a pre-`with_table_size` record.
     #[cfg(feature = "bot-profiles")]
-    const DEAD_BUTTON_HAND: &str = r#"
+    const DEAD_BUTTON_HAND: &str = r"
 - format_version: 1
   hand:
     id: dead-button-replay
@@ -2853,7 +2862,7 @@ mod tests {
   - seat: 6
     outcome: fold
     net: 0.0
-"#;
+";
 
     // P9j.6 — the owned HandHistoryError's Display/Error/From impls were untested.
     #[cfg(feature = "hand-histories")]
@@ -3272,7 +3281,7 @@ hands:
         let collection = HandCollection::new();
         assert!(collection.is_empty());
         assert_eq!(collection.len(), 0);
-        assert!(!collection.pkcore_version.is_empty());
+        assert_ne!(collection.pkcore_version, "");
         assert_eq!(collection.format_version, FORMAT_VERSION);
     }
 
@@ -3509,7 +3518,7 @@ hands:
 "#;
         let collection = HandCollection::from_yaml(yaml).expect("Failed to parse");
         assert_eq!(collection.format_version, FORMAT_VERSION);
-        assert!(!collection.pkcore_version.is_empty());
+        assert_ne!(collection.pkcore_version, "");
     }
 
     #[cfg(feature = "hand-histories")]
@@ -3839,7 +3848,7 @@ hands:
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
         let results = collection.replay_all();
-        assert!(results.is_empty());
+        assert_eq!(results, [] as [std::result::Result<crate::hand_history::ReplayResult, PKError>; 0]);
     }
 
     /// Regression test: 3-player flop where BB checks, BTN bets, BB folds.
@@ -4115,7 +4124,7 @@ hands:
 
     // ── shuffled_deck field ───────────────────────────────────────────────────
 
-    /// shuffled_deck round-trips through YAML and is omitted when None.
+    /// `shuffled_deck` round-trips through YAML and is omitted when None.
     #[cfg(feature = "hand-histories")]
     #[test]
     fn test_hand_history_shuffled_deck_round_trips() {
@@ -4168,7 +4177,7 @@ hands:
         );
     }
 
-    /// Passing a deck string to from_table_state wires it into the HandHistory.
+    /// Passing a deck string to `from_table_state` wires it into the `HandHistory`.
     #[test]
     fn test_from_table_state_stores_shuffled_deck() {
         use crate::casino::game::ForcedBets;

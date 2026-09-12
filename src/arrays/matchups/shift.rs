@@ -109,8 +109,8 @@ mod arrays__matchups__masks__shift_tests {
             higher: Bard::from(Two::HAND_AD_TD),
             lower: Bard::from(Two::HAND_5H_4S),
             odds: WinLoseDraw {
-                wins: 1108295,
-                losses: 595903,
+                wins: 1_108_295,
+                losses: 595_903,
                 draws: 8106,
             },
         }
@@ -173,8 +173,8 @@ mod arrays__matchups__masks__shift_tests {
                     lower: 0b1100,
                 },
                 rank_mask: RankMask {
-                    higher: 0b1000100000000,
-                    lower: 0b0000000001100,
+                    higher: 0b1_0001_0000_0000,
+                    lower: 0b0_0000_0000_1100,
                 },
             },
             shifts: vec![

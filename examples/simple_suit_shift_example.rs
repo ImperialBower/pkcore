@@ -13,7 +13,7 @@ use pkcore::prelude::*;
 /// ## Specify custom hands
 ///
 /// A smothered example is one where both cards share the same suits:
-/// cargo run --example simple_suit_shift_example -- -c "2s 2h 3s 3h"
+/// cargo run --example `simple_suit_shift_example` -- -c "2s 2h 3s 3h"
 ///
 /// A covered example is one where they share one suit:
 /// `cargo run --example simple_suit_shift_example -- -c "2s 2h 3s 3d"`
@@ -22,7 +22,7 @@ use pkcore::prelude::*;
 /// `cargo run --example simple_suit_shift_example -- -c "8s 7h 7c 3d"`
 ///
 /// ## View help
-/// cargo run --example simple_suit_shift_example -- --help
+/// cargo run --example `simple_suit_shift_example` -- --help
 #[derive(Parser, Debug)]
 #[command(name = "Suit Shift Example")]
 #[command(about = "Generate suit-shifted variants of a heads-up matchup", long_about = None)]
@@ -44,6 +44,6 @@ fn main() {
     println!("Total variants: {}", all_shifts.len());
 
     for variant in all_shifts {
-        println!("{}", variant);
+        println!("{variant}");
     }
 }

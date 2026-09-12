@@ -397,7 +397,7 @@ mod hand_rank__eval_tests {
         assert_eq!(
             Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
             Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
-        )
+        );
     }
 
     #[test]

@@ -94,6 +94,6 @@ mod tests {
         let s = w.to_string();
         assert!(s.contains("Winnings("));
         assert!(s.contains("chips=150"));
-        assert!(s.contains("Royal") || s.contains("HandRank") || s.contains("A"));
+        assert!(s.contains("Royal") || s.contains("HandRank") || s.contains('A'));
     }
 }

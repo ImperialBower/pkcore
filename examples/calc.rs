@@ -36,10 +36,10 @@ struct Args {
 /// `❯ cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
 ///
 /// To add logging:
-/// RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
+/// `RUST_LOG=trace` cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
 ///
 /// What about calling this hand The Fold?
-/// RUST_LOG=trace cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
+/// `RUST_LOG=trace` cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
 ///
 /// ## Step Three
 ///
@@ -86,8 +86,8 @@ struct Args {
 /// cargo run --example calc -- -d "3♠ 9♦ J♠ 8♦ 2♠ Q♠ 6♣ 4♠" -b "Q♥ 5♥ 5♣ 7♥ 4♥" -- Two Pair vs Straight Draw
 ///
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
-///     https://www.youtube.com/watch?v=vjM60lqRhPg
-///     https://www.youtube.com/watch?v=fEEW06iX4n8
+///     <https://www.youtube.com/watch?v=vjM60lqRhPg>
+///     <https://www.youtube.com/watch?v=fEEW06iX4n8>
 /// cargo run --example calc -- -d "K♠ Q♠ 5♦ K♥ 5♥ J♥" -b "J♦ T♣ A♥ K♣ 2♣" -n -- Flopping the nuts
 /// cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ 3♦" HSP S04E08 Harman/Safai
 /// cargo run --example calc -- -d "T♦ 2♦ 9♠ 6♥" -b "3♠ 8♦ A♦" HSP S04E08 Elezra/Negreanu
@@ -102,7 +102,7 @@ struct Args {
 /// cargo run --example calc -- -d "A♠ K♥ 9♦ 8♥" -b "6♦ 7♥ T♣ 3♥ 5♥" HSP S06E11 Galfond/Negreanu
 /// cargo run --example calc -- -d "7♠ 6♠ Q♠ Q♦" -b "2♠ 7♥ 9♠ T♦ 4♣" HSP S08E07 Bellande Schwimer FIRST RUN
 /// cargo run --example calc -- -d "7♠ 6♠ Q♠ Q♦" -b "2♠ 7♥ 9♠ A♠ K♠" HSP S08E07 Bellande Schwimer SECOND RUN
-/// cargo run --example calc -- -d "T♦ 9♦ 2♠ 2♥" -b "2♦ T♥ 7♦ 8♦ 6♥" DNEGS https://youtu.be/yyPU25EGLkA?t=123
+/// cargo run --example calc -- -d "T♦ 9♦ 2♠ 2♥" -b "2♦ T♥ 7♦ 8♦ 6♥" DNEGS <https://youtu.be/yyPU25EGLkA?t=123>
 /// cargo run --example calc -- -d "A♦ Q♠ K♣ Q♦" -b "J♥ 9♠ A♣ 4♦ T♣" HSP S09E03 DNEGS/Bellands
 /// cargo run --example calc -- -d "J♥ 8♠ K♠ J♠ 3♠ 3♥" -b "7♥ 8♦ 2♣ 5♣ Q♠" HSP S09E04 Adelstein/Liu/Antonius
 /// cargo run --example calc -- -d "A♥ 8♦ K♣ 7♣ T♥ T♦" -b "4♠ K♦ 2♦ J♥ 3♠" HSP S09E05 Brunson/Tilly/Antonius
@@ -110,14 +110,14 @@ struct Args {
 /// cargo run --example calc -- -d "J♥ J♣ A♥ 4♥" -b "3♣ 4♠ 4♣ 7♣ 9♠" HSP S09E05 Adelstein/Brunson 2nd
 /// cargo run --example calc -- -d "8♦ 5♦ K♦ J♥ 2♠ 2♥" -b "9♥ 2♦ K♥ 4♥ J♠" HSP S09E05 Tilly/Hultman
 /// cargo run --example calc -- -d "J♥ J♦ A♠ K♦ T♣ 9♣" -b "7♦ K♠ 2♥ 7♣ A♦" HSP S09E05 Liu/Tilly/Menon
-/// cargo run --example calc -- -d "7s 6c js 4d" -b "8h 5h 9d" -- Hand with KDog
+/// cargo run --example calc -- -d "7s 6c js 4d" -b "8h 5h 9d" -- Hand with `KDog`
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
 
     let args = Args::parse();
     let game = Game::new(HoleCards::from_str(&args.dealt)?, Board::from_str(&args.board)?);
-    println!("{}", game);
+    println!("{game}");
 
     println!();
     println!("Preflop Odds:");
@@ -126,7 +126,7 @@ fn main() -> Result<(), PKError> {
 
     println!();
     let flop_eval = FlopEval::try_from(game.clone())?;
-    println!("{}", flop_eval);
+    println!("{flop_eval}");
 
     if args.nuts {
         println!();

@@ -138,7 +138,7 @@ fn run_session(dir: &PathBuf, style_uuids: &[(&str, Uuid)], session_label: u32) 
         }
     };
 
-    println!("  Session {session_label}: ran {hands_played} of {HANDS_PER_SESSION} requested hand(s).",);
+    println!("  Session {session_label}: ran {hands_played} of {HANDS_PER_SESSION} requested hand(s).");
 
     let stats = sim.stats().expect("registry attached");
     print_per_player_line(stats, style_uuids);
@@ -184,7 +184,7 @@ fn profile_for_style(name: &str) -> BotProfile {
 }
 
 /// Prints one line per (style, uuid) showing the headline counters from
-/// the player's current PlayerStats record. Skips styles that aren't in
+/// the player's current `PlayerStats` record. Skips styles that aren't in
 /// the registry (e.g. on first reload, before any session has run).
 fn print_per_player_line(registry: &StatsRegistry, style_uuids: &[(&str, Uuid)]) {
     for (style, uuid) in style_uuids {

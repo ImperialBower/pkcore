@@ -636,7 +636,7 @@ mod bard_tests {
     #[test]
     fn as_guided_string() {
         assert_eq!(
-            format!("{}", Bard::TREY_DIAMONDS.as_guided_string()),
+            Bard::TREY_DIAMONDS.as_guided_string().to_string(),
             "🂡🂮🂭🂫🂪🂩🂨🂧🂦🂥🂤🂣🂢🂱🂾🂽🂻🂺🂹🂸🂷🂶🂵🂴🂳🂲🃁🃎🃍🃋🃊🃉🃈🃇🃆🃅🃄🃃🃂🃑🃞🃝🃛🃚🃙🃘🃗🃖🃕🃔🃓🃒\n0000_00000000_00000000_00000000_00000000_01000000_00000000"
         );
     }
@@ -657,7 +657,7 @@ mod bard_tests {
         );
     }
 
-    /// Left:  1000_00000000_00000000_00000000_00000000_00000000_00000000
+    /// Left:  `1000_00000000_00000000_00000000_00000000_00000000_00000000`
     //  Right: 1000_00000000_00000000_00000000_00000000 00000000 00000000
     #[test]
     fn fmt_display() {
@@ -975,6 +975,6 @@ mod bard_tests {
 
     #[test]
     fn pile__to_vec__empty() {
-        assert!(Bard::BLANK.to_vec().is_empty());
+        assert_eq!(Bard::BLANK.to_vec(), [] as [crate::card::Card; 0]);
     }
 }

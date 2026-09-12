@@ -140,7 +140,7 @@ mod util__tests {
     fn percent() {
         let percentage = Util::calculate_percentage(48, 2_598_960);
 
-        assert_eq!("0.00185%", format!("{:.5}%", percentage));
+        assert_eq!("0.00185%", format!("{percentage:.5}%"));
         assert_eq!("0.00000%", format!("{:.5}%", Util::calculate_percentage(0, 0)));
     }
 
@@ -148,14 +148,14 @@ mod util__tests {
     fn percent__zero_numerator() {
         let percentage = Util::calculate_percentage(0, 2_598_960);
 
-        assert_eq!("0.00000%", format!("{:.5}%", percentage));
+        assert_eq!("0.00000%", format!("{percentage:.5}%"));
     }
 
     #[test]
     fn percent__zero_denominator() {
         let percentage = Util::calculate_percentage(48, 0);
 
-        assert_eq!("0.00000%", format!("{:.5}%", percentage));
+        assert_eq!("0.00000%", format!("{percentage:.5}%"));
     }
 
     #[test]

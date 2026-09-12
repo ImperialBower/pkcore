@@ -79,16 +79,15 @@ fn audit_hand(hand: &HandHistory) -> bool {
     // ── Layer 1: bridge checks ────────────────────────────────────────────────
 
     // Board
-    if hand.board.is_some() {
-        if let Err(e) = hand.to_board() {
+    if hand.board.is_some()
+        && let Err(e) = hand.to_board() {
             failures.push(format!("board: invalid card string — {e}"));
         }
-    }
 
     // Hole cards
     for p in &hand.players {
-        if p.hole_cards.is_some() {
-            if let Err(e) = p.to_two() {
+        if p.hole_cards.is_some()
+            && let Err(e) = p.to_two() {
                 failures.push(format!(
                     "seat {} ({}): invalid hole_cards {:?} — {e}",
                     p.seat,
@@ -96,21 +95,19 @@ fn audit_hand(hand: &HandHistory) -> bool {
                     p.hole_cards.as_deref().unwrap_or("")
                 ));
             }
-        }
     }
 
     // Best hands in results
     if let Some(results) = &hand.results {
         for r in results {
-            if r.best_hand.is_some() {
-                if let Err(e) = r.to_five() {
+            if r.best_hand.is_some()
+                && let Err(e) = r.to_five() {
                     failures.push(format!(
                         "seat {} result: invalid best_hand {:?} — {e}",
                         r.seat,
                         r.best_hand.as_deref().unwrap_or("")
                     ));
                 }
-            }
         }
     }
 
@@ -203,7 +200,7 @@ fn resolve_path() -> PathBuf {
 fn most_recent_yaml(dir: &str) -> Option<PathBuf> {
     let entries = std::fs::read_dir(dir).ok()?;
     entries
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "yaml"))
         .filter_map(|e| {
             let mtime = e.metadata().ok()?.modified().ok()?;

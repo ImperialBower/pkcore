@@ -3372,7 +3372,7 @@ mod casino__table_tests {
         assert_eq!(0, table.determine_utg());
     }
 
-    /// After button_up in HU the new button (seat 1) becomes SB.
+    /// After `button_up` in HU the new button (seat 1) becomes SB.
     #[test]
     fn table_hu_button_up_swaps_roles() {
         let mut table = make_two_player_table();
@@ -4063,7 +4063,7 @@ mod casino__table_tests {
 
     // ── Burn card tests ───────────────────────────────────────────────────────
 
-    /// deal_flop must burn one card before dealing the three community cards.
+    /// `deal_flop` must burn one card before dealing the three community cards.
     /// After dealing hole cards to 2 players (4 cards consumed), then flop:
     /// deck should have 52 - 4 (hole) - 1 (burn) - 3 (flop) = 44 cards.
     #[test]
@@ -4082,7 +4082,7 @@ mod casino__table_tests {
         assert_eq!(44, table.deck.len(), "deck should have 44 cards after burn + flop deal");
     }
 
-    /// deal_turn must burn one card before dealing the turn card.
+    /// `deal_turn` must burn one card before dealing the turn card.
     /// After flop (deck at 44), turn should leave deck at 44 - 1 (burn) - 1 (turn) = 42.
     #[test]
     fn deal_turn_burns_a_card() {
@@ -4111,7 +4111,7 @@ mod casino__table_tests {
     }
 
     /// After a full hand (hole cards + burn+flop + burn+turn + burn+river) the
-    /// deck must be fully restored to 52 cards after reset().
+    /// deck must be fully restored to 52 cards after `reset()`.
     /// Fails if burn cards are discarded rather than mucked.
     #[test]
     fn reset_restores_deck_to_52_after_burns() -> Result<(), crate::PKError> {
@@ -4148,7 +4148,7 @@ mod casino__table_tests {
         Ok(())
     }
 
-    /// deal_river must burn one card before dealing the river card.
+    /// `deal_river` must burn one card before dealing the river card.
     /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
     #[test]
     fn deal_river_burns_a_card() {
@@ -4265,8 +4265,8 @@ mod casino__table_tests {
     /// and must be returned as an uncalled bet. No awardable side pot exists.
     ///
     /// Chip conservation:
-    ///   If BB wins:  BB=170, UTG=4940 (lost only 60), SB=4950. Total 10_060.
-    ///   If UTG wins: BB=0, UTG=5110 (won 110), SB=4950. Total 10_060.
+    ///   If BB wins:  BB=170, UTG=4940 (lost only 60), SB=4950. Total `10_060`.
+    ///   If UTG wins: BB=0, UTG=5110 (won 110), SB=4950. Total `10_060`.
     ///
     /// The critical assertion is that UTG's ending stack is in {4940, 5110} —
     /// any other value (e.g. 4900 or 5070) means the 40 was not returned.
@@ -4370,8 +4370,8 @@ mod casino__table_tests {
 
     /// Min-raise validation must remain anchored to the configured BB even when
     /// the BB is all-in for less. A raise to 130 over a short BB of 30 has an
-    /// increment of 30 — less than min_raise (100) — and must be rejected.
-    /// A raise to 200 has increment 100 = min_raise and must be accepted.
+    /// increment of 30 — less than `min_raise` (100) — and must be rejected.
+    /// A raise to 200 has increment 100 = `min_raise` and must be accepted.
     #[test]
     fn table_short_bb_min_raise_anchors_to_full_blind() {
         let seats = Seats::new(vec![

@@ -801,7 +801,7 @@ mod bot__table_snapshot_tests {
         table.act_check(first).unwrap();
 
         // Snapshot for the OTHER seat — it has not checked this street.
-        let other = if first == 0 { 1 } else { 0 };
+        let other = u8::from(first == 0);
         let snap = TableSnapshot::from_table(&table, other);
         assert!(
             !snap.checked_this_street,

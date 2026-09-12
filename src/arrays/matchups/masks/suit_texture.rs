@@ -216,7 +216,7 @@ mod arrays__matchups__masks__suit_texture_tests {
             }
         }
         for m in &s2 {
-            if s1.contains(&m) {
+            if s1.contains(m) {
                 return false;
             }
         }

@@ -38,11 +38,11 @@ fn main() {
 fn read_input(cache: &mut HashMap<HoleCards, DealEval>) {
     match Terminal::receive_cards_in_twos("hole cards> ") {
         Ok(twos) => match work(twos, cache) {
-            Ok(_) => {}
-            Err(e) => println!("{:?}", e),
+            Ok(()) => {}
+            Err(e) => println!("{e:?}"),
         },
         Err(e) => {
-            println!("{:?}", e);
+            println!("{e:?}");
         }
     }
 }

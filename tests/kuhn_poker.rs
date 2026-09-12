@@ -166,7 +166,7 @@ fn cfr(cards: [usize; 2], history: &str, p0: f64, p1: f64, nodes: &mut HashMap<S
     // Recurse over both actions, collecting counterfactual utilities for each.
     let mut action_utils = [0.0_f64; 2];
     for (a, action) in ["p", "b"].iter().enumerate() {
-        let next = format!("{}{}", history, action);
+        let next = format!("{history}{action}");
         action_utils[a] = if player == 0 {
             cfr(cards, &next, p0 * strategy[a], p1, nodes)
         } else {
@@ -225,7 +225,7 @@ fn train(iterations: usize) -> (f64, HashMap<String, InfoSetNode>) {
 /// Action 1 = bet or call (the "aggressive" action).
 /// Returns 0.5 if the node was never visited (should not happen after training).
 fn bet_prob(nodes: &HashMap<String, InfoSetNode>, key: &str) -> f64 {
-    nodes.get(key).map(|n| n.average_strategy()[1]).unwrap_or(0.5)
+    nodes.get(key).map_or(0.5, |n| n.average_strategy()[1])
 }
 
 #[cfg(test)]
@@ -244,9 +244,7 @@ mod tests {
         let expected = -1.0_f64 / 18.0;
         assert!(
             (value - expected).abs() < EPS,
-            "game value {:.5} should be within {EPS} of -1/18 ({:.5})",
-            value,
-            expected,
+            "game value {value:.5} should be within {EPS} of -1/18 ({expected:.5})",
         );
     }
 
@@ -288,7 +286,7 @@ mod tests {
         let (_, nodes) = train(ITERATIONS);
         // Info set: P1 has K, history is "pb" (P1 checked, P2 bet, P1 responds)
         let prob = bet_prob(&nodes, "Kpb");
-        assert!(prob > 1.0 - EPS, "P1 with K should always call P2's bet, got {prob:.3}",);
+        assert!(prob > 1.0 - EPS, "P1 with K should always call P2's bet, got {prob:.3}");
     }
 
     #[test]
@@ -296,7 +294,7 @@ mod tests {
         let (_, nodes) = train(ITERATIONS);
         // Info set: P1 has J, history is "pb" (P1 checked, P2 bet, P1 responds)
         let prob = bet_prob(&nodes, "Jpb");
-        assert!(prob < EPS, "P1 with J should always fold to P2's bet, got {prob:.3}",);
+        assert!(prob < EPS, "P1 with J should always fold to P2's bet, got {prob:.3}");
     }
 
     // ── Uniquely determined mixing frequencies ──────────────────────────────

@@ -29,14 +29,14 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub const EIGHT_OR_BETTER_LO_BIT_ACE: u8 = 0b00000001;
-    pub const EIGHT_OR_BETTER_LO_BIT_DEUCE: u8 = 0b00000010;
-    pub const EIGHT_OR_BETTER_LO_BIT_TREY: u8 = 0b00000100;
-    pub const EIGHT_OR_BETTER_LO_BIT_FOUR: u8 = 0b00001000;
-    pub const EIGHT_OR_BETTER_LO_BIT_FIVE: u8 = 0b00010000;
-    pub const EIGHT_OR_BETTER_LO_BIT_SIX: u8 = 0b00100000;
-    pub const EIGHT_OR_BETTER_LO_BIT_SEVEN: u8 = 0b01000000;
-    pub const EIGHT_OR_BETTER_LO_BIT_EIGHT: u8 = 0b10000000;
+    pub const EIGHT_OR_BETTER_LO_BIT_ACE: u8 = 0b0000_0001;
+    pub const EIGHT_OR_BETTER_LO_BIT_DEUCE: u8 = 0b0000_0010;
+    pub const EIGHT_OR_BETTER_LO_BIT_TREY: u8 = 0b0000_0100;
+    pub const EIGHT_OR_BETTER_LO_BIT_FOUR: u8 = 0b0000_1000;
+    pub const EIGHT_OR_BETTER_LO_BIT_FIVE: u8 = 0b0001_0000;
+    pub const EIGHT_OR_BETTER_LO_BIT_SIX: u8 = 0b0010_0000;
+    pub const EIGHT_OR_BETTER_LO_BIT_SEVEN: u8 = 0b0100_0000;
+    pub const EIGHT_OR_BETTER_LO_BIT_EIGHT: u8 = 0b1000_0000;
 
     #[must_use]
     pub fn bits(self) -> u32 {
@@ -262,7 +262,7 @@ mod rank_tests {
     fn number() {
         let mut i = Rank::COUNT;
         for rank in Rank::iter() {
-            i = i - 1;
+            i -= 1;
             match rank {
                 Rank::BLANK => assert_eq!(i, rank.number() as usize),
                 _ => assert_eq!(i - 1, rank.number() as usize),

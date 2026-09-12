@@ -209,7 +209,7 @@ fn main() {
         );
     }
 
-    let unweighted_avg = (0.85 + 0.65) / 2.0;
+    let unweighted_avg = f64::midpoint(0.85, 0.65);
     let weighted_prob = wc3.weighted_win_probability(&hand_odds);
 
     // With freq(AA)=1.0 and freq(KK)=0.5, AA is weighted 2× relative to KK.

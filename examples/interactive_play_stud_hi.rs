@@ -27,8 +27,7 @@ const NUM_HANDS: usize = 20;
 fn main() {
     println!("=== Seven-Card Stud Hi Demo ===");
     println!(
-        "  Ante: ${}  |  Bring-in: ${}  |  Small bet: ${}  |  Big bet: ${}  |  Starting chips: ${}",
-        ANTE, BRING_IN, SMALL_BET, BIG_BET, STARTING_CHIPS,
+        "  Ante: ${ANTE}  |  Bring-in: ${BRING_IN}  |  Small bet: ${SMALL_BET}  |  Big bet: ${BIG_BET}  |  Starting chips: ${STARTING_CHIPS}",
     );
     println!("  Hands: {NUM_HANDS}");
     println!();
@@ -73,7 +72,7 @@ fn main() {
     entries.sort_by_key(|(seat, _)| *seat);
     for (seat, net) in entries {
         let sign = if net >= 0 { "+" } else { "" };
-        println!("  Seat {}: {}{} chips", seat, sign, net);
+        println!("  Seat {seat}: {sign}{net} chips");
     }
 
     println!();
