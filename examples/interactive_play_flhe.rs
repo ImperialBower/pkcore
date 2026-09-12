@@ -75,7 +75,7 @@ fn main() {
     entries.sort_by_key(|(seat, _)| *seat);
     for (seat, net) in entries {
         let sign = if net >= 0 { "+" } else { "" };
-        println!("  Seat {}: {}{} chips", seat, sign, net);
+        println!("  Seat {seat}: {sign}{net} chips");
     }
 
     println!();

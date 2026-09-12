@@ -94,14 +94,18 @@ fn main() {
             println!("\n  *** {} is eliminated! ***", seat_label(i, &profiles));
         }
 
-        if table.seats.get_seat(HUMAN_SEAT).map(|s| s.is_empty()).unwrap_or(true) {
+        if table
+            .seats
+            .get_seat(HUMAN_SEAT)
+            .is_none_or(pkcore::prelude::Seat::is_empty)
+        {
             println!("\nYou have been eliminated after {} hand(s).", hand - 1);
             break;
         }
 
         let remaining = table.count_funded();
         if remaining < 2 {
-            println!("\nOnly {} player(s) remain. Session ends.", remaining);
+            println!("\nOnly {remaining} player(s) remain. Session ends.");
             break;
         }
 
@@ -135,8 +139,8 @@ fn main() {
         .filter(|s| !s.is_empty())
         .map(|s| s.player.chips)
     {
-        Some(c) => println!("  {:>25}: {} chips  ← You", HUMAN_NAME, c),
-        None => println!("  {:>25}: OUT  ← You", HUMAN_NAME),
+        Some(c) => println!("  {HUMAN_NAME:>25}: {c} chips  ← You"),
+        None => println!("  {HUMAN_NAME:>25}: OUT  ← You"),
     }
     let mut standings: Vec<(usize, String)> = (0..profiles.len())
         .filter_map(|i| {
@@ -149,7 +153,7 @@ fn main() {
         .collect();
     standings.sort_by(|a, b| b.0.cmp(&a.0));
     for (chips, name) in &standings {
-        println!("  {:>25}: {} chips", name, chips);
+        println!("  {name:>25}: {chips} chips");
     }
 }
 
@@ -163,10 +167,7 @@ fn run_hand(
     hand_num: usize,
     collection: &HandCollection,
 ) -> (Winnings, HandHistory) {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = table.button;
 
     // Snapshot starting stacks before forced bets (hand-history convention).
@@ -210,10 +211,10 @@ fn run_hand(
         })
         .collect();
 
-    if let Some(seat) = table.seats.get_seat(HUMAN_SEAT) {
-        if seat.cards.has_cards() {
-            println!("  Your hole cards: {}", seat.cards.sorted_display());
-        }
+    if let Some(seat) = table.seats.get_seat(HUMAN_SEAT)
+        && seat.cards.has_cards()
+    {
+        println!("  Your hole cards: {}", seat.cards.sorted_display());
     }
 
     println!("  Preflop  [pot: {}]", table.effective_pot());
@@ -221,7 +222,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let ending_stacks = chip_counts(&table);
+        let ending_stacks = chip_counts(table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -244,7 +245,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let ending_stacks = chip_counts(&table);
+        let ending_stacks = chip_counts(table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -267,7 +268,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let ending_stacks = chip_counts(&table);
+        let ending_stacks = chip_counts(table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -291,7 +292,7 @@ fn run_hand(
     reveal_showdown(table, profiles);
     let board_str = table.board.to_string();
     let winnings = table.end_hand().expect("end_hand");
-    let ending_stacks = chip_counts(&table);
+    let ending_stacks = chip_counts(table);
     let history = build_hand_history(
         hand_num,
         ts_secs,
@@ -308,10 +309,11 @@ fn run_hand(
 
 /// Prints the human's hole cards as a reminder at the start of each post-flop street.
 fn print_human_cards(table: &Table) {
-    if let Some(seat) = table.seats.get_seat(HUMAN_SEAT) {
-        if seat.cards.has_cards() && seat.player.is_in_hand() {
-            println!("  (your cards: {})", seat.cards.sorted_display());
-        }
+    if let Some(seat) = table.seats.get_seat(HUMAN_SEAT)
+        && seat.cards.has_cards()
+        && seat.player.is_in_hand()
+    {
+        println!("  (your cards: {})", seat.cards.sorted_display());
     }
 }
 
@@ -340,7 +342,7 @@ fn reveal_showdown(table: &Table, profiles: &[BotProfile]) {
                     "    {:>20}  [{}]  →  {}  ({:?} #{})",
                     name, hole, e.hand, e.hand_rank.class, e.hand_rank.value
                 ),
-                None => println!("    {:>20}  [{}]", name, hole),
+                None => println!("    {name:>20}  [{hole}]"),
             }
         }
     }
@@ -461,22 +463,19 @@ fn read_human_action(
     println!();
     loop {
         println!("  ┌─ Your turn ─────────────────────────────────────");
-        println!(
-            "  │  Cards: {}   Chips: {}   Pot: {}{}",
-            hole, chips, pot, position_suffix
-        );
+        println!("  │  Cards: {hole}   Chips: {chips}   Pot: {pot}{position_suffix}");
         if to_call > 0 {
             println!("  │  To call: {}   Min raise: {}", to_call, table.min_raise());
-            println!("  │  f=fold  c=call {}  r <n>=raise to n  a=all-in  s=save", to_call);
+            println!("  │  f=fold  c=call {to_call}  r <n>=raise to n  a=all-in  s=save");
         } else {
-            println!("  │  Min bet: {}", BIG_BLIND);
+            println!("  │  Min bet: {BIG_BLIND}");
             println!("  │  ch=check  b <n>=bet n  a=all-in  s=save");
         }
 
         let trimmed = match editor.read_line(&prompt) {
             Ok(Signal::Success(buf)) => buf.trim().to_lowercase(),
             // Ctrl+C / Ctrl+D — fold or check and exit gracefully
-            Ok(Signal::CtrlC) | Ok(Signal::CtrlD) => {
+            Ok(Signal::CtrlC | Signal::CtrlD) => {
                 let action = if to_call > 0 {
                     let _ = table.act_fold(seat);
                     "folds".to_string()
@@ -507,7 +506,7 @@ fn read_human_action(
                     println!();
                     return "checks".to_string();
                 }
-                println!("  There is a bet of {} to call — you cannot check.", to_call);
+                println!("  There is a bet of {to_call} to call — you cannot check.");
             }
             "c" | "call" => {
                 if to_call > 0 {
@@ -530,7 +529,7 @@ fn read_human_action(
                         println!();
                         return format!("bets {amount}");
                     }
-                    println!("  Bet rejected. Min bet: {}.", BIG_BLIND);
+                    println!("  Bet rejected. Min bet: {BIG_BLIND}.");
                 }
                 Some(_) => println!("  There is already a bet — use 'r <n>' to raise."),
                 None => println!("  Usage: b <chips>"),
@@ -606,14 +605,11 @@ fn build_hand_history(
 // ── Display helpers ───────────────────────────────────────────────────────────
 
 /// Returns the display name for a seat: `"You"` for seat 0, bot profile name otherwise.
-fn seat_label<'a>(seat: u8, profiles: &'a [BotProfile]) -> &'a str {
+fn seat_label(seat: u8, profiles: &[BotProfile]) -> &str {
     if seat == HUMAN_SEAT {
         HUMAN_NAME
     } else {
-        profiles
-            .get((seat as usize) - 1)
-            .map(|p| p.name.as_str())
-            .unwrap_or("?")
+        profiles.get((seat as usize) - 1).map_or("?", |p| p.name.as_str())
     }
 }
 
@@ -624,9 +620,9 @@ fn print_results(results: &[ResultEntry], profiles: &[BotProfile]) {
         let name = seat_label(r.seat, profiles);
         match (r.net, r.pot_won) {
             (Some(net), Some(won)) if net >= 0.0 => {
-                println!("  {:>20}  wins {:>7.0} chips  (net {:+.0})", name, won, net)
+                println!("  {name:>20}  wins {won:>7.0} chips  (net {net:+.0})");
             }
-            (Some(net), _) => println!("  {:>20}  loses             (net {:+.0})", name, net),
+            (Some(net), _) => println!("  {name:>20}  loses             (net {net:+.0})"),
             _ => {}
         }
     }

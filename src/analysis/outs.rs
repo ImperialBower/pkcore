@@ -345,7 +345,7 @@ impl Default for Outs {
 impl From<&CaseEvals> for Outs {
     fn from(case_evals: &CaseEvals) -> Self {
         let mut outs = Outs::default();
-        for case_eval in case_evals.iter() {
+        for case_eval in case_evals {
             outs.add_from_case_eval(case_eval);
         }
         outs

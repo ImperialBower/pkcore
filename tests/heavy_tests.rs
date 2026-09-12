@@ -123,19 +123,12 @@ mod heavy_tests {
     /// compared against the payoff the log records for it: a player who folds
     /// loses precisely what they put in, so the two must agree to the chip.
     ///
-    /// EPIC-83 split the check in two, because the plain engine clears more
-    /// state than the celled one did and the single old check went dead:
-    ///
-    /// - **Hands the replay finished.** `end_hand` has run, so every seat's
-    ///   final stack is compared against `STARTING_STACK + payoff` — winners
-    ///   included. This is the stronger of the two, and it covers exactly the
-    ///   hands the celled-era check used to skip.
-    /// - **Hands the replay left unfinished.** A log that ends `...r10000c///`
-    ///   records an all-in and a call and then stops: there are no further
-    ///   actions to drive the board out, so `Nubificus` never reaches
-    ///   `end_hand` and no pot is awarded. Final stacks say nothing there, so
-    ///   the older check still applies — each losing seat's committed chips
-    ///   must equal the loss the log records for it.
+    /// Every hand must finish: `end_hand` has run, so every seat's final stack
+    /// is compared against `STARTING_STACK + payoff` — winners included. A log
+    /// that ends `...r10000c///` records no action after the all-in call; the
+    /// replay deals that board out itself. Before `DEFECT_025` it could not,
+    /// and those hands were held only to the weaker "each loser committed
+    /// what it lost" check.
     ///
     /// One tolerance is deliberate. The corpus records split pots to half a
     /// chip (`...|287.5|...`); the parser truncates to `isize`, so a finished
@@ -170,13 +163,16 @@ mod heavy_tests {
 
                 // `end_hand` calls `Player::reset`, which zeroes
                 // `chips_in_play` on every seat. So an all-zero ring means the
-                // hand resolved; anything left in play means the replay ran
-                // out of logged actions mid-hand.
+                // hand resolved; anything left in play means the replay
+                // stopped mid-hand.
                 let hand_resolved = nubi
                     .table
                     .seats
                     .iter()
                     .all(|seat| seat.player.chips_in_play == 0);
+                if !hand_resolved {
+                    return Some(format!("Game #{idx}: replay never finished the hand\n  {}", plur.raw));
+                }
 
                 // Field 4 of the raw record is the payoff list. A decimal
                 // point there means a split pot the parser had to truncate.
@@ -188,27 +184,15 @@ mod heavy_tests {
                         continue;
                     };
 
-                    if hand_resolved {
-                        let expected = isize::try_from(Pluribus::STARTING_STACK).unwrap_or_default() + payoff;
-                        let actual = isize::try_from(seat.player.chips).unwrap_or_default();
-                        let slack = isize::from(payoffs_are_rounded);
+                    let expected = isize::try_from(Pluribus::STARTING_STACK).unwrap_or_default() + payoff;
+                    let actual = isize::try_from(seat.player.chips).unwrap_or_default();
+                    let slack = isize::from(payoffs_are_rounded);
 
-                        if (actual - expected).abs() > slack {
-                            return Some(format!(
-                                "Game #{idx} seat {seat_number}: log says it ends on {expected}, replay ended on {actual}\n  {}",
-                                plur.raw
-                            ));
-                        }
-                    } else if *payoff < 0 {
-                        let committed = seat.player.chips_in_play;
-
-                        if committed != payoff.unsigned_abs() {
-                            return Some(format!(
-                                "Game #{idx} seat {seat_number}: log says it lost {}, replay committed {committed}\n  {}",
-                                payoff.unsigned_abs(),
-                                plur.raw
-                            ));
-                        }
+                    if (actual - expected).abs() > slack {
+                        return Some(format!(
+                            "Game #{idx} seat {seat_number}: log says it ends on {expected}, replay ended on {actual}\n  {}",
+                            plur.raw
+                        ));
                     }
                 }
 
@@ -394,20 +378,12 @@ mod heavy_tests {
     /// This is the tier that can catch a `DEFECT_021`-shaped bug in mirror
     /// image — the cumulative-amount conversion run backwards.
     ///
-    /// Two classes of hand are excluded, and between them they account for
-    /// **every** failure — there is no unexplained residue:
+    /// Only the eight [`HALF_CHIP_HANDS`] are excluded.
     ///
-    /// 1. The eight [`HALF_CHIP_HANDS`].
-    /// 2. **92 all-in run-outs the engine cannot finish** (91 counted here —
-    ///    the 92nd is also a half-chip hand and is excluded before the check).
-    ///    When every
-    ///    remaining player is all-in, `Table` deals one more street and then
-    ///    stalls: `is_game_over` wants `is_last_street`, the board never
-    ///    reaches five cards, and the pot is never awarded. That is a `Table`
-    ///    state-machine gap, not an exporter bug, and EPIC-87's Tier 2 is the
-    ///    first thing that ever asked the engine to run a board out. Detected
-    ///    here by chip conservation — a hand that actually finished pays out
-    ///    exactly what it took in, so the net column sums to zero.
+    /// Chip conservation guards `DEFECT_025`: a hand that actually finished
+    /// pays out exactly what it took in, so the net column sums to zero. Before
+    /// the fix, 91 all-in run-outs stalled a street short and never paid the
+    /// pot.
     ///
     /// The flop comes back in canonical order because `DealtFlop` carries a
     /// single `Bard`, which is a bitset; see `TryFrom<&Table> for Pluribus`.
@@ -485,8 +461,7 @@ mod heavy_tests {
                 exported.index = hand.index;
 
                 // Chip conservation: a non-zero sum means the pot was never
-                // awarded, which is the all-in run-out the engine cannot
-                // finish. Counted, not silently skipped.
+                // awarded — an all-in run-out that stalled (`DEFECT_025`).
                 if exported.winnings.iter().sum::<isize>() != 0 {
                     stalled += 1;
                     continue;
@@ -507,11 +482,6 @@ mod heavy_tests {
             hands,
             failures.iter().take(10).cloned().collect::<Vec<_>>().join("\n")
         );
-        assert_eq!(
-            stalled, 91,
-            "the number of hands the engine cannot run out changed; if this went \
-             down, the all-in run-out gap is being fixed and this test should \
-             tighten with it"
-        );
+        assert_eq!(stalled, 0, "an all-in run-out never paid its pot (DEFECT_025)");
     }
 }

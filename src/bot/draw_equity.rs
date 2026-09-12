@@ -129,7 +129,7 @@ fn unseen_cards(hero: Two, board: &Cards) -> Cards {
     let mut deck = Cards::deck();
     deck.remove(&hero.first());
     deck.remove(&hero.second());
-    for card in board.iter() {
+    for card in board {
         deck.remove(card);
     }
     deck

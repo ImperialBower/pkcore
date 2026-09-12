@@ -413,7 +413,7 @@ mod arrays__hole_cards__twos_tests {
 
     #[test]
     fn len() {
-        assert_eq!(3, StartingHands::from([HERO, VILLAIN, MINION]).len())
+        assert_eq!(3, StartingHands::from([HERO, VILLAIN, MINION]).len());
     }
 
     #[test]

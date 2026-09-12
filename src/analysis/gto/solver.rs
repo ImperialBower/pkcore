@@ -1285,15 +1285,15 @@ impl Solver {
                 // IP regret for action a  = node_value - child_value[a]
                 //   (IP minimises OOP utility — positive regret = a lowered OOP value,
                 //    so IP should play it more)
-                let opp_reach = match player {
+                let counterparty_reach = match player {
                     Player::Oop => ip_reach,
                     Player::Ip => oop_reach,
                 };
                 let deltas: Vec<f64> = child_values
                     .iter()
                     .map(|&cv| match player {
-                        Player::Oop => opp_reach * (cv - node_value),
-                        Player::Ip => opp_reach * (node_value - cv),
+                        Player::Oop => counterparty_reach * (cv - node_value),
+                        Player::Ip => counterparty_reach * (node_value - cv),
                     })
                     .collect();
                 regrets.update(node_id, acting_hand, &deltas);
@@ -1555,7 +1555,10 @@ mod analysis__gto__solver__tests {
 
     #[test]
     fn test_solver_hand_pairs_non_empty() {
-        assert!(!make_solver().hand_pairs.is_empty());
+        assert_ne!(
+            make_solver().hand_pairs,
+            [] as [(crate::arrays::two::Two, crate::arrays::two::Two); 0]
+        );
     }
 
     #[test]
@@ -1651,8 +1654,7 @@ mod analysis__gto__solver__tests {
         let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
 
         let make = |iters: usize| {
-            let config =
-                SolverConfig::new(oop.clone(), ip.clone(), board.clone(), 1_000, 200).with_max_iterations(iters);
+            let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200).with_max_iterations(iters);
             Solver::new(config).solve().exploitability
         };
 
@@ -1786,7 +1788,10 @@ mod analysis__gto__solver__tests {
 
     #[test]
     fn test_solver_new_turn_hand_pairs_non_empty() {
-        assert!(!make_turn_solver().hand_pairs.is_empty());
+        assert_ne!(
+            make_turn_solver().hand_pairs,
+            [] as [(crate::arrays::two::Two, crate::arrays::two::Two); 0]
+        );
     }
 
     #[test]
@@ -1795,7 +1800,10 @@ mod analysis__gto__solver__tests {
         // River card (6h) should NOT exclude hands containing 6h.
         // (AA, KK, QQ, JJ on board 2h3d4c5s — none conflict, so all pairs valid.)
         let solver = make_turn_solver();
-        assert!(!solver.hand_pairs.is_empty());
+        assert_ne!(
+            solver.hand_pairs,
+            [] as [(crate::arrays::two::Two, crate::arrays::two::Two); 0]
+        );
     }
 
     #[test]
@@ -1966,7 +1974,7 @@ mod analysis__gto__solver__tests {
         let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
 
         // Vanilla: no discount, regret accumulates linearly.
-        let vanilla_config = SolverConfig::new(oop.clone(), ip.clone(), board.clone(), 1_000, 200)
+        let vanilla_config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200)
             .with_max_iterations(1)
             .with_cfr_variant(CfrVariant::Vanilla);
         let vanilla_expl = Solver::new(vanilla_config).solve().exploitability;

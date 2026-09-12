@@ -1415,7 +1415,7 @@ mod kuhn_tests {
             .unwrap()
             .apply(KuhnAction::Check)
             .unwrap();
-        assert!(state.legal_actions().is_empty());
+        assert_eq!(state.legal_actions(), [] as [crate::games::kuhn::KuhnAction; 0]);
     }
 
     // ── KuhnState::apply ─────────────────────────────────────────────────────
@@ -1627,7 +1627,7 @@ mod kuhn_tests {
             for card in [KuhnCard::Jack, KuhnCard::Queen, KuhnCard::King] {
                 let info = KuhnInfoSet::new(card, hist.clone());
                 let sum: f64 = strategy.action_probs(&info).iter().map(|(_, p)| p).sum();
-                assert!((sum - 1.0).abs() < 1e-10, "probs for {} don't sum to 1: {sum}", info);
+                assert!((sum - 1.0).abs() < 1e-10, "probs for {info} don't sum to 1: {sum}");
             }
         }
     }
@@ -1666,7 +1666,7 @@ mod kuhn_tests {
             KuhnCard::Jack,
             KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Check),
         );
-        assert!(strategy.action_probs(&info).is_empty());
+        assert_eq!(strategy.action_probs(&info), []);
     }
 
     #[test]

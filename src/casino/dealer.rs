@@ -410,7 +410,9 @@ impl Dealer {
             _ => log::error!("Unexpected board state with {} cards", self.table.board.len()),
         }
 
-        self.table.seats.reset_state_in_hand();
+        // No `reset_state_in_hand` here: `bring_it_in` already resets every seat
+        // that can still bet, and forcing all-in seats back to `YetToAct` left
+        // an all-in run-out owing actions nobody could take (`DEFECT_025`).
         Ok(())
     }
 
@@ -705,7 +707,7 @@ impl Dealer {
             return Err(DealerError::HandInProgress);
         }
 
-        for seat in self.table.seats.iter_mut() {
+        for seat in &mut self.table.seats {
             if seat.is_empty() || seat.player.is_tapped_out() {
                 continue;
             }
@@ -747,6 +749,27 @@ mod casino__dealer_tests {
             .seat_player(Player::new_with_chips("Bob".to_string(), 10_000))
             .unwrap();
         dealer
+    }
+
+    /// `DEFECT_025`: `advance_street` must not turn all-in seats back into
+    /// seats that owe an action, or the run-out cannot reach `end_hand`.
+    #[test]
+    fn advance_street_runs_out_an_all_in_hand() {
+        let mut dealer = two_player_dealer();
+        dealer.start_hand().unwrap();
+        let first = dealer.next_to_act();
+        dealer.act(DealerAction::AllIn { seat: first }).unwrap();
+        let second = dealer.next_to_act();
+        dealer.act(DealerAction::Call { seat: second }).unwrap();
+
+        for expected_board in [3, 4, 5] {
+            dealer.advance_street().unwrap();
+            assert_eq!(expected_board, dealer.table.board.len());
+        }
+
+        assert!(dealer.table.is_game_over());
+        dealer.end_hand().unwrap();
+        assert_eq!(20_000, dealer.table.seats.total_chip_count());
     }
 
     fn six_player_dealer() -> Dealer {

@@ -33,7 +33,7 @@ mod util__name_tests {
 
     #[test]
     fn generate() {
-        assert!(!Name::generate().is_empty())
+        assert_ne!(Name::generate(), "")
     }
 
     #[test]

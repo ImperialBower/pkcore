@@ -1768,7 +1768,7 @@ mod arrays__two_tests {
     use super::*;
     use rstest::rstest;
 
-    /// <https://groups.google.com/g/rec.gambling.poker/c/KZNAicdopK8?hl=en&pli=1#720c87127510688b />
+    /// <<https://groups.google.com/g/rec.gambling.poker/c/KZNAicdopK8?hl=en&pli=1#720c87127510688b> />
     ///
     /// Scottro --
     ///
@@ -1786,7 +1786,7 @@ mod arrays__two_tests {
     ///
     /// Straight Flushes,
     /// Mike Caro
-    /// <https://www.amazon.com/gp/product/B00KJMP6B2/ref=dbs_a_def_rwt_hsch_vapi_tkin_p1_i0 />
+    /// <<https://www.amazon.com/gp/product/B00KJMP6B2/ref=dbs_a_def_rwt_hsch_vapi_tkin_p1_i0> />
     ///
     /// **ASIDE** The book is out as
     /// [The Official Dictionary of Poker: Second Edition](https://www.amazon.com/Official-Dictionary-Poker-Second-ebook/dp/B00KJMP6B2?ref_=ast_author_mpb)
@@ -1835,7 +1835,7 @@ mod arrays__two_tests {
     ///
     /// Now, let's pass in two of the same card and make sure it returns an error.
     ///
-    /// Once we've implemented Two::SOK we can use it in our new function to verify that the `Cards`
+    /// Once we've implemented `Two::SOK` we can use it in our new function to verify that the `Cards`
     /// are ok.
     #[test]
     fn new__not_unique() {

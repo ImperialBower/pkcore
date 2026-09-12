@@ -297,23 +297,6 @@ impl Twos {
         self.0.insert(two);
     }
 
-    /// Consumes `self` and returns an owning iterator over the hands in arbitrary order.
-    ///
-    /// Use [`to_vec`](Self::to_vec) when a sorted, stable order is needed.
-    ///
-    /// # Examples
-    /// ```
-    /// use pkcore::analysis::gto::twos::Twos;
-    /// use pkcore::arrays::two::Two;
-    ///
-    /// let twos = Twos::from(vec![Two::HAND_AS_AH]);
-    /// assert_eq!(twos.into_iter().count(), 1);
-    /// ```
-    #[must_use]
-    pub fn into_iter(self) -> std::vec::IntoIter<Two> {
-        Vec::from_iter(self.0).into_iter()
-    }
-
     /// Returns the number of hands in the collection.
     ///
     /// # Examples
@@ -930,6 +913,27 @@ impl FromStr for Twos {
     }
 }
 
+/// Consumes `self` and returns an owning iterator over the hands in arbitrary order.
+///
+/// Use [`to_vec`](Twos::to_vec) when a sorted, stable order is needed.
+///
+/// # Examples
+/// ```
+/// use pkcore::analysis::gto::twos::Twos;
+/// use pkcore::arrays::two::Two;
+///
+/// let twos = Twos::from(vec![Two::HAND_AS_AH]);
+/// assert_eq!(twos.into_iter().count(), 1);
+/// ```
+impl IntoIterator for Twos {
+    type Item = Two;
+    type IntoIter = std::vec::IntoIter<Two>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Vec::from_iter(self.0).into_iter()
+    }
+}
+
 impl Display for Twos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
@@ -976,10 +980,10 @@ mod arrays__combos__twos_tests {
         let aces_and_kings = aces.extend(&kings);
 
         assert_eq!(length, aces_and_kings.len());
-        for ace in aces.0.iter() {
+        for ace in &aces.0 {
             assert!(aces_and_kings.contains(ace));
         }
-        for kk in kings.0.iter() {
+        for kk in &kings.0 {
             assert!(aces_and_kings.contains(kk));
         }
     }

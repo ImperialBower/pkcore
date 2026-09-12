@@ -503,7 +503,7 @@ mod tests {
     fn test_player_action_clone_copy() {
         let a = PlayerAction::Bet(100);
         let b = a; // Copy
-        let c = a.clone(); // Clone
+        let c = a; // Clone
         assert_eq!(a, b);
         assert_eq!(a, c);
     }

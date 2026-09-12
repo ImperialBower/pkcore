@@ -597,7 +597,7 @@ mod weighted_combos_tests {
     fn test_weighted_twos_excludes_zero_frequency() {
         let mut wc = WeightedCombos::default();
         wc.insert(Combo::COMBO_AA, 0.0);
-        assert!(wc.weighted_twos().is_empty());
+        assert_eq!(wc.weighted_twos(), [] as [(crate::arrays::two::Two, f64); 0]);
     }
 
     #[test]

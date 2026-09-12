@@ -3214,7 +3214,7 @@ mod analysis__gto__range_tests {
         assert_eq!(
             range.hashset(),
             DISTINCT_POCKET_PAIRS.filter_on_rank(rank).filter_is_paired().hashset()
-        )
+        );
     }
 
     #[test]
@@ -3240,7 +3240,7 @@ mod analysis__gto__range_tests {
             .filter_on_rank(bottom)
             .filter_is_suited()
             .hashset();
-        assert_eq!(range.hashset(), twos)
+        assert_eq!(range.hashset(), twos);
     }
 
     #[test]
@@ -3286,7 +3286,7 @@ mod analysis__gto__range_tests {
             .filter_on_rank(bottom)
             .filter_is_not_suited()
             .hashset();
-        assert_eq!(range.hashset(), twos)
+        assert_eq!(range.hashset(), twos);
     }
 
     #[test]
@@ -3387,7 +3387,7 @@ mod analysis__gto__range_tests {
             .filter_on_rank(top)
             .filter_on_rank(bottom)
             .hashset();
-        assert_eq!(range.hashset(), twos)
+        assert_eq!(range.hashset(), twos);
     }
 
     #[test]

@@ -180,6 +180,25 @@ impl Nubificus {
         for action in self.pluribus.actions.clone() {
             self.do_action(&action, false)?;
         }
+        self.run_out()
+    }
+
+    /// Deals the rest of the board and settles when the logged actions end
+    /// with two or more players in the hand and none able to bet: an all-in
+    /// run-out. The log records no action on those streets, so nothing in
+    /// [`Self::do_action`] reaches them (`DEFECT_025`).
+    fn run_out(&mut self) -> Result<(), PKError> {
+        // At most the flop, turn, river, and settlement.
+        for _ in 0..4 {
+            let seats = &self.table.seats;
+            let is_run_out = seats.count_active_in_hand() >= 2
+                && seats.count_players_with_action_to_give() <= 1
+                && seats.is_betting_complete();
+            if !is_run_out {
+                break;
+            }
+            self.table.act()?;
+        }
         Ok(())
     }
 
@@ -221,7 +240,7 @@ impl Nubificus {
             self.do_action(action, true)?;
         }
 
-        Ok(())
+        self.run_out()
     }
 
     /// # Errors
@@ -418,7 +437,7 @@ impl TryFrom<&Pluribus> for Table {
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
         let mut seats = Seats::from(pluribus.players.clone());
-        for seat in seats.iter_mut() {
+        for seat in &mut seats {
             seat.player.chips = Pluribus::STARTING_STACK;
             seat.cards = BoxedCards::blanks(2);
         }
@@ -653,7 +672,7 @@ impl TryFrom<&Table> for Pluribus {
         let mut players = Vec::with_capacity(size);
         let mut winnings = Vec::with_capacity(size);
 
-        for seat in table.seats.iter() {
+        for seat in &table.seats {
             players.push(seat.player.handle.clone());
             // Net for the hand: what the seat has left against the fixed stack
             // every Pluribus seat starts each hand with.
@@ -1509,7 +1528,7 @@ mod store_pluribus_tests {
 
         let table = Table::try_from(&pluribus).unwrap();
 
-        for seat in table.seats.iter() {
+        for seat in &table.seats {
             assert_eq!(10_000, seat.player.chips, "{}", seat.player.handle);
         }
     }
@@ -1679,7 +1698,7 @@ mod store_pluribus_tests {
 
     #[test]
     fn log_to_string_vec() {
-        assert!(Pluribus::parse_string(LOG).is_ok())
+        assert!(Pluribus::parse_string(LOG).is_ok());
     }
 
     #[rstest]
@@ -1884,7 +1903,7 @@ mod store_pluribus_tests {
         let s = "STATE:14:fr200cfff/cc/cc/cc:4cJs|5s9h|Kh7h|9sQs|2d2h|5dTh/3s3dAd/Qc/Td:-50|-100|0|350|-200|0:MrWhite|MrPink|MrBrown|Pluribus|MrBlue|MrBlonde";
         let pl = Pluribus::from_str(s).unwrap();
         let nub = Nubificus::try_from(pl).unwrap().play_hand_display().unwrap();
-        println!("{:?}", nub);
+        println!("{nub:?}");
     }
 }
 
@@ -1942,7 +1961,7 @@ mod analysis__nubibus__unum_tests {
         amnesiac.rounds.clear();
         amnesiac.raw.clear();
 
-        assert!(amnesiac.rounds.is_empty());
+        assert_eq!(amnesiac.rounds, [] as [std::string::String; 0]);
         assert_eq!(
             amnesiac.actions_to_pluribus().unwrap(),
             hand.actions_to_pluribus().unwrap()
@@ -1974,6 +1993,22 @@ mod analysis__nubibus__unum_tests {
         let hand = Pluribus::from_str(ALL_IN_RUN_OUT).unwrap();
 
         assert_eq!(hand.actions_to_pluribus().unwrap(), "fffr225fr1100r2558r6655r10000c///");
+    }
+
+    /// `DEFECT_025`: the logged actions run out with only the flop dealt, so
+    /// replay has to deal the rest of the board and pay what the log says.
+    #[test]
+    fn play_hand_runs_out_an_all_in_board_and_pays_the_pot() {
+        let hand = Pluribus::from_str(ALL_IN_RUN_OUT).unwrap();
+        let mut nubificus = Nubificus::try_from(&hand).unwrap();
+
+        nubificus.play_hand().unwrap();
+
+        // The flop exports in `Three`'s sorted order, not log order, so only
+        // the turn and river are compared verbatim.
+        let exported = Pluribus::try_from(&nubificus.table).unwrap();
+        assert!(exported.board.to_pluribus().ends_with("/Ac/7d"));
+        assert_eq!(exported.winnings, hand.winnings);
     }
 
     #[test]

@@ -384,7 +384,7 @@ mod play__stages__flop_eval_tests {
     /// They tie 16 times.
     fn validate_the_hand(sut: FlopEval) {
         assert_eq!(990, sut.case_evals.len());
-        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap()); // D
+        assert_eq!(&(931, 16), sut.results.v.first().unwrap()); // D
         assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
     }
 

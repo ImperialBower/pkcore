@@ -867,7 +867,7 @@ pub trait GTO {
         let twos = self.explode();
         let mut cps = ComboPairs::default();
 
-        for two in twos.into_iter() {
+        for two in twos {
             let combo = Combo::from(two);
             cps.add(combo, two);
         }

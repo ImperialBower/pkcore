@@ -223,13 +223,13 @@ mod transition_surface_tests {
         let utg = t.next_to_act();
         t.act_fold(utg).expect("fold");
         // A folded seat has no decision to make.
-        assert!(t.legal_actions(utg).is_empty());
+        assert_eq!(t.legal_actions(utg), [] as [crate::casino::action::PlayerAction; 0]);
     }
 
     #[test]
     fn legal_actions__empty_for_unknown_seat() {
         let t = nlh_at_utg();
-        assert!(t.legal_actions(99).is_empty());
+        assert_eq!(t.legal_actions(99), [] as [crate::casino::action::PlayerAction; 0]);
     }
 
     #[test]
@@ -249,7 +249,7 @@ mod transition_surface_tests {
     fn every_legal_action_is_accepted_by_apply_action() {
         let seat = nlh_at_utg().next_to_act();
         let actions = nlh_at_utg().legal_actions(seat);
-        assert!(!actions.is_empty());
+        assert_ne!(actions, [] as [crate::casino::action::PlayerAction; 0]);
 
         for action in actions {
             let mut t = nlh_at_utg();
@@ -365,7 +365,7 @@ mod transition_surface_tests {
     fn every_legal_action_is_accepted_by_apply_action__stud() {
         let completer = stud_at_completer().next_to_act();
         let actions = stud_at_completer().legal_actions(completer);
-        assert!(!actions.is_empty());
+        assert_ne!(actions, [] as [crate::casino::action::PlayerAction; 0]);
 
         for action in actions {
             let mut t = stud_at_completer();

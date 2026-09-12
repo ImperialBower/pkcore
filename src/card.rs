@@ -591,8 +591,8 @@ mod card_tests {
         let weighted = Card::TREY_CLUBS.frequency_paired();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
-        assert_eq!(0b00000000_00000000_00010000_00000000, weighted.get_suit_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, weighted.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0000_0001_0000_0000_0000, weighted.get_suit_flag());
         assert_eq!("3♣", weighted.to_string());
     }
 
@@ -601,8 +601,8 @@ mod card_tests {
         let weighted = Card::TREY_DIAMONDS.frequency_tripped();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
-        assert_eq!(0b00000000_00000000_00100000_00000000, weighted.get_suit_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, weighted.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0000_0010_0000_0000_0000, weighted.get_suit_flag());
         assert_eq!("3♦", weighted.to_string());
     }
 
@@ -611,63 +611,63 @@ mod card_tests {
         let weighted = Card::TREY_HEARTS.frequency_quaded();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
-        assert_eq!(0b00000000_00000000_01000000_00000000, weighted.get_suit_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, weighted.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0000_0100_0000_0000_0000, weighted.get_suit_flag());
         assert_eq!("3♥", weighted.to_string());
     }
 
     #[test]
     fn get_rank() {
         let card = Card::ACE_CLUBS;
-        assert_eq!(0b00010000_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0001_0000_0000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::ACE, card.get_rank());
         assert_eq!(Rank::ACE.prime(), card.get_rank_prime());
         let card = Card::KING_DIAMONDS;
-        assert_eq!(0b00001000_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_1000_0000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::KING, card.get_rank());
         assert_eq!(Rank::KING.prime(), card.get_rank_prime());
         let card = Card::QUEEN_SPADES;
-        assert_eq!(0b00000100_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0100_0000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::QUEEN, card.get_rank());
         assert_eq!(Rank::QUEEN.prime(), card.get_rank_prime());
         let card = Card::JACK_HEARTS;
-        assert_eq!(0b00000010_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0010_0000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::JACK, card.get_rank());
         assert_eq!(Rank::JACK.prime(), card.get_rank_prime());
         let card = Card::TEN_SPADES;
-        assert_eq!(0b00000001_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0001_0000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::TEN, card.get_rank());
         assert_eq!(Rank::TEN.prime(), card.get_rank_prime());
         let card = Card::NINE_HEARTS;
-        assert_eq!(0b00000000_10000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_1000_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::NINE, card.get_rank());
         assert_eq!(Rank::NINE.prime(), card.get_rank_prime());
         let card = Card::EIGHT_DIAMONDS;
-        assert_eq!(0b00000000_01000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0100_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::EIGHT, card.get_rank());
         assert_eq!(Rank::EIGHT.prime(), card.get_rank_prime());
         let card = Card::SEVEN_CLUBS;
-        assert_eq!(0b00000000_00100000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0010_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::SEVEN, card.get_rank());
         assert_eq!(Rank::SEVEN.prime(), card.get_rank_prime());
         let card = Card::SIX_SPADES;
-        assert_eq!(0b00000000_00010000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0001_0000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::SIX, card.get_rank());
         assert_eq!(Rank::SIX.prime(), card.get_rank_prime());
         let card = Card::FIVE_HEARTS;
-        assert_eq!(0b00000000_00001000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_1000_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::FIVE, card.get_rank());
         assert_eq!(Rank::FIVE.prime(), card.get_rank_prime());
         let card = Card::FOUR_DIAMONDS;
-        assert_eq!(0b00000000_00000100_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0100_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::FOUR, card.get_rank());
         assert_eq!(Rank::FOUR.prime(), card.get_rank_prime());
         let card = Card::TREY_CLUBS;
-        assert_eq!(0b00000000_00000010_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::TREY, card.get_rank());
         assert_eq!(Rank::TREY.prime(), card.get_rank_prime());
         let card = Card::DEUCE_SPADES;
-        assert_eq!(0b00000000_00000001_00000000_00000000, card.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0001_0000_0000_0000_0000, card.get_rank_flag());
         assert_eq!(Rank::DEUCE, card.get_rank());
         assert_eq!(Rank::DEUCE.prime(), card.get_rank_prime());
     }
@@ -678,8 +678,8 @@ mod card_tests {
 
         let weighted = card.frequency_paired();
 
-        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
-        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, weighted.get_rank_flag());
+        assert_eq!(0b0000_0000_0000_0010_0000_0000_0000_0000, weighted.get_rank_flag());
         assert_eq!("3♣", weighted.to_string());
     }
 
@@ -744,12 +744,12 @@ mod card_tests {
 
     //region card_consts tests
     /// REFACTORING NOTES
-    /// https://github.com/ContractBridge/pkcore/commit/c3b1a7a425b1ef0394c3719ae34156e685397965
+    /// <https://github.com/ContractBridge/pkcore/commit/c3b1a7a425b1ef0394c3719ae34156e685397965>
     /// Original version doesn't test for value, just for internal logic
     /// The goal of testing is to validate how the code is expected to act
     /// and insulate us from breaking things when we change the code later on.
     ///
-    /// Fail to validate value: change one u32 for a CardNumber and the test should fail.
+    /// Fail to validate value: change one u32 for a `CardNumber` and the test should fail.
     /// MORAL: Test for value!
     #[rstest]
     #[case(Card::from(CardNumber::AceSpades as u32), "A♠")] // WORST COMMENT EVER
@@ -965,7 +965,7 @@ mod card_tests {
 
     #[test]
     fn card_round_trips_every_card_in_the_deck() {
-        for card in crate::cards::Cards::deck().iter() {
+        for card in &crate::cards::Cards::deck() {
             let rendered = card.to_pluribus();
             assert_eq!(rendered.len(), 2);
             assert_eq!(Card::from_str(&rendered).unwrap(), *card);

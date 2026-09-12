@@ -3372,7 +3372,7 @@ mod casino__table_tests {
         assert_eq!(0, table.determine_utg());
     }
 
-    /// After button_up in HU the new button (seat 1) becomes SB.
+    /// After `button_up` in HU the new button (seat 1) becomes SB.
     #[test]
     fn table_hu_button_up_swaps_roles() {
         let mut table = make_two_player_table();
@@ -3546,6 +3546,64 @@ mod casino__table_tests {
         let utg = table.determine_utg();
         table.act_all_in(utg).unwrap();
         assert!(table.seats.get_seat(utg).unwrap().player.is_all_in());
+    }
+
+    /// `DEFECT_025`: with every live seat all-in, calling `act()` must run the
+    /// board out and settle. It used to deal the turn, reset both seats to
+    /// `YetToAct` with no chips behind, and stall there forever.
+    #[test]
+    fn act_runs_out_the_board_when_every_live_seat_is_all_in() {
+        let mut table = make_two_player_table();
+        table.act().unwrap();
+        let first = table.next_to_act();
+        table.act_all_in(first).unwrap();
+        let second = table.next_to_act();
+        table.act_call(second).unwrap();
+
+        // Three streets to deal and one settlement: anything past that is a stall.
+        for _ in 0..8 {
+            if table.event_count(&TableAction::EndHand) > 0 {
+                break;
+            }
+            table.act().unwrap();
+        }
+
+        assert_eq!(1, table.event_count(&TableAction::EndHand), "the hand never settled");
+        assert!(table.event_log.iter().any(|a| matches!(a, TableAction::DealtRiver(_))));
+        assert_eq!(0, table.pot);
+        assert_eq!(20_000, table.seats.total_chip_count());
+    }
+
+    /// `DEFECT_025`: a seat that is all-in stays all-in when `act()` deals the
+    /// next street, even while the other seats keep betting.
+    #[test]
+    fn act_keeps_an_all_in_seat_all_in_across_streets() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Carol".to_string(), 500)),
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act().unwrap();
+        let carol = 0;
+        let first = table.next_to_act();
+        assert_eq!(carol, first, "three-handed, the button acts first pre-flop");
+        table.act_all_in(carol).unwrap();
+        let sb = table.next_to_act();
+        table.act_call(sb).unwrap();
+        let bb = table.next_to_act();
+        table.act_call(bb).unwrap();
+
+        table.act().unwrap(); // flop
+        for _ in 0..2 {
+            let seat = table.next_to_act();
+            table.act_check(seat).unwrap();
+        }
+        table.act().unwrap(); // turn
+
+        assert_eq!(4, table.board.len());
+        assert!(table.seats.get_seat(carol).unwrap().is_all_in());
+        assert_ne!(carol, table.next_to_act());
     }
 
     #[test]
@@ -4005,7 +4063,7 @@ mod casino__table_tests {
 
     // ── Burn card tests ───────────────────────────────────────────────────────
 
-    /// deal_flop must burn one card before dealing the three community cards.
+    /// `deal_flop` must burn one card before dealing the three community cards.
     /// After dealing hole cards to 2 players (4 cards consumed), then flop:
     /// deck should have 52 - 4 (hole) - 1 (burn) - 3 (flop) = 44 cards.
     #[test]
@@ -4024,7 +4082,7 @@ mod casino__table_tests {
         assert_eq!(44, table.deck.len(), "deck should have 44 cards after burn + flop deal");
     }
 
-    /// deal_turn must burn one card before dealing the turn card.
+    /// `deal_turn` must burn one card before dealing the turn card.
     /// After flop (deck at 44), turn should leave deck at 44 - 1 (burn) - 1 (turn) = 42.
     #[test]
     fn deal_turn_burns_a_card() {
@@ -4053,7 +4111,7 @@ mod casino__table_tests {
     }
 
     /// After a full hand (hole cards + burn+flop + burn+turn + burn+river) the
-    /// deck must be fully restored to 52 cards after reset().
+    /// deck must be fully restored to 52 cards after `reset()`.
     /// Fails if burn cards are discarded rather than mucked.
     #[test]
     fn reset_restores_deck_to_52_after_burns() -> Result<(), crate::PKError> {
@@ -4090,7 +4148,7 @@ mod casino__table_tests {
         Ok(())
     }
 
-    /// deal_river must burn one card before dealing the river card.
+    /// `deal_river` must burn one card before dealing the river card.
     /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
     #[test]
     fn deal_river_burns_a_card() {
@@ -4207,8 +4265,8 @@ mod casino__table_tests {
     /// and must be returned as an uncalled bet. No awardable side pot exists.
     ///
     /// Chip conservation:
-    ///   If BB wins:  BB=170, UTG=4940 (lost only 60), SB=4950. Total 10_060.
-    ///   If UTG wins: BB=0, UTG=5110 (won 110), SB=4950. Total 10_060.
+    ///   If BB wins:  BB=170, UTG=4940 (lost only 60), SB=4950. Total `10_060`.
+    ///   If UTG wins: BB=0, UTG=5110 (won 110), SB=4950. Total `10_060`.
     ///
     /// The critical assertion is that UTG's ending stack is in {4940, 5110} —
     /// any other value (e.g. 4900 or 5070) means the 40 was not returned.
@@ -4312,8 +4370,8 @@ mod casino__table_tests {
 
     /// Min-raise validation must remain anchored to the configured BB even when
     /// the BB is all-in for less. A raise to 130 over a short BB of 30 has an
-    /// increment of 30 — less than min_raise (100) — and must be rejected.
-    /// A raise to 200 has increment 100 = min_raise and must be accepted.
+    /// increment of 30 — less than `min_raise` (100) — and must be rejected.
+    /// A raise to 200 has increment 100 = `min_raise` and must be accepted.
     #[test]
     fn table_short_bb_min_raise_anchors_to_full_blind() {
         let seats = Seats::new(vec![

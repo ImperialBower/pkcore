@@ -109,6 +109,6 @@ mod analysis__gto__odds_tests {
             losses: 2,
             draws: 3,
         };
-        assert_eq!(format!("{}", a), "16.67% (1), 33.33% (2), 50.00% (3)");
+        assert_eq!(format!("{a}"), "16.67% (1), 33.33% (2), 50.00% (3)");
     }
 }

@@ -22,7 +22,7 @@ fn main() -> Result<(), PKError> {
 
     let args = Args::parse();
     let game = Game::new(HoleCards::from_str(&args.dealt)?, Board::from_str(&args.board)?);
-    println!("{}", game);
+    println!("{game}");
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

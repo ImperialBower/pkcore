@@ -14,6 +14,11 @@ impl Table {
     /// Universal action regulator: advances the table through whatever step is
     /// needed next.
     ///
+    /// When every live seat is all-in, repeated calls run the board out and
+    /// settle: [`Seats::bring_it_in`](super::Seats::bring_it_in) leaves all-in
+    /// seats all-in, so betting stays complete on each new street
+    /// (`DEFECT_025`).
+    ///
     /// # Errors
     ///
     /// Propagates any error from the sub-action called.
@@ -36,7 +41,6 @@ impl Table {
                 if self.seats.is_betting_complete() {
                     self.bring_it_in()?;
                     self.deal_turn()?;
-                    self.seats.reset_state_in_hand();
                 }
                 Ok(())
             }
@@ -44,7 +48,6 @@ impl Table {
                 if self.seats.is_betting_complete() {
                     self.bring_it_in()?;
                     self.deal_river()?;
-                    self.seats.reset_state_in_hand();
                 }
                 Ok(())
             }

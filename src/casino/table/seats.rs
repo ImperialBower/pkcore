@@ -670,6 +670,24 @@ impl Seats {
     }
 }
 
+impl<'a> IntoIterator for &'a Seats {
+    type Item = &'a Seat;
+    type IntoIter = std::slice::Iter<'a, Seat>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut Seats {
+    type Item = &'a mut Seat;
+    type IntoIter = std::slice::IterMut<'a, Seat>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 impl Display for Seats {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for (i, seat) in self.0.iter().enumerate() {
@@ -808,7 +826,7 @@ mod casino__table__seats_tests {
             Seat::new(Player::new_with_chips("Bo".to_string(), 200)),
         ]);
 
-        for seat in seats.iter_mut() {
+        for seat in &mut seats {
             seat.player.state = PlayerState::Fold;
         }
 

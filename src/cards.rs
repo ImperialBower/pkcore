@@ -311,7 +311,7 @@ impl Cards {
     /// the audacity to call him on his bullshit, but to be honest, he was doing me a favor by
     /// driving me out of that place._
     pub fn dump(&self) {
-        for card in self.iter() {
+        for card in self {
             println!("{} {card}\n", card.bit_string_guided());
         }
     }
@@ -404,7 +404,7 @@ impl Cards {
     }
 
     pub fn insert_all(&mut self, cards: &Cards) {
-        for card in cards.iter() {
+        for card in cards {
             self.insert(*card);
         }
     }
@@ -697,6 +697,15 @@ impl BitXorAssign for Cards {
     }
 }
 
+impl<'a> IntoIterator for &'a Cards {
+    type Item = &'a Card;
+    type IntoIter = Iter<'a, Card>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl fmt::Display for Cards {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let s = self.iter().map(Card::to_string).collect::<Vec<String>>().join(" ");
@@ -924,7 +933,7 @@ impl FromStr for Cards {
 
 impl Hash for Cards {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        for card in self.iter() {
+        for card in self {
             card.hash(state);
         }
     }
@@ -1160,7 +1169,7 @@ mod cards_tests {
     #[test]
     fn collapse() {
         let wheel = Cards::from_str("5♠ 4♠ 3♠ 2♠ A♥").unwrap().shuffle();
-        let expected: u32 = 0b00010000_00001111_11001111_00101111;
+        let expected: u32 = 0b0001_0000_0000_1111_1100_1111_0010_1111;
 
         assert_eq!(expected, wheel.collapse());
     }
@@ -1235,7 +1244,7 @@ mod cards_tests {
         assert_eq!(deck.len(), 52);
     }
 
-    /// DEFECT #BAD_TWOS STEP 2
+    /// DEFECT #`BAD_TWOS` STEP 2
     ///
     /// This is what you get for not testing your code. It's my own damn fault.
     #[test]

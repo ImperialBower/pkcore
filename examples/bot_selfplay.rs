@@ -63,8 +63,7 @@ fn main() {
     let mut collection = HandCollection::new();
 
     println!(
-        "=== Bot Self-Play: up to {} hands  |  blinds {}/{}  |  {} chips each ===",
-        NUM_HANDS, SMALL_BLIND, BIG_BLIND, STARTING_CHIPS
+        "=== Bot Self-Play: up to {NUM_HANDS} hands  |  blinds {SMALL_BLIND}/{BIG_BLIND}  |  {STARTING_CHIPS} chips each ==="
     );
     println!();
     print_stacks(&session.table, &profiles);
@@ -72,7 +71,7 @@ fn main() {
     for hand in 1..=NUM_HANDS {
         let busted_indices = session.eliminate_busted();
         for i in busted_indices {
-            let name = profiles.get(i as usize).map(|p| p.name.as_str()).unwrap_or("?");
+            let name = profiles.get(i as usize).map_or("?", |p| p.name.as_str());
             println!("\n  *** {name} is eliminated! ***");
         }
 
@@ -112,7 +111,7 @@ fn main() {
         .collect();
     standings.sort_by(|a, b| b.0.cmp(&a.0));
     for (chips, name) in &standings {
-        println!("  {:>25}: {} chips", name, chips);
+        println!("  {name:>25}: {chips} chips");
     }
 }
 
@@ -125,10 +124,7 @@ fn main() {
 /// are the signal to print "Flop / Turn / River" headers.
 #[allow(clippy::cast_precision_loss)]
 fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl Rng) -> (Winnings, HandHistory) {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = session.table.button;
 
     // Snapshot stacks before forced bets (hand-history convention).
@@ -243,7 +239,12 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
     // Print each player's outcome and net chip change.
     for (i, profile) in profiles.iter().enumerate() {
         let seat = i as u8;
-        if session.table.seats.get_seat(seat).map(|s| s.is_empty()).unwrap_or(true) {
+        if session
+            .table
+            .seats
+            .get_seat(seat)
+            .map_or(true, pkcore::prelude::Seat::is_empty)
+        {
             continue;
         }
         let ending = session.table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
@@ -350,10 +351,11 @@ fn action_desc(table: &Table, seat: u8, action: PlayerAction) -> String {
 /// Prints each active player's hole cards after the deal.
 fn print_hole_cards(table: &Table, profiles: &[BotProfile]) {
     for (i, profile) in profiles.iter().enumerate() {
-        if let Some(seat) = table.seats.get_seat(i as u8) {
-            if seat.cards.has_cards() && seat.player.is_in_hand() {
-                println!("    {:>20}  {}", profile.name, seat.cards.sorted_display());
-            }
+        if let Some(seat) = table.seats.get_seat(i as u8)
+            && seat.cards.has_cards()
+            && seat.player.is_in_hand()
+        {
+            println!("    {:>20}  {}", profile.name, seat.cards.sorted_display());
         }
     }
 }
@@ -362,16 +364,17 @@ fn print_hole_cards(table: &Table, profiles: &[BotProfile]) {
 fn print_showdown_hands(table: &Table, profiles: &[BotProfile], board: &str) {
     println!("  --- Showdown ---");
     for (i, profile) in profiles.iter().enumerate() {
-        if let Some(seat) = table.seats.get_seat(i as u8) {
-            if seat.cards.has_cards() && seat.player.is_in_hand() {
-                let hole = seat.cards.sorted_display();
-                match rank_seven(&hole, board) {
-                    Some(r) => println!(
-                        "    {:>20}  [{}]  →  {}  ({:?} #{})",
-                        profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value
-                    ),
-                    None => println!("    {:>20}  [{}]", profile.name, hole),
-                }
+        if let Some(seat) = table.seats.get_seat(i as u8)
+            && seat.cards.has_cards()
+            && seat.player.is_in_hand()
+        {
+            let hole = seat.cards.sorted_display();
+            match rank_seven(&hole, board) {
+                Some(r) => println!(
+                    "    {:>20}  [{}]  →  {}  ({:?} #{})",
+                    profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value
+                ),
+                None => println!("    {:>20}  [{}]", profile.name, hole),
             }
         }
     }
@@ -401,11 +404,10 @@ fn print_stacks(table: &Table, profiles: &[BotProfile]) {
 
 /// Returns the profile name for a given seat index, or "?" if the seat is empty.
 fn seat_name(idx: u8, table: &Table, profiles: &[BotProfile]) -> String {
-    if table.seats.get_seat(idx).map(|s| s.is_empty()).unwrap_or(true) {
+    if table.seats.get_seat(idx).map_or(true, pkcore::prelude::Seat::is_empty) {
         return "?".to_string();
     }
     profiles
         .get(idx as usize)
-        .map(|p| p.name.clone())
-        .unwrap_or_else(|| "?".to_string())
+        .map_or_else(|| "?".to_string(), |p| p.name.clone())
 }

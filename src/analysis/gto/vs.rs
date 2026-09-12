@@ -467,13 +467,13 @@ mod arrays__combos__solver_tests {
             higher: Bard::from(Two::HAND_AS_AH),
             lower: Bard::from(Two::HAND_KS_KH),
             odds: WinLoseDraw {
-                wins: 1410336,
-                losses: 292660,
+                wins: 1_410_336,
+                losses: 292_660,
                 draws: 9308,
             },
         };
 
-        let flipped_hup = solver.hup_flip(hup.clone());
+        let flipped_hup = solver.hup_flip(hup);
 
         assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
         assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));

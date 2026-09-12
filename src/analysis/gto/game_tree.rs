@@ -1190,7 +1190,7 @@ mod tests {
                 chance_counts.push(c.children.len());
             }
         }
-        assert!(!chance_counts.is_empty());
+        assert_ne!(chance_counts, [] as [usize; 0]);
         for count in chance_counts {
             assert_eq!(count, 48, "each chance node should have 48 runout children");
         }
@@ -1201,13 +1201,13 @@ mod tests {
         // Every showdown terminal under a chance node must carry a runout card.
         let tree = GameTree::build_turn(&turn_config());
         for i in 0..tree.len() {
-            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i)) {
-                if t.outcome == TerminalOutcome::Showdown {
-                    assert!(
-                        t.runout_river.is_some(),
-                        "showdown terminal in a turn tree must have runout_river set"
-                    );
-                }
+            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i))
+                && t.outcome == TerminalOutcome::Showdown
+            {
+                assert!(
+                    t.runout_river.is_some(),
+                    "showdown terminal in a turn tree must have runout_river set"
+                );
             }
         }
     }
@@ -1217,10 +1217,10 @@ mod tests {
         // Fold terminals do not need a runout card — the hand ended before the river.
         let tree = GameTree::build_turn(&turn_config());
         for i in 0..tree.len() {
-            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i)) {
-                if matches!(t.outcome, TerminalOutcome::Fold { .. }) {
-                    assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
-                }
+            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i))
+                && matches!(t.outcome, TerminalOutcome::Fold { .. })
+            {
+                assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
             }
         }
     }

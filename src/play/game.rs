@@ -892,7 +892,7 @@ mod play__game_tests {
     /// ὁ δὲ ἀνεξέταστος βίος οὐ βιωτὸς ἀνθρώπῳ from Plato's Apology.
     ///
     /// No, I don't know ancient Greek. One of the essential skills of the imposter is being able to
-    /// ~~Gopher~~ ~~Yahoo!~~ ~~HotBot~~ ~~Ask Jeeves~~ ~~Google~~ Duck Duck Go things to make
+    /// ~~Gopher~~ ~~Yahoo!~~ ~~`HotBot`~~ ~~Ask Jeeves~~ ~~Google~~ Duck Duck Go things to make
     /// yourself look smart 😉
     ///
     /// Moral:
@@ -904,7 +904,7 @@ mod play__game_tests {
     ///
     /// ## Meanwhile, back at the ranch
     ///
-    /// We're going to start off with clearly failing values from our earlier possible_evals_at_flop()
+    /// We're going to start off with clearly failing values from our earlier `possible_evals_at_flop()`
     /// test, then code the solution, and finally make the tests green. For complex state tests
     /// like this, where there isn't a known target to validate, I will let a test's intermediate
     /// failure point me to the correct result. I can compare the results to what I know should be

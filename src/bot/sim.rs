@@ -1314,8 +1314,8 @@ mod tests {
         let mut sim = SimTable::with_rule_based(table, bots);
         sim.eliminate_busted();
         // Seat 0 (0 chips) should be cleared; seat 1 (30 chips) should still be present.
-        assert!(sim.table.seats.get_seat(0).map_or(true, |s| s.is_empty()));
-        assert!(!sim.table.seats.get_seat(1).map_or(true, |s| s.is_empty()));
+        assert!(sim.table.seats.get_seat(0).is_none_or(crate::prelude::Seat::is_empty));
+        assert!(!sim.table.seats.get_seat(1).is_none_or(crate::prelude::Seat::is_empty));
     }
 
     #[test]
@@ -1331,7 +1331,7 @@ mod tests {
         let mut sim = SimTable::with_rule_based(table, bots);
         // Should not return InsufficientChips; B goes all-in as blind.
         let result = sim.run_n_hands(5);
-        assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+        assert!(result.is_ok(), "Expected Ok, got {result:?}");
     }
 
     // ── EPIC-26 Phase 3 (Unit B): stats registry wiring ─────────────────────
@@ -1426,7 +1426,7 @@ mod tests {
 
     /// P9c — a short stack facing a bet must be able to jam. When a decider
     /// proposes a raise it cannot afford the minimum of, reconcile degrades it to
-    /// AllIn (a real jam), NOT to a flat Call. Before the fix, short stacks could
+    /// `AllIn` (a real jam), NOT to a flat Call. Before the fix, short stacks could
     /// never jam via Bet/Raise, systematically skewing trainer BB/100.
     #[test]
     fn reconcile_degrades_oversize_raise_to_all_in_for_short_stack() {
@@ -1459,7 +1459,7 @@ mod tests {
 
     /// P9e — a deep shove in a capped structure is really a max raise, so
     /// reconcile classifies it as Raise(max), matching how the engine logs it.
-    /// This keeps sim ActionCounts and log-derived player stats in agreement.
+    /// This keeps sim `ActionCounts` and log-derived player stats in agreement.
     #[test]
     fn reconcile_classifies_capped_deep_shove_as_raise_not_all_in() {
         let seats = Seats::new(vec![

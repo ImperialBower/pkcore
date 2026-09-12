@@ -1,5 +1,5 @@
 //! Integration test: `SimTable` must play every betting street to completion
-//! ([DEFECT_004](../docs/defects/DEFECT_004_exploit_smoke_flake.md)).
+//! ([`DEFECT_004`](../docs/defects/DEFECT_004_exploit_smoke_flake.md)).
 #![allow(non_snake_case)]
 //!
 //! `SimTable::run_street` used to stop after `bots.len() * 8` actions — 16 in a

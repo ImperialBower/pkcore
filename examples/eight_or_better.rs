@@ -18,8 +18,8 @@ fn main() {
         }
     });
 
-    let mut keys = mappy.keys().cloned().collect::<Vec<u8>>();
-    keys.sort();
+    let mut keys = mappy.keys().copied().collect::<Vec<u8>>();
+    keys.sort_unstable();
 
     for (i, key) in keys.iter().enumerate() {
         println!("{i} - {key:0b} {key}: {}", mappy.get(key).unwrap());

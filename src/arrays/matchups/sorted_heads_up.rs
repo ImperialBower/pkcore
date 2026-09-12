@@ -940,7 +940,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[test]
     #[ignore = "initializes 812k-element set; run explicitly with -- --ignored"]
     fn unique() {
-        assert_eq!(812175, SORTED_HEADS_UP_UNIQUE.len());
+        assert_eq!(812_175, SORTED_HEADS_UP_UNIQUE.len());
     }
 
     #[test]
@@ -1075,7 +1075,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// for a few million entries. Run it if you want to see it. Let us ignore this test, shall we.
     /// See `docs/data/stacktrace.txt` for the full error.
     ///
-    /// In hindsight, maybe deriving Eq, PartialEq on Wins wasn't such a good idea. Let's remove
+    /// In hindsight, maybe deriving Eq, `PartialEq` on Wins wasn't such a good idea. Let's remove
     /// them, shall we...? Here';s the test for posterity's sake.
     ///
     /// ```txt

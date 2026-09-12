@@ -24,8 +24,7 @@ const NUM_HANDS: usize = 20;
 fn main() {
     println!("=== Pot-Limit Omaha Demo ===");
     println!(
-        "  Stakes: ${}/${} blinds  |  Starting chips: ${}  |  Hands: {}",
-        SMALL_BLIND, BIG_BLIND, STARTING_CHIPS, NUM_HANDS,
+        "  Stakes: ${SMALL_BLIND}/${BIG_BLIND} blinds  |  Starting chips: ${STARTING_CHIPS}  |  Hands: {NUM_HANDS}",
     );
     println!();
 
@@ -68,7 +67,7 @@ fn main() {
     entries.sort_by_key(|(seat, _)| *seat);
     for (seat, net) in entries {
         let sign = if net >= 0 { "+" } else { "" };
-        println!("  Seat {}: {}{} chips", seat, sign, net);
+        println!("  Seat {seat}: {sign}{net} chips");
     }
 
     println!();

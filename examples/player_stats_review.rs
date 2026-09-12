@@ -114,10 +114,7 @@ fn run_one_hand(
     rng: &mut impl Rng,
     hand_num: usize,
 ) -> Option<HandHistory> {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = session.table.button;
 
     let stacks: Vec<(u8, String, usize, Uuid)> = (0..session.table.seats.0.len() as u8)
@@ -211,7 +208,7 @@ fn print_hud(registry: &StatsRegistry, id_to_name: &HashMap<Uuid, String>) {
     let mut rows: Vec<(&str, &PlayerStats)> = registry
         .iter()
         .map(|(id, stats)| {
-            let name = id_to_name.get(id).map(String::as_str).unwrap_or("(unknown)");
+            let name = id_to_name.get(id).map_or("(unknown)", String::as_str);
             (name, stats)
         })
         .collect();

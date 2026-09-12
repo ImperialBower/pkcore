@@ -85,7 +85,7 @@ fn main() {
         total_iters += extra;
         let avg = cfr.average_strategy();
         let exploit = cfr.exploitability();
-        println!("  ── After {} ──", label);
+        println!("  ── After {label} ──");
         println!("     Exploitability: {exploit:.6} chips");
         print_key_info_sets(&avg);
         println!();
@@ -120,7 +120,7 @@ fn main() {
         } else {
             "  —".to_owned()
         };
-        println!("  {:>12}   {exploit:>14.6}   {reduction:>10}", iters);
+        println!("  {iters:>12}   {exploit:>14.6}   {reduction:>10}");
         prev_exploit = exploit;
         let _ = needed; // suppress warning
     }
@@ -146,16 +146,8 @@ fn main() {
         let cfr_probs = final_avg.action_probs(&info);
         let nash_probs = nash_ref.action_probs(&info);
 
-        let cfr_p = cfr_probs
-            .iter()
-            .find(|(a, _)| *a == action)
-            .map(|(_, p)| *p)
-            .unwrap_or(0.0);
-        let nash_p = nash_probs
-            .iter()
-            .find(|(a, _)| *a == action)
-            .map(|(_, p)| *p)
-            .unwrap_or(0.0);
+        let cfr_p = cfr_probs.iter().find(|(a, _)| *a == action).map_or(0.0, |(_, p)| *p);
+        let nash_p = nash_probs.iter().find(|(a, _)| *a == action).map_or(0.0, |(_, p)| *p);
         let delta = cfr_p - nash_p;
 
         let label = format!("{info} → {action}");
@@ -212,7 +204,7 @@ fn print_strategy_table(strategy: &KuhnStrategy, label: &str) {
     println!("  {}", "─".repeat(52));
     for_each_info_set(|info, action| {
         let probs = strategy.action_probs(&info);
-        let p = probs.iter().find(|(a, _)| *a == action).map(|(_, p)| *p).unwrap_or(0.0);
+        let p = probs.iter().find(|(a, _)| *a == action).map_or(0.0, |(_, p)| *p);
         let label = format!("{info} → {action}");
         println!("  {label:<30}  {p:>8.4}  {:>7.1}%", p * 100.0);
     });
@@ -261,13 +253,13 @@ fn print_key_info_sets(strategy: &KuhnStrategy) {
     for ((card, hist, action), label) in key_info.iter().zip(labels.iter()) {
         let info = KuhnInfoSet::new(*card, hist.clone());
         let probs = strategy.action_probs(&info);
-        let p = probs.iter().find(|(a, _)| a == action).map(|(_, p)| *p).unwrap_or(0.0);
+        let p = probs.iter().find(|(a, _)| a == action).map_or(0.0, |(_, p)| *p);
         print!("     {label}: {p:.3}");
     }
     println!();
 }
 
-/// Calls `f(info_set, action)` for every (info_set, primary action) pair in
+/// Calls `f(info_set, action)` for every (`info_set`, primary action) pair in
 /// the 12 Kuhn decision nodes, in a consistent canonical order.
 fn for_each_info_set<F>(mut f: F)
 where

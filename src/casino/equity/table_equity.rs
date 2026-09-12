@@ -679,10 +679,10 @@ mod casino__equity__table_equity_tests {
         assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(20, Seatbit::NONE)]));
     }
 
-    /// Row 4: an active player (SEAT_0) contributed more chips than any opponent
-    /// could match.  After the winner (SEAT_1) takes their share, SEAT_0's
+    /// Row 4: an active player (`SEAT_0`) contributed more chips than any opponent
+    /// could match.  After the winner (`SEAT_1`) takes their share, `SEAT_0`'s
     /// unmatched excess must appear in the remaining equity so the caller can
-    /// return those chips to SEAT_0.
+    /// return those chips to `SEAT_0`.
     #[test]
     fn winnings__active_over_contributor_excess_remains() {
         let equities = TableEquity::new(vec![

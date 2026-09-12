@@ -137,7 +137,7 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
             Method::Exact,
         )
     } else {
-        let seed = req.opts.seed.unwrap_or_else(rand::random);
+        let rng_seed = req.opts.seed.unwrap_or_else(rand::random);
         (
             monte_carlo(
                 &resolved,
@@ -146,7 +146,7 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
                 unknown_board,
                 n,
                 req.opts.max_samples,
-                seed,
+                rng_seed,
             ),
             Method::MonteCarlo,
         )

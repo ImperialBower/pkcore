@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_025_all_in_run_out_never_completes.md`  
 **Date:** 2026-08-29  
 **Severity:** High  
-**Status:** Open  
+**Status:** Fixed in `0.12.4` (2026-09-12) — see [Resolution](#resolution)  
 **Found by:** [EPIC-87](../epics/EPIC-87_Pluribus_Export.md) Tier 2, the first test in the codebase that ever asked the engine to run a board out  
 **Affects:** pkcore `0.10.0` and every version before it
 
@@ -133,6 +133,55 @@ the same hole.
 
 Note that side pots already exist (`TableAction::SidePot`, `PlayerWinsSidePot`),
 so the settlement half is likely in place — it is reaching it that is missing.
+
+---
+
+## Resolution
+
+**Fixed in `0.12.4`, 2026-09-12.** The root cause above is incomplete.
+`is_game_over` is correct; it waits for a river that nothing was dealing. Two
+gaps together caused the stall.
+
+**1. A street reset erased the all-in state.** `Table::act()` called
+`seats.reset_state_in_hand()` after `deal_turn` and `deal_river`, and so did
+`Dealer::advance_street` after every deal. That method sets every in-hand seat
+to `YetToAct`, including all-in seats. After `bring_it_in` a seat's `bet` is
+`0`, so the chip fallback in `Player::is_all_in` (`chips == 0 && bet > 0`) no
+longer sees it either. The table then saw two seats that owed an action, with
+no chips to act with. Traced on the `ALL_IN_RUN_OUT` fixture:
+
+```text
+after play_hand : board 5♦ K♦ T♥     seats AllIn(10000), AllIn(10000)  betting_complete=true
+after act()     : board 5♦ K♦ T♥ A♣  seats YetToAct,     YetToAct      betting_complete=false  (forever)
+```
+
+The reset was redundant. `Seats::bring_it_in` already resets every seat that
+can still bet, and on the all-in path it freezes states on purpose. A test in
+`src/casino/table.rs` already warned that this call "would clobber BB's AllIn
+flag". `PokerSession::advance_street` never made the call, which is why the
+session path always worked. **Fix:** the call is removed from both places.
+
+**2. Replay had nothing to drive the run-out.** After the last logged action,
+`Nubificus::play_hand` stopped. **Fix:** a private `Nubificus::run_out` keeps
+calling `Table::act()` while two or more seats are in the hand, at most one
+can still bet, and betting is complete. `play_hand` and `play_hand_display`
+call it after the logged actions.
+
+**Tests added**
+
+- `casino__table_tests::act_runs_out_the_board_when_every_live_seat_is_all_in`
+- `casino__table_tests::act_keeps_an_all_in_seat_all_in_across_streets`
+- `casino__dealer_tests::advance_street_runs_out_an_all_in_hand`
+- `analysis__nubibus__unum_tests::play_hand_runs_out_an_all_in_board_and_pays_the_pot`
+- `tests/heavy_tests.rs`: `pluribus__corpus_replays_and_re_exports` now asserts
+  `stalled == 0` (was `91`). `pluribus__all_games_replay_without_errors` now
+  requires every hand to finish and checks every seat's final stack, instead of
+  holding unfinished hands to the weaker loser-only check.
+
+**Prevention.** `Seats::reset_state_in_hand` is still public, and it still
+turns all-in seats into `YetToAct`. Library code no longer calls it, but
+tests do. A later change could make it skip all-in seats, as the crate-private
+`reset_non_allin_to_yet_to_act` already does.
 
 ---
 

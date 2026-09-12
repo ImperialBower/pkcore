@@ -195,7 +195,7 @@ mod games__omaha_high_tests {
     /// Robl: AS QS QD JC
     /// Antonius: 9H 8D 6D 5D
     /// board: 4D AD 7S JD AC
-    /// https://www.youtube.com/watch?v=iXmrtiqoUKM
+    /// <https://www.youtube.com/watch?v=iXmrtiqoUKM>
     const ROBL_HAND: [Card; 4] = [
         Card::ACE_SPADES,
         Card::QUEEN_SPADES,
@@ -247,7 +247,7 @@ mod games__omaha_high_tests {
         for permutation in &actual {
             assert_eq!(2, hand.how_many(&permutation.cards()));
             assert_eq!(3, permutation.how_many(&board.cards()));
-            assert!(hand.is_valid(&board, &permutation));
+            assert!(hand.is_valid(&board, permutation));
         }
         assert_eq!(60, actual.len());
     }

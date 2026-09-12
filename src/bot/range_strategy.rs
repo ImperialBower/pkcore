@@ -303,7 +303,7 @@ mod bot__range_strategy_tests {
     #[test]
     fn tight_passive() {
         let s = RangeStrategy::tight_passive();
-        assert!(!s.open_raise.is_empty());
+        assert_ne!(s.open_raise, "");
         assert!(s.postflop_cbet_frequency < 50);
     }
 
@@ -322,14 +322,14 @@ mod bot__range_strategy_tests {
     #[test]
     fn tight_aggressive() {
         let s = RangeStrategy::tight_aggressive();
-        assert!(!s.open_raise.is_empty());
+        assert_ne!(s.open_raise, "");
         assert!(s.postflop_cbet_frequency > 50);
     }
 
     #[test]
     fn loose_passive() {
         let s = RangeStrategy::loose_passive();
-        assert!(!s.open_raise.is_empty());
+        assert_ne!(s.open_raise, "");
         assert!(s.postflop_cbet_frequency < 30);
     }
 
@@ -342,7 +342,7 @@ mod bot__range_strategy_tests {
     #[test]
     fn abc() {
         let s = RangeStrategy::abc();
-        assert!(!s.open_raise.is_empty());
+        assert_ne!(s.open_raise, "");
         assert!(s.postflop_cbet_frequency > 50);
     }
 
@@ -350,7 +350,7 @@ mod bot__range_strategy_tests {
     fn short_stack_ninja() {
         let s = RangeStrategy::short_stack_ninja();
         assert_eq!(s.postflop_cbet_frequency, 100);
-        assert!(s.call_three_bet.is_empty());
+        assert_eq!(s.call_three_bet, "");
     }
 
     #[test]

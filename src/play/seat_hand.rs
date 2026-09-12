@@ -456,6 +456,15 @@ impl SeatHand {
     }
 }
 
+impl<'a> IntoIterator for &'a SeatHand {
+    type Item = &'a HoleCard;
+    type IntoIter = std::slice::Iter<'a, HoleCard>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 impl Index<usize> for SeatHand {
     type Output = HoleCard;
 

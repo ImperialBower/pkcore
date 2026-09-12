@@ -1,4 +1,4 @@
-//! Integration test: every action a bot returns must be legal (DEFECT_007).
+//! Integration test: every action a bot returns must be legal (`DEFECT_007`).
 #![allow(non_snake_case)]
 //!
 //! `PokerSession::run_hand` propagates `apply_action` failures with `?` and
@@ -7,7 +7,7 @@
 //! returns an action the engine rejects.
 //!
 //! This harness deliberately does **not** carry the AllIn/Check fallback that
-//! `tests/bot_marathon.rs` uses — the fallback is what hid DEFECT_007 for three
+//! `tests/bot_marathon.rs` uses — the fallback is what hid `DEFECT_007` for three
 //! months. Every `apply_action` result is asserted.
 //!
 //! Stakes escalate every few hands so stacks fall below one legal raise, which

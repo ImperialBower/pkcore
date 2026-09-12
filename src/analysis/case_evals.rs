@@ -110,11 +110,20 @@ impl CaseEvals {
         info!("CaseEvals.wins()");
         let mut wins = Wins::default();
 
-        for case_eval in self.iter() {
+        for case_eval in self {
             wins.add(case_eval.flags_win());
         }
 
         wins
+    }
+}
+
+impl<'a> IntoIterator for &'a CaseEvals {
+    type Item = &'a CaseEval;
+    type IntoIter = Iter<'a, CaseEval>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

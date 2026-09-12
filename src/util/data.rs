@@ -186,8 +186,8 @@ impl TestData {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_7D_7C.bard(),
             odds: WinLoseDraw {
-                wins: 1364608,
-                losses: 343300,
+                wins: 1_364_608,
+                losses: 343_300,
                 draws: 4396,
             },
         }];
@@ -196,8 +196,8 @@ impl TestData {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_7D_7C.bard(),
             odds: WinLoseDraw {
-                wins: 1364608,
-                losses: 343300,
+                wins: 1_364_608,
+                losses: 343_300,
                 draws: 4396,
             },
         });
@@ -205,8 +205,8 @@ impl TestData {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_6D_6C.bard(),
             odds: WinLoseDraw {
-                wins: 1364608,
-                losses: 343300,
+                wins: 1_364_608,
+                losses: 343_300,
                 draws: 4396,
             },
         });
@@ -214,8 +214,8 @@ impl TestData {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_5D_5C.bard(),
             odds: WinLoseDraw {
-                wins: 1364608,
-                losses: 343300,
+                wins: 1_364_608,
+                losses: 343_300,
                 draws: 4396,
             },
         });

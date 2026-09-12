@@ -96,7 +96,7 @@ mod hand_rank__evals_tests {
 
         let sorted = the_nuts.sort();
 
-        assert_eq!(HandRankClass::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::ThreeNines, sorted.0.first().unwrap().hand_rank.class);
         assert_eq!(HandRankClass::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
         assert_eq!(HandRankClass::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
     }
@@ -119,7 +119,7 @@ mod hand_rank__evals_tests {
 
         let the_nuts = Evals::from(v.clone());
 
-        assert_eq!(v, the_nuts.0.to_vec());
+        assert_eq!(v, the_nuts.0.clone());
     }
 
     #[test]
@@ -131,7 +131,7 @@ mod hand_rank__evals_tests {
 
         let the_nuts = Evals::from(TestData::fives_the_fold());
 
-        assert_eq!(antonius, *the_nuts.to_vec().get(0).unwrap());
+        assert_eq!(antonius, *the_nuts.to_vec().first().unwrap());
         assert_eq!(phil, *the_nuts.to_vec().get(1).unwrap());
         assert_eq!(daniel, *the_nuts.to_vec().get(2).unwrap());
     }

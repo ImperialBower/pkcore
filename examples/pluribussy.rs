@@ -7,7 +7,7 @@ fn main() -> Result<(), PKError> {
     let logs = Nubificus::get_log_files("data/pluribus/raw/")?;
 
     let mut game_num = 0;
-    for log in logs.iter() {
+    for log in &logs {
         for plur in Pluribus::read_in_log(log.as_str())? {
             println!();
             println!("------------------------------------------------------------------------------");

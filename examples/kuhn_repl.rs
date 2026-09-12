@@ -279,7 +279,11 @@ fn handle(session: &mut Session, command: Command) {
             None => println!("  No hand in progress. Type 'deal' to start."),
             Some(state) => {
                 let card = session.p0_card.unwrap();
-                let actions: Vec<String> = state.legal_actions().iter().map(|a| a.to_string()).collect();
+                let actions: Vec<String> = state
+                    .legal_actions()
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect();
                 let whose_turn = match state.current_player() {
                     Some(0) => "You (P0)".to_owned(),
                     Some(1) => "GTO (P1)".to_owned(),
@@ -300,7 +304,7 @@ fn handle(session: &mut Session, command: Command) {
             println!("  │  Hands played  : {}", session.hands);
             println!("  │  Net chips     : {:+}", session.net);
             if session.hands > 0 {
-                let avg = session.net as f64 / session.hands as f64;
+                let avg = f64::from(session.net) / f64::from(session.hands);
                 println!("  │  Average/hand  : {avg:+.4}");
                 println!("  │  GTO game value for P0: −0.0556 chips/hand");
                 println!("  │  (P0 is at a structural disadvantage in Kuhn)");
@@ -327,7 +331,11 @@ fn apply_human(session: &mut Session, action: KuhnAction) {
         return;
     }
     if !state.legal_actions().contains(&action) {
-        let legal: Vec<String> = state.legal_actions().iter().map(|a| a.to_string()).collect();
+        let legal: Vec<String> = state
+            .legal_actions()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         println!("  ✗ '{action}' is not legal here. Legal: {}", legal.join(", "));
         return;
     }
@@ -342,15 +350,20 @@ fn apply_human(session: &mut Session, action: KuhnAction) {
     session.gto_respond();
 
     // After GTO responds, if it is P0's turn again (Check-Bet scenario), prompt.
-    if let Some(state) = &session.state {
-        if state.current_player() == Some(0) && !state.is_terminal() {
-            let card = session.p0_card.unwrap();
-            let legal: Vec<String> = state.legal_actions().iter().map(|a| a.to_string()).collect();
-            println!(
-                "  Your card [{card}] | history: {} | legal: {}",
-                state.history(),
-                legal.join(", ")
-            );
-        }
+    if let Some(state) = &session.state
+        && state.current_player() == Some(0)
+        && !state.is_terminal()
+    {
+        let card = session.p0_card.unwrap();
+        let legal: Vec<String> = state
+            .legal_actions()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
+        println!(
+            "  Your card [{card}] | history: {} | legal: {}",
+            state.history(),
+            legal.join(", ")
+        );
     }
 }
