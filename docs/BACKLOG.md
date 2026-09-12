@@ -1,135 +1,114 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-08-30** against `main` @ `cf5f50f7`,
-> pkcore **`0.11.0`** — tagged, and **published to crates.io the same day**
-> (`max_version: 0.11.0`). Working tree clean. `CHANGELOG.md` has no
-> `[Unreleased]` section: the manifest, the changelog and the registry all agree.
-> Items tagged 🤖 are machine-proposed — review before adopting. Tech-debt detail
-> lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+> Refreshed by the `/backlog` skill on **2026-09-12** against `main` @ `52675954`,
+> pkcore **`0.12.3`** — published to crates.io 2026-09-05. Working tree clean.
+> `CHANGELOG.md` has no `[Unreleased]` section. Items tagged 🤖 are
+> machine-proposed — review before adopting. Tech-debt detail lives in
+> [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the 2026-08-22 pass (that pass was 4 releases stale).**
-> Everything the old file listed as "ship-ready next" either shipped or was
-> superseded:
+> **What changed since the 2026-08-30 pass.**
 >
-> - **EPIC-83 — Table Decelled: shipped.** `TableCelled` and its whole family are
->   gone (`ba1dd3fc`), together with `pkstate` (`89313e53`). One engine remains.
-> - **EPIC-85 — JavaScript Bindings: closed** (`c24b3738`). `pkcore.js` ships to
->   npm as `@imperialbower/pkcore`.
-> - **EPIC-87 — Pluribus Export: shipped** as `0.10.0` (`8993f780`, `1d4e952e`).
-> - **EPIC-88 — Table Snapshot & Restore: shipped** in `0.11.0`. Every status row
->   is Complete bar one deliberate deferral (`Winnings` serde).
-> - **`0.11.0` itself** dropped `store`/`terminal` from the default features,
->   removed every third-party type from public signatures, deprecated
->   `TableManager`/`TableEvent`, and hardened `Card` deserialization.
-> - **EPIC-79b — Sealed Deck: superseded** by
->   [EPIC-84](epics/EPIC-84_Sealed_Table_Cardpack.md), which consumes
->   `cardpack` 0.11's seal kernel instead of building one here.
-> - **Downstream is current.** All ten compilable consumers passed the
->   [0.11.0 release audit](RELEASE_AUDIT_0.11.0.md) and their manifests now pin
->   `pkcore = "0.11.0"` — including `pkgto-web` and `pkkuhn-web`, which had been
->   stuck on `0.2.1` for five minors. `pkodds` is the only holdout.
+> - **EPIC-39 — Decider Opponent-Range Model: shipped** in `0.12.0`
+>   (`0ed358b2`). Every status row Complete. `outs` and `preflop_charts` are no
+>   longer schema-only.
+> - **`0.12.1`** fixed `preflop_charts: solver` spending a flat 25,000 samples;
+>   audited in [`RELEASE_AUDIT_0.12.1.md`](RELEASE_AUDIT_0.12.1.md).
+> - **`0.12.2` / `0.12.3`** moved the clippy lints into `Cargo.toml` `[lints]`
+>   and exempted tests from the `unwrap`/`expect` ban.
 >
-> **The frontier moved.** With one engine, a snapshot, and a clean public
-> surface, kernel-hardening is largely done. What is left is **reach** (browser
-> bindings, sealed deck) and **the parts of the platform vision that were never
-> built** (autonomous loop, spectator, OTel).
+> **Two corrections to the last pass.** It missed an open High-severity defect
+> ([DEFECT_025](defects/DEFECT_025_all_in_run_out_never_completes.md)), and it
+> listed EPIC-20, -21, -22, -29 and -32 as "designed, nothing built" — `ROADMAP.md`
+> records all five as **Complete**.
 
 ---
 
-## Release follow-through (`0.11.0`)
+## Do next
 
-Nothing is broken. Three loose ends, in order of urgency:
+Ranked by severity, then by "designed, unblocked, nothing has landed".
 
-1. **The `pkodds` `max_samples` decision** —
-   [`RELEASE_AUDIT_0.11.0.md`](RELEASE_AUDIT_0.11.0.md#the-one-finding-that-matters).
-   `pkodds` still pins `pkcore = "0.1.4"`, eight minors behind, and is the only
-   consumer with a *behavioural* exposure: `EquityOptions::max_samples` now
-   defaults to **25,000**, down from 100,000. Nothing fails to compile — an
-   equity service silently gets 4× fewer samples. Decide before bumping it.
-2. **No release notes since `0.6.0`.** `docs/releases/` stops at
-   `RELEASE_0.6.0.md`; `0.7.0`, `0.8.x`, `0.9.x`, `0.10.0` and `0.11.0` have
-   none. `/release-notes` covers this. Five documents behind is where a
-   changelog stops being a substitute.
-3. **`TableManager` / `TableEvent` removal.** `0.11.0` deprecated them and the
-   changelog promises removal **one release after** — i.e. in `0.12.0`. That is
-   a deliberate, dated commitment; do not let it slide.
+1. **DEFECT_025 — an all-in run-out never completes**
+   ([`defects/DEFECT_025_all_in_run_out_never_completes.md`](defects/DEFECT_025_all_in_run_out_never_completes.md))
+   **Severity High, Status Open, filed 2026-08-29, no fix since.** When every
+   live seat is all-in, `Table` deals one street and stalls: `is_game_over`
+   (`src/casino/table.rs`) needs a five-card board, so `end_hand` never runs and
+   the pot is never paid. 92 of 10,000 Pluribus hands hit it.
+   `PokerSession` is **not** affected — it loops street advances itself and has
+   run-out tests (`src/casino/session.rs:1396`). The hole is in raw
+   `Table::act()` and in `Nubificus` replay. The test that will prove a fix is
+   already written: `tests/heavy_tests.rs:511` asserts `stalled == 91` and should
+   follow the fix to zero. **Recommended next.**
 
----
+2. **Remove `TableManager` / `TableEvent` — the promise slid.** `0.11.0` deprecated
+   them and its changelog says *"removal comes one release after this one"*
+   (`CHANGELOG.md:231`). `0.12.0` shipped with both still exported
+   (`src/prelude.rs:110`, `src/casino/manager.rs`). Small, but breaking — it needs
+   a minor bump (`0.13.0`). Either do it, or edit the promise.
 
-## Ship-ready next (pkcore itself)
-
-Ranked by "designed, unblocked, nothing has landed".
-
-1. **EPIC-84 — Sealed Table via the cardpack Seal Kernel**
+3. **EPIC-84 — Sealed Table via the cardpack Seal Kernel**
    ([`epics/EPIC-84_Sealed_Table_Cardpack.md`](epics/EPIC-84_Sealed_Table_Cardpack.md))
-   Every phase reads **Not started**. Gives pkcore a deck it cannot read
-   (`SlotPile`, `Revealed<D>`, `Codebook`) plus a provably-fair shuffle, by
-   *consuming* `cardpack` 0.11.0 rather than building the crypto here. Phase 0
-   is a dependency bump (`cardpack` 0.6.9 → 0.11.0), which makes it the cheapest
-   real start on the list. Supersedes EPIC-79b — retire that doc as part of the
-   work. **Recommended next.**
+   Every phase **Not started**. Phase 0 is a dependency bump; `cardpack` is now
+   `0.11.1` on crates.io (pkcore pins `0.6.9`). Supersedes EPIC-79b.
 
-2. **EPIC-86 — Browser Bindings (`pkwasm`)**
+4. **EPIC-86 — Browser Bindings (`pkwasm`)**
    ([`epics/EPIC-86_Browser_Bindings.md`](epics/EPIC-86_Browser_Bindings.md))
-   Feasibility is **Complete**: the spike builds on `wasm32-unknown-unknown`,
-   64.7 KB gzipped, zero rayon in the tree, `getrandom` already solved upstream.
-   Everything after that — card primitives, table engine, `Dealer`, `Winnings`,
-   `PokerSession`, the hand-written `.d.ts` — is **Planned**. This is the third
-   binding after `pkcore.py` and `pkcore.js`, so the shape is known work rather
-   than research.
+   Feasibility Complete (64.7 KB gzipped). Phases 1–5 Planned. Third binding
+   after `pkcore.py` and `pkcore.js`, so the shape is known. Implementation
+   lands in `pkwasm`, not here.
 
-3. **EPIC-39 — Decider Opponent-Range Model**
-   ([`epics/EPIC-39_Decider_Range_Model.md`](epics/EPIC-39_Decider_Range_Model.md))
-   All rows Planned. `villain_range(state) -> Combos` from position and action,
-   fed to the equity engine via the already-supported `PlayerSpec::Range`. This
-   is the unblocker for the two EPIC-36 knobs that shipped schema-only
-   (`outs`, `preflop_charts`). Highest gameplay payoff of the three.
-
-4. **EPIC-81 — pkcore on the `ckc-rs` kernel**
+5. **EPIC-81 — pkcore on the `ckc-rs` kernel**
    ([`epics/EPIC-81_Ckc_Rs_Dependency.md`](epics/EPIC-81_Ckc_Rs_Dependency.md))
-   Deletes ~5,700 lines from `src/` with no downstream change. **Still blocked**
-   on publishing `ckc-rs 0.2.0`; crates.io has `0.1.18` and `0.2.0` exists only
-   on a local branch. It is our own crate, so the unblock is short — but it is a
-   second repo's release, not a pkcore edit.
+   **Still blocked**: crates.io `ckc-rs` is `0.1.18`; the EPIC needs `0.2.0`.
 
 ---
 
-## Platform vision — designed, nothing built
+## Release follow-through
 
-These are the ROADMAP phases that never became code. They are large and each
-needs a fresh look at its EPIC before being trusted as a plan.
+- **No release notes since `0.6.0`.** `docs/releases/` has none for `0.7.0`
+  through `0.12.3` — now eleven releases. `/release-notes` covers this.
+- **Git tags stop at `v0.12.1`.** crates.io has `0.12.2` and `0.12.3`.
+- **Downstream actions from the 0.12.1 audit** —
+  [`RELEASE_AUDIT_0.12.1.md` § Recommended Actions](RELEASE_AUDIT_0.12.1.md#recommended-actions):
+  pkdealer must decide what `--preflop-charts solver` means before bumping;
+  `pkgto-web` / `pkkuhn-web` should set `default-features = false` (0.12.0's
+  default-on 15.8 MB `hup-charts` makes this costlier); `pkrange` / `pksrv` are
+  frozen at `0.0.13` / `0.0.8`.
+- **`pkodds` `max_samples` decision** — still pinned to `0.1.4`; the
+  100,000 → 25,000 default change is a silent 4× sample cut when it bumps.
+  Carried from the last pass
+  ([`RELEASE_AUDIT_0.11.0.md`](RELEASE_AUDIT_0.11.0.md#the-one-finding-that-matters)).
 
-- **EPIC-20 — Autonomous Game Loop** (`Planned`) — bots playing unattended.
-- **EPIC-21 — Spectator** (`Planned`) — the web watch-a-table app.
-- **EPIC-22 — OTel** (`Planned`) and **EPIC-38 — Observability**,
-  with **EPIC-61 — AI Observability** layered above them.
+---
+
+## Planned EPICs — not built
+
+Each needs a fresh read of its EPIC before being trusted as a plan.
+
 - **EPIC-37 — Mobile Engine** — UniFFI, iOS/Android CI, steppable solver. Its
-  snapshot phase was carved out and shipped as EPIC-88; the rest is untouched
-  (`rg 'SolveJob|mobile' src/` → zero hits).
-- **EPIC-53 — Platform Reach**, **EPIC-50/51/52** (`pkgate`: transport, authn,
-  authz) — the networking wrapper, rooted in sibling repos.
-- **EPIC-29/32/34** — variant engine foundation, Stud Hi, variant web selection.
-- **EPIC-60 — Showcase**, **EPIC-67 — Demons**, **EPIC-95 — Distinct** (a
-  bitvec revisit, currently a paragraph of intent, not a design).
+  snapshot phase shipped as EPIC-88.
+- **EPIC-38 — Framework Observability** — `TableObserver`, `events_since`,
+  off-by-default `tracing` facade. **EPIC-61 — AI Observability** layers above it.
+- **EPIC-34 — Variant Web Selection** — pkarena0-web work.
+- **EPIC-50/51/52/53** — `pkgate` transport, authn, authz, platform reach;
+  rooted in sibling repos.
+- **EPIC-60 — Showcase**, **EPIC-66 — Serialization**, **EPIC-67 — Demons**,
+  **EPIC-95 — Distinct** (a paragraph of intent, not a design).
 
 ---
 
 ## Tech debt
 
-Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). Census in `src/`
-as of this pass: **46 `TODO`**, of which **10 `TODO RF`** and **3 `TODO TD`**.
-No `FIXME`, `HACK`, `XXX` or `TODO DEFECT` markers remain.
+Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). The marker set in
+`src/` is **unchanged** since the last pass: 59 raw `TODO` hits (48 comment
+markers), **10 `TODO RF`**, **3 `TODO TD`**, no `FIXME`/`HACK`/`XXX`.
 
-The three that read as more than cleanup:
+The ones that read as more than cleanup:
 
-- **Self-declared missing tests** — `src/analysis/store/heads_up.rs:150`
-  (*"Write tests!!!"*), `src/play/game.rs:345` and `:903`. Direct violations of
-  the `CLAUDE.md` rule that every public fn carries a unit test.
+- **Self-declared missing tests** — `src/analysis/store/heads_up.rs:150`,
+  `src/play/game.rs:345` and `:903`.
 - **`examples/preflop.rs:210`** — `TODO TD DEFECT: Still doing double inserts.`
-  The only marker in the tree that still claims a live defect.
-- **`src/arrays/matchups/masks/suit_texture.rs`** — four `Type1223a–d` variants
-  under a `Defect watch` note, in a module whose own header calls the code
-  *"an abomination"*.
+- **`src/arrays/matchups/masks/suit_texture.rs:20–23`** — four `Type1223a–d`
+  variants under a `Defect watch` note.
 
 ---
 
@@ -140,8 +119,7 @@ The three that read as more than cleanup:
 - [#49 — Client Event Shorthand Message](https://github.com/ImperialBower/pkcore/issues/49)
   (opened 2026-02-25)
 
-Both predate the last four releases. Worth a look to confirm they are still
-wanted before they get older.
+Both are six months old. Confirm they are still wanted, or close them.
 
 ---
 
@@ -149,11 +127,13 @@ wanted before they get older.
 
 Not authored by the user. Keep, edit, or delete.
 
-- 🤖 **Write `docs/releases/RELEASE_0.11.0.md` and backfill `0.7.0`–`0.10.0`.**
-  The gap is mechanical to close and the audit explicitly asks for it.
-- 🤖 **Re-run the automated debt review.** The last one was 2026-08-18 and
-  predates four releases, the `TableCelled` removal and the `pkstate` retirement.
-  Its findings should not be trusted as current.
-- 🤖 **Delete or mark `EPIC-79b_Sealed_Deck.md` as superseded.** EPIC-84 §
-  Decisions already records it as *"Superseded → consumed"*, but the file still
-  reads as live work.
+- 🤖 **Re-run the automated debt review.** The last one was 2026-08-18 — before
+  `TableCelled` was removed, before `0.11.0`, and before EPIC-39 added
+  `src/bot/range_model.rs`, `hand_order.rs`, `draw_equity.rs` and
+  `preflop_equity.rs`, none of which any review has read.
+- 🤖 **Mark `EPIC-79b_Sealed_Deck.md` as superseded.** EPIC-84 § Decisions says
+  so, but the 79b file still reads *"Nothing has landed"* with every row
+  Planned.
+- 🤖 **Make Pluribus replay use the run-out path once DEFECT_025 is fixed.**
+  The fix belongs on `Table`; `Nubificus::do_action` should then need no
+  special case.

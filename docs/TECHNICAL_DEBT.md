@@ -7,26 +7,40 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-30** against `main` @ `cf5f50f7`, pkcore `0.11.0`
-> (tagged and published). Four releases landed since the previous pass —
-> `0.8.x`, `0.9.x`, `0.10.0`, `0.11.0` — including the removal of `TableCelled`
-> and of the `pkstate` dependency, the EPIC-88 snapshot work, and the `0.11.0`
-> public-surface cleanup. Line numbers below were re-verified against this
-> commit; the marker set itself is unchanged apart from `TableCelled`'s markers
-> disappearing with the code.
-> Marker census in `src/` (re-counted 2026-08-30): **46 `TODO`**, of which
-> **10 `TODO RF`** and **3 `TODO TD`** — down from 70/11/3. **0 `TODO DEFECT`**.
-> No `FIXME`, `HACK`, or `XXX` markers remain.
+> Last refreshed **2026-09-12** against `main` @ `52675954`, pkcore `0.12.3`
+> (published). Since the 2026-08-30 pass: EPIC-39 shipped in `0.12.0`, a
+> sample-budget fix in `0.12.1`, and the lint move to `Cargo.toml` in
+> `0.12.2`/`0.12.3`. The `TODO` marker set in `src/` is **identical** to
+> `cf5f50f7` (diffed line by line). Two line references drifted and are
+> corrected below.
+> Marker census in `src/` (2026-09-12, raw `grep -rn TODO src`): **59 hits** —
+> 48 comment markers plus prose and `expect("TODO: panic message")` strings —
+> of which **10 `TODO RF`** and **3 `TODO TD`**. **0 `TODO DEFECT`**. No
+> `FIXME`, `HACK`, or `XXX` markers. (The 2026-08-30 figure of 46 used a
+> narrower count; the set did not shrink.)
 >
-> The automated review pass below ran **2026-08-18** and is now 12 days and four
-> releases old; it predates the `TableCelled` removal, the `pkstate` retirement
-> and every `0.11.0` signature change. **Do not trust the 🤖 section as
-> current** — ask for a re-run.
+> The automated review pass below ran **2026-08-18** and is now 25 days and
+> seven releases old; it predates the `TableCelled` removal, every `0.11.0`
+> signature change, and all four EPIC-39 modules in `src/bot/`. **Do not trust
+> the 🤖 section as current** — ask for a re-run.
 
 ## Tracked debt
 
-_Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase._
+_Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
+`docs/defects/` records._
 
+- [ ] **DEFECT_025 — all-in run-out never completes** — **Open, severity High,
+  filed 2026-08-29.** When every live seat is all-in, `Table::is_game_over`
+  needs a five-card board, so the hand stalls after one more street and the pot
+  is never paid. `PokerSession` drives its own run-out and is not affected; raw
+  `Table::act()` and `Nubificus` replay are. `tests/heavy_tests.rs:511` asserts
+  the stall count (`91`) and should follow the fix to zero.
+  ([`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md),
+  `src/casino/table.rs` `is_game_over`)
+- [ ] **`TableManager` / `TableEvent` removal overdue** — deprecated in `0.11.0`
+  with *"removal comes one release after this one"* (`CHANGELOG.md:231`); still
+  exported after `0.12.0`–`0.12.3`. Breaking, so it needs `0.13.0`.
+  (`src/casino/manager.rs`, `src/prelude.rs:110`)
 - [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:613`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
@@ -46,7 +60,7 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 - [ ] **`analysis/store/heads_up.rs`** — `TODO: Write tests!!!` (`src/analysis/store/heads_up.rs:150`)
 - [ ] **`play/game.rs`** — `TODO: Write some fucking tests.` (`src/play/game.rs:345`)
 - [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` (`src/play/game.rs:903`)
-- [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. (`src/lib.rs:467`, `:495`)
+- [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. (`src/lib.rs:557`; line moved from `:467` by 2026-09-12)
 
 ### Missing `# Errors` documentation
 
@@ -99,7 +113,7 @@ dropped. Ranked most severe first._
 
 - [x] ~~🤖 **`SolverCache::cache_key` omits `max_iterations` and `cfr_variant`**~~ — **FIXED** in `0.5.3`, recorded as [`DEFECT_016`](defects/DEFECT_016_solver_cache_key_omissions.md). `target_exploitability` was omitted too — same root cause, fixed in the same change. All three now hash; `CfrVariant` gets a discriminant tag plus `alpha`/`beta` IEEE-754 bit patterns, since a float-carrying enum cannot derive `Hash`. Seven regression tests, two of them end-to-end through `put`/`get`. Entries written by `0.5.2` or earlier are orphaned — a miss and a re-solve, never a wrong answer. (`src/analysis/gto/solver_cache.rs:97`)
 
-- [ ] 🤖 **`cache_key` is still not compiler-enforced against new `SolverConfig` fields** — raised by the `DEFECT_016` fix and deliberately left out of it. Destructuring the config exhaustively (`let SolverConfig { hero_range, villain_range, .. }` with no `..`) would turn a future added field into a compile error instead of a silent cache collision. Suggested alongside any next change to `SolverConfig`. (`src/analysis/gto/solver_cache.rs:97`)
+- [ ] 🤖 **`cache_key` is still not compiler-enforced against new `SolverConfig` fields** — raised by the `DEFECT_016` fix and deliberately left out of it. Destructuring the config exhaustively (`let SolverConfig { hero_range, villain_range, .. }` with no `..`) would turn a future added field into a compile error instead of a silent cache collision. Suggested alongside any next change to `SolverConfig`. (`src/analysis/gto/solver_cache.rs:108`)
 
 - [x] ~~🤖 **`OmahaHigh::eval` does not enforce Omaha's exactly-2-hole-cards rule**~~ — **FIXED** in `0.5.4`, recorded as [`DEFECT_017`](defects/DEFECT_017_omaha_eval_two_card_rule.md). `eval` now enumerates the 60 legal 2-from-hand + 3-from-board combinations through `permutations`, so illegal hands are never constructed rather than filtered afterwards. The `Four::omaha_high` doc comment is corrected — it had pointed at `eval` as the sound alternative. The DECON-02 golden vectors were generated through the broken function; regenerated, plus a fourth case that actually discriminates (none of the three existing ones did). (`src/games/omaha.rs:38`, comment at `src/arrays/four.rs:63`)
 
@@ -111,7 +125,7 @@ dropped. Ranked most severe first._
 
 - [ ] 🤖 **`data/hands/legacy/pkarena0-session_2026-04-15.yaml` records one illegal hand** — `pkarena0-hand-002` was captured from the engine while [`DEFECT_022`](defects/DEFECT_022_next_to_act_restarts_under_the_gun.md) was live, so its preflop action order is one the engine now correctly rejects: seat 4 raises to 5900 before seat 8 has acted on seat 5's raise to 2333. It is skipped by `all_hands_replay_consistently` rather than edited, because the recording is the only evidence of what actually happened. Not fixable — the bot decisions are a captured session, not a reproducible script. Recorded so a later reader does not mistake the skip for laziness. (`tests/pkarena0_session.rs`)
 
-- [ ] 🤖 **Duplicated logic between the two table engines is now a standing risk, not an incident** — four consecutive defects ([`DEFECT_015`](defects/DEFECT_015_act_raise_all_in_underflow.md), [`DEFECT_016`](defects/DEFECT_016_solver_cache_key_omissions.md), [`DEFECT_017`](defects/DEFECT_017_omaha_eval_two_card_rule.md), [`DEFECT_022`](defects/DEFECT_022_next_to_act_restarts_under_the_gun.md)) had the same wrong logic in two places, and in three of them only one copy had been fixed by an earlier change. `casino::table` and `casino::table_celled` carry parallel `Seats`, `next_to_act`, `act_raise`, and betting-completion implementations. Suggested: a shared conformance test suite run against both engines, so a fix to one that is not applied to the other fails immediately. Cheaper than merging them, and it is the check that would have caught all four.
+- [x] ~~🤖 **Duplicated logic between the two table engines is now a standing risk, not an incident**~~ — **MOOT 2026-09-12.** `TableCelled` was deleted in [EPIC-83](epics/EPIC-83_Table_Decelled.md) (`ba1dd3fc`); one engine remains, so there is nothing left to drift apart. Original note: — — four consecutive defects ([`DEFECT_015`](defects/DEFECT_015_act_raise_all_in_underflow.md), [`DEFECT_016`](defects/DEFECT_016_solver_cache_key_omissions.md), [`DEFECT_017`](defects/DEFECT_017_omaha_eval_two_card_rule.md), [`DEFECT_022`](defects/DEFECT_022_next_to_act_restarts_under_the_gun.md)) had the same wrong logic in two places, and in three of them only one copy had been fixed by an earlier change. `casino::table` and `casino::table_celled` carry parallel `Seats`, `next_to_act`, `act_raise`, and betting-completion implementations. Suggested: a shared conformance test suite run against both engines, so a fix to one that is not applied to the other fails immediately. Cheaper than merging them, and it is the check that would have caught all four.
 
 - [x] ~~🤖 **`min_raise_for_tier` hardcodes `big_blind = 0`**~~ — **FIXED** in `0.6.0`, recorded as [`DEFECT_023`](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). The No-Limit / Pot-Limit fallthrough called `self.min_raise(last_raise, 0)`, so on the first raise of a street (`last_raise == 0`) it returned `0` and enforced no minimum. It had been known and routed around at one call site since EPIC-30 (§"Latent `min_raise_for_tier` bug sidestepped at the dispatch layer") without ever being fixed at the source, and only the `FixedLimit` arm was tested. The method now takes `big_blind` as a third parameter and the `Table::min_raise` route-around is gone. (`src/games/betting_structure.rs:130`)
 
@@ -188,7 +202,7 @@ _Not re-verified line-by-line in the 2026-08-18 refresh — treat the specific
 names as a starting point, not a checklist._
 
 - [ ] 🤖 **`Deck` public methods** — `get`, `iter`, `to_par_iter`, `par_iter`, `array_iter`, `combinations`, `len`, `poker_cards`, `poker_cards_shuffled` lack doc tests. (`src/deck.rs`)
-- [ ] 🤖 **Table determiners** — `determine_game_phase`, `determine_betting_phase`, `determine_ceiling`, `determine_street_equity_possible`, `determine_street_equity`, `determine_hand_equity`, `commentary_last`, `commentary_last_player_action` lack doc tests. (`src/casino/table_celled.rs`)
+- [x] ~~🤖 **Table determiners**~~ — **GONE.** The file `src/casino/table_celled.rs` was deleted with `TableCelled` ([EPIC-83](epics/EPIC-83_Table_Decelled.md)). A re-run should check whether `casino::table::Table` has the same doc-test gaps.
 - [ ] 🤖 **`Board` constructors** — `Board::new`, `Board::turn_cards` lack doc tests. (`src/play/board.rs`)
 - [ ] 🤖 **`hup.rs` query helpers** — `flip_mode`, `from_shift`, `matches`, `db_count`, `db_is_valid`, and siblings lack doc tests. (`src/analysis/store/db/hup.rs`)
 
