@@ -29,14 +29,16 @@
 _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
 `docs/defects/` records._
 
-- [ ] **DEFECT_025 — all-in run-out never completes** — **Open, severity High,
-  filed 2026-08-29.** When every live seat is all-in, `Table::is_game_over`
-  needs a five-card board, so the hand stalls after one more street and the pot
-  is never paid. `PokerSession` drives its own run-out and is not affected; raw
-  `Table::act()` and `Nubificus` replay are. `tests/heavy_tests.rs:511` asserts
-  the stall count (`91`) and should follow the fix to zero.
-  ([`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md),
-  `src/casino/table.rs` `is_game_over`)
+- [x] ~~**DEFECT_025 — all-in run-out never completes**~~ — **FIXED 2026-09-12**
+  in `0.12.4`. The cause was a redundant `reset_state_in_hand()` after each
+  street deal in `Table::act()` and `Dealer::advance_street`, which turned
+  all-in seats back into `YetToAct`; plus no run-out driver in `Nubificus`
+  replay. The stall count in `tests/heavy_tests.rs` is now asserted at `0`.
+  ([`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md#resolution))
+- [ ] **`Seats::reset_state_in_hand` still clobbers all-in seats** — the
+  `DEFECT_025` trap. Library code no longer calls it, but it is public and
+  tests use it. Consider making it skip all-in seats, like the crate-private
+  `reset_non_allin_to_yet_to_act`. (`src/casino/table/seats.rs:655`)
 - [ ] **`TableManager` / `TableEvent` removal overdue** — deprecated in `0.11.0`
   with *"removal comes one release after this one"* (`CHANGELOG.md:231`); still
   exported after `0.12.0`–`0.12.3`. Breaking, so it needs `0.13.0`.

@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.4] - 2026-09-12
+
+### Fixed
+
+- **An all-in run-out now finishes and pays the pot**
+  ([DEFECT_025](docs/defects/DEFECT_025_all_in_run_out_never_completes.md)).
+  When every live seat was all-in, `Table::act()` dealt the turn, then stalled:
+  the board stopped at four cards, `end_hand` never ran, and the pot was never
+  paid. The cause was a `seats.reset_state_in_hand()` call after each street
+  deal. `bring_it_in` already resets every seat that can still bet and keeps
+  all-in seats all-in; the extra reset turned all-in seats back into
+  `YetToAct` with no chips behind, so the table waited for actions nobody could
+  take. The same call is gone from `Dealer::advance_street`, which had the
+  same hole. `PokerSession` never made the call and was never affected.
+- **Pluribus replay deals out the board after an all-in.** A log such as
+  `...r10000c///` has no actions after the all-in call, so
+  `Nubificus::play_hand` and `play_hand_display` used to stop with only the
+  flop dealt. They now deal the remaining streets and settle. All 10,000
+  corpus hands now finish, and every seat's final stack — winners included —
+  matches the log. The 91 hands the EPIC-87 round-trip test used to count as
+  stalled now round-trip too.
+
+### Changed (behaviour)
+
+- **`Dealer` no longer asks an all-in seat to act on later streets.** Before,
+  after one player went all-in and another called with chips behind,
+  `advance_street` reset both seats, so both were asked to check on every
+  later street. Now betting is complete on each new street, and the caller
+  calls `advance_street` once per street, then `end_hand`. This matches
+  `PokerSession`.
+
 ## [0.12.3] - 2026-09-04
 
 ### Changed

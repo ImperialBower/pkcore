@@ -3548,6 +3548,64 @@ mod casino__table_tests {
         assert!(table.seats.get_seat(utg).unwrap().player.is_all_in());
     }
 
+    /// `DEFECT_025`: with every live seat all-in, calling `act()` must run the
+    /// board out and settle. It used to deal the turn, reset both seats to
+    /// `YetToAct` with no chips behind, and stall there forever.
+    #[test]
+    fn act_runs_out_the_board_when_every_live_seat_is_all_in() {
+        let mut table = make_two_player_table();
+        table.act().unwrap();
+        let first = table.next_to_act();
+        table.act_all_in(first).unwrap();
+        let second = table.next_to_act();
+        table.act_call(second).unwrap();
+
+        // Three streets to deal and one settlement: anything past that is a stall.
+        for _ in 0..8 {
+            if table.event_count(&TableAction::EndHand) > 0 {
+                break;
+            }
+            table.act().unwrap();
+        }
+
+        assert_eq!(1, table.event_count(&TableAction::EndHand), "the hand never settled");
+        assert!(table.event_log.iter().any(|a| matches!(a, TableAction::DealtRiver(_))));
+        assert_eq!(0, table.pot);
+        assert_eq!(20_000, table.seats.total_chip_count());
+    }
+
+    /// `DEFECT_025`: a seat that is all-in stays all-in when `act()` deals the
+    /// next street, even while the other seats keep betting.
+    #[test]
+    fn act_keeps_an_all_in_seat_all_in_across_streets() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Carol".to_string(), 500)),
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act().unwrap();
+        let carol = 0;
+        let first = table.next_to_act();
+        assert_eq!(carol, first, "three-handed, the button acts first pre-flop");
+        table.act_all_in(carol).unwrap();
+        let sb = table.next_to_act();
+        table.act_call(sb).unwrap();
+        let bb = table.next_to_act();
+        table.act_call(bb).unwrap();
+
+        table.act().unwrap(); // flop
+        for _ in 0..2 {
+            let seat = table.next_to_act();
+            table.act_check(seat).unwrap();
+        }
+        table.act().unwrap(); // turn
+
+        assert_eq!(4, table.board.len());
+        assert!(table.seats.get_seat(carol).unwrap().is_all_in());
+        assert_ne!(carol, table.next_to_act());
+    }
+
     #[test]
     fn table_end_hand_single_winner() {
         let mut table = make_three_player_table();

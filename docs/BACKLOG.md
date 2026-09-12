@@ -27,19 +27,13 @@
 
 Ranked by severity, then by "designed, unblocked, nothing has landed".
 
-1. **DEFECT_025 — an all-in run-out never completes**
-   ([`defects/DEFECT_025_all_in_run_out_never_completes.md`](defects/DEFECT_025_all_in_run_out_never_completes.md))
-   **Severity High, Status Open, filed 2026-08-29, no fix since.** When every
-   live seat is all-in, `Table` deals one street and stalls: `is_game_over`
-   (`src/casino/table.rs`) needs a five-card board, so `end_hand` never runs and
-   the pot is never paid. 92 of 10,000 Pluribus hands hit it.
-   `PokerSession` is **not** affected — it loops street advances itself and has
-   run-out tests (`src/casino/session.rs:1396`). The hole is in raw
-   `Table::act()` and in `Nubificus` replay. The test that will prove a fix is
-   already written: `tests/heavy_tests.rs:511` asserts `stalled == 91` and should
-   follow the fix to zero. **Recommended next.**
+1. ~~**DEFECT_025 — an all-in run-out never completes**~~ — **FIXED in
+   `0.12.4`** (2026-09-12).
+   [Resolution](defects/DEFECT_025_all_in_run_out_never_completes.md#resolution).
+   All 10,000 Pluribus hands now finish and pay out as logged.
 
-2. **Remove `TableManager` / `TableEvent` — the promise slid.** `0.11.0` deprecated
+2. **Remove `TableManager` / `TableEvent` — the promise slid.** **Recommended
+   next.** `0.11.0` deprecated
    them and its changelog says *"removal comes one release after this one"*
    (`CHANGELOG.md:231`). `0.12.0` shipped with both still exported
    (`src/prelude.rs:110`, `src/casino/manager.rs`). Small, but breaking — it needs
@@ -134,6 +128,8 @@ Not authored by the user. Keep, edit, or delete.
 - 🤖 **Mark `EPIC-79b_Sealed_Deck.md` as superseded.** EPIC-84 § Decisions says
   so, but the 79b file still reads *"Nothing has landed"* with every row
   Planned.
-- 🤖 **Make Pluribus replay use the run-out path once DEFECT_025 is fixed.**
-  The fix belongs on `Table`; `Nubificus::do_action` should then need no
-  special case.
+- 🤖 **Check downstream for the `0.12.4` `Dealer` change before bumping.**
+  `advance_street` no longer asks all-in seats to check on later streets.
+  pkdealer drives hands through `PokerSession`, not `Dealer` (grep, 2026-09-12),
+  so it is not affected. Other consumers were not checked; `/audit-release`
+  covers this.
