@@ -1202,12 +1202,13 @@ mod tests {
         let tree = GameTree::build_turn(&turn_config());
         for i in 0..tree.len() {
             if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i))
-                && t.outcome == TerminalOutcome::Showdown {
-                    assert!(
-                        t.runout_river.is_some(),
-                        "showdown terminal in a turn tree must have runout_river set"
-                    );
-                }
+                && t.outcome == TerminalOutcome::Showdown
+            {
+                assert!(
+                    t.runout_river.is_some(),
+                    "showdown terminal in a turn tree must have runout_river set"
+                );
+            }
         }
     }
 
@@ -1217,9 +1218,10 @@ mod tests {
         let tree = GameTree::build_turn(&turn_config());
         for i in 0..tree.len() {
             if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i))
-                && matches!(t.outcome, TerminalOutcome::Fold { .. }) {
-                    assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
-                }
+                && matches!(t.outcome, TerminalOutcome::Fold { .. })
+            {
+                assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
+            }
         }
     }
 }

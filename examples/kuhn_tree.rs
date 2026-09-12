@@ -103,9 +103,7 @@ fn main() {
         }
 
         println!("│  ─────────────────────────────────────────────────────────────────");
-        println!(
-            "│  Deal EV (conditional on this deal):  P0 {deal_ev_p0:+.4}  P1 {deal_ev_p1:+.4}"
-        );
+        println!("│  Deal EV (conditional on this deal):  P0 {deal_ev_p0:+.4}  P1 {deal_ev_p1:+.4}");
         println!("└───────────────────────────────────────────────────────────────────");
         println!();
 

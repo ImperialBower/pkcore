@@ -80,34 +80,37 @@ fn audit_hand(hand: &HandHistory) -> bool {
 
     // Board
     if hand.board.is_some()
-        && let Err(e) = hand.to_board() {
-            failures.push(format!("board: invalid card string — {e}"));
-        }
+        && let Err(e) = hand.to_board()
+    {
+        failures.push(format!("board: invalid card string — {e}"));
+    }
 
     // Hole cards
     for p in &hand.players {
         if p.hole_cards.is_some()
-            && let Err(e) = p.to_two() {
-                failures.push(format!(
-                    "seat {} ({}): invalid hole_cards {:?} — {e}",
-                    p.seat,
-                    p.name,
-                    p.hole_cards.as_deref().unwrap_or("")
-                ));
-            }
+            && let Err(e) = p.to_two()
+        {
+            failures.push(format!(
+                "seat {} ({}): invalid hole_cards {:?} — {e}",
+                p.seat,
+                p.name,
+                p.hole_cards.as_deref().unwrap_or("")
+            ));
+        }
     }
 
     // Best hands in results
     if let Some(results) = &hand.results {
         for r in results {
             if r.best_hand.is_some()
-                && let Err(e) = r.to_five() {
-                    failures.push(format!(
-                        "seat {} result: invalid best_hand {:?} — {e}",
-                        r.seat,
-                        r.best_hand.as_deref().unwrap_or("")
-                    ));
-                }
+                && let Err(e) = r.to_five()
+            {
+                failures.push(format!(
+                    "seat {} result: invalid best_hand {:?} — {e}",
+                    r.seat,
+                    r.best_hand.as_deref().unwrap_or("")
+                ));
+            }
         }
     }
 

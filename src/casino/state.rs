@@ -749,12 +749,14 @@ mod casino__state_tests {
 
     #[test]
     fn partial_ord_matches_ord() {
-        let states = [PlayerState::YetToAct,
+        let states = [
+            PlayerState::YetToAct,
             PlayerState::Check,
             PlayerState::Bet(50),
             PlayerState::Bet(100),
             PlayerState::Call(100),
-            PlayerState::Fold];
+            PlayerState::Fold,
+        ];
 
         for i in 0..states.len() {
             for j in 0..states.len() {

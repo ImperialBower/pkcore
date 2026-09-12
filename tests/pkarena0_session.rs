@@ -233,7 +233,8 @@ fn session_2026_04_28_stakes_match_post_amounts() {
 
         // Both posts under-paid AND both blinders could have covered = drift.
         // A single under-paid post with that blinder short on chips = legit.
-        assert!(!(sb_under && bb_under && sb_could_post && bb_could_post), 
+        assert!(
+            !(sb_under && bb_under && sb_could_post && bb_could_post),
             "{}: stakes-vs-posts drift detected (recorded {recorded_sb}/{recorded_bb}, \
              posted {sb_post}/{bb_post}). \
              Likely cause: set_blinds called during this hand in pkarena0-web.",

@@ -114,9 +114,7 @@ fn run_one_hand(
     rng: &mut impl Rng,
     hand_num: usize,
 ) -> Option<HandHistory> {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = session.table.button;
 
     let stacks: Vec<(u8, String, usize, Uuid)> = (0..session.table.seats.0.len() as u8)

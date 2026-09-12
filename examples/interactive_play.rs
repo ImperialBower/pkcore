@@ -94,7 +94,11 @@ fn main() {
             println!("\n  *** {} is eliminated! ***", seat_label(i, &profiles));
         }
 
-        if table.seats.get_seat(HUMAN_SEAT).is_none_or(pkcore::prelude::Seat::is_empty) {
+        if table
+            .seats
+            .get_seat(HUMAN_SEAT)
+            .is_none_or(pkcore::prelude::Seat::is_empty)
+        {
             println!("\nYou have been eliminated after {} hand(s).", hand - 1);
             break;
         }
@@ -163,9 +167,7 @@ fn run_hand(
     hand_num: usize,
     collection: &HandCollection,
 ) -> (Winnings, HandHistory) {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = table.button;
 
     // Snapshot starting stacks before forced bets (hand-history convention).
@@ -210,9 +212,10 @@ fn run_hand(
         .collect();
 
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT)
-        && seat.cards.has_cards() {
-            println!("  Your hole cards: {}", seat.cards.sorted_display());
-        }
+        && seat.cards.has_cards()
+    {
+        println!("  Your hole cards: {}", seat.cards.sorted_display());
+    }
 
     println!("  Preflop  [pot: {}]", table.effective_pot());
     run_street(table, profiles, rng, editor, collection);
@@ -307,9 +310,11 @@ fn run_hand(
 /// Prints the human's hole cards as a reminder at the start of each post-flop street.
 fn print_human_cards(table: &Table) {
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT)
-        && seat.cards.has_cards() && seat.player.is_in_hand() {
-            println!("  (your cards: {})", seat.cards.sorted_display());
-        }
+        && seat.cards.has_cards()
+        && seat.player.is_in_hand()
+    {
+        println!("  (your cards: {})", seat.cards.sorted_display());
+    }
 }
 
 /// Reveals all remaining players' hole cards and hand evaluations at showdown.
@@ -458,9 +463,7 @@ fn read_human_action(
     println!();
     loop {
         println!("  ┌─ Your turn ─────────────────────────────────────");
-        println!(
-            "  │  Cards: {hole}   Chips: {chips}   Pot: {pot}{position_suffix}"
-        );
+        println!("  │  Cards: {hole}   Chips: {chips}   Pot: {pot}{position_suffix}");
         if to_call > 0 {
             println!("  │  To call: {}   Min raise: {}", to_call, table.min_raise());
             println!("  │  f=fold  c=call {to_call}  r <n>=raise to n  a=all-in  s=save");
@@ -606,9 +609,7 @@ fn seat_label(seat: u8, profiles: &[BotProfile]) -> &str {
     if seat == HUMAN_SEAT {
         HUMAN_NAME
     } else {
-        profiles
-            .get((seat as usize) - 1)
-            .map_or("?", |p| p.name.as_str())
+        profiles.get((seat as usize) - 1).map_or("?", |p| p.name.as_str())
     }
 }
 

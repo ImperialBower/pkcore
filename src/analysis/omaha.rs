@@ -4,7 +4,7 @@ use crate::cards::Cards;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EightOrBetter {
-    Wheel = 0b11111,        // 5♠ 4♠ 3♠ 2♠ A♠
+    Wheel = 0b11111,         // 5♠ 4♠ 3♠ 2♠ A♠
     High6 = 0b10_1111,       // 6♠ 4♠ 3♠ 2♠ A♠
     High65 = 0b11_0111,      // 6♠ 5♠ 3♠ 2♠ A♠
     High654 = 0b11_1011,     // 6♠ 5♠ 4♠ 2♠ A♠

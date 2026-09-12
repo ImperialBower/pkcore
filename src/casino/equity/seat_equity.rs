@@ -104,9 +104,11 @@ mod casino__equity__seat_equity_tests {
 
     #[test]
     fn seat_equity_sort_orders_by_highest_chips_first() {
-        let mut equities = [SeatEquity::new(5_000, Seatbit::SEAT_1),
+        let mut equities = [
+            SeatEquity::new(5_000, Seatbit::SEAT_1),
             SeatEquity::new(10_000, Seatbit::SEAT_0),
-            SeatEquity::new(9_000, Seatbit::SEAT_2)];
+            SeatEquity::new(9_000, Seatbit::SEAT_2),
+        ];
 
         equities.sort();
 
@@ -117,8 +119,10 @@ mod casino__equity__seat_equity_tests {
 
     #[test]
     fn seat_equity_sort_uses_seatbit_as_tiebreaker() {
-        let mut equities = [SeatEquity::new(9_000, Seatbit::SEAT_2),
-            SeatEquity::new(9_000, Seatbit::SEAT_1)];
+        let mut equities = [
+            SeatEquity::new(9_000, Seatbit::SEAT_2),
+            SeatEquity::new(9_000, Seatbit::SEAT_1),
+        ];
 
         equities.sort();
 

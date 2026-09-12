@@ -90,10 +90,11 @@ fn setup(table: &mut Table) -> Result<(), PKError> {
     // The event log is a plain Vec<TableAction>; walk it directly.
     for action in &table.event_log {
         if let Some(seat_num) = action.get_seat()
-            && let Some(seat) = table.seats.get_seat(seat_num) {
-                println!("--- {} {action}", seat.player.handle);
-                continue;
-            }
+            && let Some(seat) = table.seats.get_seat(seat_num)
+        {
+            println!("--- {} {action}", seat.player.handle);
+            continue;
+        }
         println!("--- {action}");
     }
 
@@ -140,9 +141,10 @@ fn flop(table: &mut Table, _preflop_pot: usize) -> Result<usize, PKError> {
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_flop_display().
     if let Ok(game) = table.build_game()
-        && let Ok(fe) = FlopEval::try_from(game) {
-            println!("{fe}");
-        }
+        && let Ok(fe) = FlopEval::try_from(game)
+    {
+        println!("{fe}");
+    }
 
     println!();
     println!("The Nuts @ Flop:");
@@ -164,9 +166,10 @@ fn turn(table: &mut Table, _flop_pot: usize) -> Result<usize, PKError> {
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_turn_display().
     if let Ok(game) = table.build_game()
-        && let Ok(te) = TurnEval::try_from(&game) {
-            println!("{te}");
-        }
+        && let Ok(te) = TurnEval::try_from(&game)
+    {
+        println!("{te}");
+    }
 
     let _gus = table.act_bet(3, 24_000)?;
     commentary_action_to(table);
@@ -274,9 +277,10 @@ fn commentary_action_to(table: &Table) {
     for action in table.event_log.iter().rev() {
         if action.is_player_action() {
             if let Some(seat_num) = action.get_seat()
-                && let Some(seat) = table.seats.get_seat(seat_num) {
-                    println!("{} {action}", seat.player.handle);
-                }
+                && let Some(seat) = table.seats.get_seat(seat_num)
+            {
+                println!("{} {action}", seat.player.handle);
+            }
             break;
         }
     }

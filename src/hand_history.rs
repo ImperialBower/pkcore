@@ -3848,7 +3848,10 @@ hands:
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
         let results = collection.replay_all();
-        assert_eq!(results, [] as [std::result::Result<crate::hand_history::ReplayResult, PKError>; 0]);
+        assert_eq!(
+            results,
+            [] as [std::result::Result<crate::hand_history::ReplayResult, PKError>; 0]
+        );
     }
 
     /// Regression test: 3-player flop where BB checks, BTN bets, BB folds.

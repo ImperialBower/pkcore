@@ -279,7 +279,11 @@ fn handle(session: &mut Session, command: Command) {
             None => println!("  No hand in progress. Type 'deal' to start."),
             Some(state) => {
                 let card = session.p0_card.unwrap();
-                let actions: Vec<String> = state.legal_actions().iter().map(std::string::ToString::to_string).collect();
+                let actions: Vec<String> = state
+                    .legal_actions()
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect();
                 let whose_turn = match state.current_player() {
                     Some(0) => "You (P0)".to_owned(),
                     Some(1) => "GTO (P1)".to_owned(),
@@ -327,7 +331,11 @@ fn apply_human(session: &mut Session, action: KuhnAction) {
         return;
     }
     if !state.legal_actions().contains(&action) {
-        let legal: Vec<String> = state.legal_actions().iter().map(std::string::ToString::to_string).collect();
+        let legal: Vec<String> = state
+            .legal_actions()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         println!("  ✗ '{action}' is not legal here. Legal: {}", legal.join(", "));
         return;
     }
@@ -343,13 +351,19 @@ fn apply_human(session: &mut Session, action: KuhnAction) {
 
     // After GTO responds, if it is P0's turn again (Check-Bet scenario), prompt.
     if let Some(state) = &session.state
-        && state.current_player() == Some(0) && !state.is_terminal() {
-            let card = session.p0_card.unwrap();
-            let legal: Vec<String> = state.legal_actions().iter().map(std::string::ToString::to_string).collect();
-            println!(
-                "  Your card [{card}] | history: {} | legal: {}",
-                state.history(),
-                legal.join(", ")
-            );
-        }
+        && state.current_player() == Some(0)
+        && !state.is_terminal()
+    {
+        let card = session.p0_card.unwrap();
+        let legal: Vec<String> = state
+            .legal_actions()
+            .iter()
+            .map(std::string::ToString::to_string)
+            .collect();
+        println!(
+            "  Your card [{card}] | history: {} | legal: {}",
+            state.history(),
+            legal.join(", ")
+        );
+    }
 }

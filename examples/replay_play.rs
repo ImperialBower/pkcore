@@ -78,9 +78,7 @@ fn main() {
 
 fn print_hand(hand: &HandHistory) {
     // Header
-    let btn = hand
-        .table
-        .button.map_or_else(|| "?".to_string(), |b| b.to_string());
+    let btn = hand.table.button.map_or_else(|| "?".to_string(), |b| b.to_string());
     let ts = hand.hand.timestamp.as_deref().unwrap_or("");
     println!(
         "─── {}  btn={}  blinds={}/{}  {} ───",
@@ -188,10 +186,7 @@ fn format_result(r: &ResultEntry, players: &[PlayerEntry]) -> String {
 }
 
 fn player_name(seat: u8, players: &[PlayerEntry]) -> &str {
-    players
-        .iter()
-        .find(|p| p.seat == seat)
-        .map_or("?", |p| p.name.as_str())
+    players.iter().find(|p| p.seat == seat).map_or("?", |p| p.name.as_str())
 }
 
 // ── File resolution ────────────────────────────────────────────────────────────

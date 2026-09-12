@@ -146,14 +146,8 @@ fn main() {
         let cfr_probs = final_avg.action_probs(&info);
         let nash_probs = nash_ref.action_probs(&info);
 
-        let cfr_p = cfr_probs
-            .iter()
-            .find(|(a, _)| *a == action)
-            .map_or(0.0, |(_, p)| *p);
-        let nash_p = nash_probs
-            .iter()
-            .find(|(a, _)| *a == action)
-            .map_or(0.0, |(_, p)| *p);
+        let cfr_p = cfr_probs.iter().find(|(a, _)| *a == action).map_or(0.0, |(_, p)| *p);
+        let nash_p = nash_probs.iter().find(|(a, _)| *a == action).map_or(0.0, |(_, p)| *p);
         let delta = cfr_p - nash_p;
 
         let label = format!("{info} → {action}");

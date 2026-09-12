@@ -124,9 +124,7 @@ fn main() {
 /// are the signal to print "Flop / Turn / River" headers.
 #[allow(clippy::cast_precision_loss)]
 fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl Rng) -> (Winnings, HandHistory) {
-    let ts_secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
+    let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
     let button = session.table.button;
 
     // Snapshot stacks before forced bets (hand-history convention).
@@ -241,7 +239,12 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
     // Print each player's outcome and net chip change.
     for (i, profile) in profiles.iter().enumerate() {
         let seat = i as u8;
-        if session.table.seats.get_seat(seat).map_or(true, pkcore::prelude::Seat::is_empty) {
+        if session
+            .table
+            .seats
+            .get_seat(seat)
+            .map_or(true, pkcore::prelude::Seat::is_empty)
+        {
             continue;
         }
         let ending = session.table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
@@ -349,9 +352,11 @@ fn action_desc(table: &Table, seat: u8, action: PlayerAction) -> String {
 fn print_hole_cards(table: &Table, profiles: &[BotProfile]) {
     for (i, profile) in profiles.iter().enumerate() {
         if let Some(seat) = table.seats.get_seat(i as u8)
-            && seat.cards.has_cards() && seat.player.is_in_hand() {
-                println!("    {:>20}  {}", profile.name, seat.cards.sorted_display());
-            }
+            && seat.cards.has_cards()
+            && seat.player.is_in_hand()
+        {
+            println!("    {:>20}  {}", profile.name, seat.cards.sorted_display());
+        }
     }
 }
 
@@ -360,16 +365,18 @@ fn print_showdown_hands(table: &Table, profiles: &[BotProfile], board: &str) {
     println!("  --- Showdown ---");
     for (i, profile) in profiles.iter().enumerate() {
         if let Some(seat) = table.seats.get_seat(i as u8)
-            && seat.cards.has_cards() && seat.player.is_in_hand() {
-                let hole = seat.cards.sorted_display();
-                match rank_seven(&hole, board) {
-                    Some(r) => println!(
-                        "    {:>20}  [{}]  →  {}  ({:?} #{})",
-                        profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value
-                    ),
-                    None => println!("    {:>20}  [{}]", profile.name, hole),
-                }
+            && seat.cards.has_cards()
+            && seat.player.is_in_hand()
+        {
+            let hole = seat.cards.sorted_display();
+            match rank_seven(&hole, board) {
+                Some(r) => println!(
+                    "    {:>20}  [{}]  →  {}  ({:?} #{})",
+                    profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value
+                ),
+                None => println!("    {:>20}  [{}]", profile.name, hole),
             }
+        }
     }
 }
 
@@ -401,5 +408,6 @@ fn seat_name(idx: u8, table: &Table, profiles: &[BotProfile]) -> String {
         return "?".to_string();
     }
     profiles
-        .get(idx as usize).map_or_else(|| "?".to_string(), |p| p.name.clone())
+        .get(idx as usize)
+        .map_or_else(|| "?".to_string(), |p| p.name.clone())
 }
