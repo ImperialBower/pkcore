@@ -32,12 +32,10 @@ Ranked by severity, then by "designed, unblocked, nothing has landed".
    [Resolution](defects/DEFECT_025_all_in_run_out_never_completes.md#resolution).
    All 10,000 Pluribus hands now finish and pay out as logged.
 
-2. **Remove `TableManager` / `TableEvent` — the promise slid.** **Recommended
-   next.** `0.11.0` deprecated
-   them and its changelog says *"removal comes one release after this one"*
-   (`CHANGELOG.md:231`). `0.12.0` shipped with both still exported
-   (`src/prelude.rs:110`, `src/casino/manager.rs`). Small, but breaking — it needs
-   a minor bump (`0.13.0`). Either do it, or edit the promise.
+2. ~~**Remove `TableManager` / `TableEvent` — the promise slid.**~~ — **DONE in
+   `0.13.0`** (2026-09-13). `src/casino/manager.rs` deleted, along with the
+   `pub mod manager;` declaration and the `TableManager` re-export from
+   `pkcore::prelude`.
 
 3. **EPIC-84 — Sealed Table via the cardpack Seal Kernel**
    ([`epics/EPIC-84_Sealed_Table_Cardpack.md`](epics/EPIC-84_Sealed_Table_Cardpack.md))

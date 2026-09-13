@@ -2,8 +2,7 @@
 //!
 //! This is the **canonical** driver — the one to reach for when integrating
 //! pkcore. See the [`casino`](crate::casino) module header for how it differs
-//! from [`Dealer`](crate::casino::dealer::Dealer) and
-//! [`TableManager`](crate::casino::manager::TableManager).
+//! from [`Dealer`](crate::casino::dealer::Dealer).
 //!
 //! [`PokerSession`] wraps a [`Table`] and orchestrates the hand lifecycle —
 //! dealing, street progression, and session management (eliminating busted players,

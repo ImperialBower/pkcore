@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-09-13
+
+### Removed
+
+- **`TableManager` and `TableEvent` are gone.** Both were `#[deprecated]` since
+  0.11.0 as a multi-table sketch with no hand-lifecycle gating and zero
+  consumers ([docs/TECHNICAL_DEBT.md](docs/TECHNICAL_DEBT.md),
+  [docs/BACKLOG.md](docs/BACKLOG.md)); removal was promised "one release
+  after" the deprecation and had slipped through 0.12.0–0.12.5. `src/casino/manager.rs`
+  is deleted along with its `pub mod manager;` declaration and its
+  `TableManager` re-export from `pkcore::prelude`. Drive many tables by
+  holding many `PokerSession`s instead — the same routing, plus the
+  lifecycle guarantees `TableManager` never had. This is a breaking change,
+  hence the minor bump: any `use pkcore::prelude::TableManager` or
+  `pkcore::casino::manager::*` import no longer resolves.
+
 ## [0.12.5] - 2026-09-12
 
 ### Changed

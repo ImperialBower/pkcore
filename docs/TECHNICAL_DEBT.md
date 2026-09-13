@@ -39,10 +39,9 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   `DEFECT_025` trap. Library code no longer calls it, but it is public and
   tests use it. Consider making it skip all-in seats, like the crate-private
   `reset_non_allin_to_yet_to_act`. (`src/casino/table/seats.rs:655`)
-- [ ] **`TableManager` / `TableEvent` removal overdue** — deprecated in `0.11.0`
-  with *"removal comes one release after this one"* (`CHANGELOG.md:231`); still
-  exported after `0.12.0`–`0.12.3`. Breaking, so it needs `0.13.0`.
-  (`src/casino/manager.rs`, `src/prelude.rs:110`)
+- [x] **`TableManager` / `TableEvent` removal overdue** — done in `0.13.0`:
+  `src/casino/manager.rs` deleted, along with the `pub mod manager;`
+  declaration and the `TableManager` re-export from `pkcore::prelude`.
 - [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:613`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)

@@ -669,11 +669,7 @@ pub enum PKError {
     /// A `Wins` record whose tie counts differ between the two players it is
     /// being read as — a three-way result fed to a heads-up constructor.
     InconsistentWins,
-    /// A `TableManager` event named a table id that is not in the manager.
-    ///
-    /// Returned by `TableManager::process_events` rather than skipping the
-    /// event silently — a queued event for an unknown table is a caller bug,
-    /// not a no-op.
+    /// A lookup named a table id that does not exist.
     TableNotFound,
     /// The requested operation is recognised but not yet implemented.
     ///

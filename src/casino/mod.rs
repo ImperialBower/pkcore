@@ -61,18 +61,11 @@
 //! moving between them is a re-spelling rather than a change in behaviour —
 //! but it *is* a re-spelling: different action enum, different error type. Pick
 //! once, deliberately.
-//!
-//! # Retired
-//!
-//! [`manager::TableManager`] is deprecated as of 0.11.0. It was a multi-table
-//! sketch that never grew hand-lifecycle gating of its own, and nothing depends
-//! on it. Drive many tables by holding many [`session::PokerSession`]s.
 
 pub mod cashier;
 pub mod dealer;
 pub mod equity;
 pub mod game;
-pub mod manager;
 pub mod position;
 pub mod state;
 pub mod table;
