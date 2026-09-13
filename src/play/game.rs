@@ -342,7 +342,16 @@ impl Game {
     /// Let's finish this up for the flop and then package it all up nice and neat in
     /// a struct, shall we?
     ///
-    /// TODO: Write some fucking tests.
+    /// ```
+    /// use pkcore::prelude::TestData;
+    ///
+    /// let game = TestData::the_hand();
+    /// let (case_evals, wins, results, outs) = game.turn_calculations();
+    /// assert!(!case_evals.is_empty());
+    /// assert!(!wins.is_empty());
+    /// assert_eq!(results.player_count, 2);
+    /// assert_eq!(outs.longest_player(), 2);
+    /// ```
     #[must_use]
     pub fn turn_calculations(&self) -> (CaseEvals, Wins, WinResults, Outs) {
         let case_evals = self.turn_case_evals();

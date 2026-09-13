@@ -104,6 +104,14 @@ pub struct PreflopRow {
 }
 
 impl PreflopRow {
+    /// ```
+    /// use pkcore::analysis::store::heads_up::PreflopRow;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+    /// assert_eq!(row.higher, Two::HAND_6S_6H);
+    /// assert_eq!(row.lower, Two::HAND_5D_5C);
+    /// ```
     #[must_use]
     pub fn new(first: Two, second: Two, first_wins: usize, second_wins: usize, ties: usize) -> PreflopRow {
         if first > second {
@@ -125,6 +133,14 @@ impl PreflopRow {
         }
     }
 
+    /// ```
+    /// use pkcore::analysis::store::heads_up::PreflopRow;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+    /// assert_eq!(row.get_wins(Two::HAND_6S_6H), Some(200));
+    /// assert_eq!(row.get_wins(Two::HAND_7D_7C), None);
+    /// ```
     #[must_use]
     pub fn get_wins(&self, hand: Two) -> Option<usize> {
         if hand == self.higher {
@@ -136,6 +152,13 @@ impl PreflopRow {
         }
     }
 
+    /// ```
+    /// use pkcore::analysis::store::heads_up::PreflopRow;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+    /// assert_eq!(row.to_index(), "6♠ 6♥ 5♦ 5♣");
+    /// ```
     #[must_use]
     pub fn to_index(&self) -> String {
         HUP::two_to_index(self.higher, self.lower)
@@ -146,19 +169,34 @@ impl PreflopRow {
 /// so that I can see if a calculation has already been done. Since the `Twos`
 /// are sorted and the `Cards` in the `Twos` are sorted, we can get rid of a lot of
 /// duplicate calculations.
-///
-/// TODO: Write tests!!!
-///
-///
 #[derive(Clone, Debug, Default)]
 pub struct PreflopRowHash(pub HashMap<String, PreflopRow>);
 
 impl PreflopRowHash {
+    /// ```
+    /// use pkcore::analysis::store::heads_up::{PreflopRow, PreflopRowHash};
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let mut hash = PreflopRowHash::default();
+    /// let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+    /// assert!(hash.add(row).is_none());
+    /// ```
     pub fn add(&mut self, value: PreflopRow) -> Option<PreflopRow> {
         let key = HUP::two_to_index(value.higher, value.lower);
         self.0.insert(key, value)
     }
 
+    /// ```
+    /// use pkcore::analysis::store::heads_up::{PreflopRow, PreflopRowHash};
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let mut hash = PreflopRowHash::default();
+    /// let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+    /// let key = row.to_index();
+    /// hash.add(row);
+    /// assert!(hash.contains_key(&key));
+    /// assert!(!hash.contains_key("nope"));
+    /// ```
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
         self.0.contains_key(key)
@@ -169,9 +207,53 @@ impl PreflopRowHash {
 pub struct HUP;
 
 impl HUP {
+    /// ```
+    /// use pkcore::analysis::store::heads_up::HUP;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
+    /// ```
     #[must_use]
     pub fn two_to_index(a: Two, b: Two) -> String {
         format!("{a} {b}")
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis__store__heads_up__preflop_row_hash_tests {
+    use super::*;
+
+    #[test]
+    fn add__inserts_and_returns_none_for_new_key() {
+        let mut hash = PreflopRowHash::default();
+        let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+        assert!(hash.add(row).is_none());
+    }
+
+    #[test]
+    fn add__returns_previous_value_on_overwrite() {
+        let mut hash = PreflopRowHash::default();
+        let first = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+        let second = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 111, 222, 6);
+        hash.add(first.clone());
+        let previous = hash.add(second);
+        assert_eq!(previous, Some(first));
+    }
+
+    #[test]
+    fn contains_key__true_after_add() {
+        let mut hash = PreflopRowHash::default();
+        let row = PreflopRow::new(Two::HAND_5D_5C, Two::HAND_6S_6H, 100, 200, 5);
+        let key = row.to_index();
+        hash.add(row);
+        assert!(hash.contains_key(&key));
+    }
+
+    #[test]
+    fn contains_key__false_for_unknown_key() {
+        let hash = PreflopRowHash::default();
+        assert!(!hash.contains_key("nope"));
     }
 }
 

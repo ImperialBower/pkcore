@@ -121,7 +121,7 @@ way or the other.** That alone justifies the EPIC.
 | **Tier 3** novel export of a pkcore-dealt hand | ✅ Done — `dealt_hand_exports_and_reimports` |
 | Half-chip payoffs (8 corpus hands) | ⚖️ **Design option 3** — accepted, named, excluded |
 | Hole-card order within a player | ⚖️ **New finding** — cannot round-trip, see C-1 |
-| All-in run-out (92 hands) | 🐛 **New finding** — engine gap, see C-3 |
+| All-in run-out (92 hands) | ✅ **Fixed** — [`DEFECT_025`](../defects/DEFECT_025_all_in_run_out_never_completes.md), 0.12.4, see C-3 |
 | Divider theory (`nubibus.rs:528-530`) | ✅ **Confirmed 10,000 / 10,000** |
 | File-level writer (4 header lines + N states) | ✅ Done — `Pluribus::write_log` |
 | `examples/unum.rs` corpus verifier | ✅ Done |
@@ -743,7 +743,8 @@ is both), and **zero are unexplained**.
 This is not an exporter bug and was not fixed here. Tier 2 is the first thing
 in the codebase that ever asked the engine to run a board out; before EPIC-87
 nothing could tell that it did not. Filed as
-[`DEFECT_025`](../defects/DEFECT_025_all_in_run_out_never_completes.md).
+[`DEFECT_025`](../defects/DEFECT_025_all_in_run_out_never_completes.md) —
+since fixed in `0.12.4` (2026-09-12).
 
 ### C-4 — `Unumable for Pluribus` cannot be the re-simulation
 
