@@ -7,22 +7,23 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-09-12** against `main` @ `52675954`, pkcore `0.12.3`
-> (published). Since the 2026-08-30 pass: EPIC-39 shipped in `0.12.0`, a
-> sample-budget fix in `0.12.1`, and the lint move to `Cargo.toml` in
-> `0.12.2`/`0.12.3`. The `TODO` marker set in `src/` is **identical** to
-> `cf5f50f7` (diffed line by line). Two line references drifted and are
-> corrected below.
-> Marker census in `src/` (2026-09-12, raw `grep -rn TODO src`): **59 hits** —
-> 48 comment markers plus prose and `expect("TODO: panic message")` strings —
-> of which **10 `TODO RF`** and **3 `TODO TD`**. **0 `TODO DEFECT`**. No
-> `FIXME`, `HACK`, or `XXX` markers. (The 2026-08-30 figure of 46 used a
-> narrower count; the set did not shrink.)
+> Last refreshed **2026-09-13** against `main` @ `ab186a91`, pkcore `0.13.0`
+> (working tree clean). Since the 2026-09-12 pass: `TableManager`/`TableEvent`
+> were removed (`0.13.0`, breaking). DEFECT_025 (all-in run-out never
+> completes) is fixed, in `0.12.4`.
+> Marker census in `src/` (2026-09-13, `grep -rn 'TODO\|FIXME\|HACK\|XXX\|BUG'
+> --include=*.rs src/`, excluding the `expect("TODO: panic message")` idiom):
+> **60 comment-marker hits**, of which **10 `TODO RF`** and **3 `TODO TD`**.
+> **0 `TODO DEFECT`**. No `FIXME`, `HACK`, `XXX`, or bare `BUG` markers (one
+> `BUG FIX:` label at `src/play/game.rs:219` documents an already-applied fix,
+> not an open bug). This pass added roughly 20 previously-untracked TODOs,
+> folded in below by section — mostly flavor text and vague "what should this
+> do" notes rather than new load-bearing debt.
 >
-> The automated review pass below ran **2026-08-18** and is now 25 days and
-> seven releases old; it predates the `TableCelled` removal, every `0.11.0`
-> signature change, and all four EPIC-39 modules in `src/bot/`. **Do not trust
-> the 🤖 section as current** — ask for a re-run.
+> The automated review pass below ran **2026-08-18** and is now over three
+> weeks and multiple releases old; it predates the `TableManager`/`TableEvent`
+> removal and the `0.12.5` clippy-pedantic cleanup. **Do not trust the 🤖
+> section as current** — ask for a re-run.
 
 ## Tracked debt
 
@@ -94,6 +95,50 @@ leaking back in._
 - [ ] **Retired gRPC example stub** — `TODO: Implement event streaming`. Dead code if `pkdealer` owns the server now. (`examples/retired/dealer_grpc_server.rs:354`)
 - [ ] **Terminal input helpers unfinished** — a bare `TODO` and a note to move to RustyLine. (`src/util/terminal.rs:119`, `:129`)
 - [ ] **Weak randomizer** — `TODO: Craft better randomizer`. (`src/util/random_ordering.rs:6`)
+
+### Newly found, 2026-09-13 — untracked comment TODOs
+
+_First time these are captured. Mostly small, some are vague enough that the
+right move is deleting the comment rather than acting on it — flagged where
+that looks true._
+
+- [ ] **`play/game.rs:427` — `TODONE TD: Resolve this.`** — the `TODONE`
+  spelling reads like a half-finished edit; unclear whether the marker itself
+  is stale or the work is. Worth a look before the next `play/game.rs` change.
+- [ ] **`Cards` gaps** — `TODO: Add the ability to pass in burn cards`
+  (`src/cards.rs:103`); `TODO: Refactor this to return the Cards as
+  BoxedCards, instead of an examples` (`src/cards.rs:200`).
+- [ ] **`Rank`/`Suit` char round-trip** — `TODO NOTE: I wonder if there is a
+  better way to go back and forth from chars?` (`src/rank.rs:92`); a `TODO
+  Early` tag with no body (`src/suit.rs:5`).
+- [ ] **GTO layer stubs** — `TODO: Add logging`
+  (`src/analysis/gto/combo.rs:3682`); a vague aspirational note about future
+  gameplay work (`src/analysis/gto/mod.rs:2416`).
+- [ ] **`arrays/mod.rs` open questions** — `TODO: How can we make this work?`
+  (`:73`) and `TODO ¿Is there a way to do this directly from the trait?`
+  (`:116`).
+- [ ] **`arrays/two.rs:20`** — `TODO: Can we do this with a macro?`
+- [ ] **`hole_cards/twos.rs:32`** — bare `TODO: do that`, no context.
+- [ ] **`play/hole_cards.rs:51`** — `TODO: Refactor to Two;`.
+- [ ] **`play/stages/flop_eval.rs`** — two more markers beyond the tracked
+  `TODO RF` at `:226`: `TODO: Add the ability to calculate the effective
+  nuts` (`:178`) and `TODO: Even spacing for each result string` (`:255`,
+  cosmetic).
+- [ ] **`arrays/seven.rs:121`** — `TODO: Align around passing by reference or
+  value for primitives.`
+- [ ] **Cosmetic-only, low priority** — `println!()` spacing questions at
+  `src/analysis/nubibus.rs:346` and `:376`; a joke aside at
+  `src/analysis/store/db/hup.rs:449` (`TODO: Write about music and mood and
+  pairing`); an artist's-statement comment at `src/rank.rs:8`; `TODO: Section
+  on defect vectors` at `src/analysis/case_eval.rs:66`; `TODO: Make sure to
+  write something about the inability to use the and trait to consts` at
+  `src/bard.rs:237`; `TODO Continue refactoring` on a test case attribute at
+  `src/card.rs:756`. None of these describe behavior that is wrong — candidates
+  for deleting the comment rather than actioning it.
+- [ ] **`lib.rs:529`** — `TODO: Write on demand tests (ignore) to validate
+  these numbers against our code`, the same combinatorial-constants concern
+  already tracked under **Self-declared missing tests** at `lib.rs:557` — two
+  markers, one issue.
 
 ## 🤖 Automated review findings
 

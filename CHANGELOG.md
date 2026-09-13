@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-09-13
+
+### Changed
+
+- **`cardpack` bumped from 0.6.9 to 0.11.1.** This is EPIC-84 Phase 0
+  ([docs/epics/EPIC-84_Sealed_Table_Cardpack.md](docs/epics/EPIC-84_Sealed_Table_Cardpack.md)),
+  unblocking the sealed-table work by consuming cardpack's shipped seal
+  kernel instead of building one in pkcore. `src/bard.rs`'s `to_pile()`
+  returns cardpack's `BasicPile`, which reaches pkcore's public API, so a
+  dependency major-equivalent jump like this counts as a breaking change for
+  any downstream crate pinned to `cardpack` 0.6.x, hence the minor bump. No
+  pkcore source changes were needed — the `BasicPile` / `Pile` / `Standard52`
+  surface `src/bard.rs` uses is unchanged between the two versions.
+
 ## [0.13.0] - 2026-09-13
 
 ### Removed

@@ -114,7 +114,7 @@ spec — not a pkcore trait.
 | Component | Status |
 |---|---|
 | Decision record: consume cardpack 0.11.0, retire 79b build plan | Draft (this doc) |
-| Phase 0 — cardpack `0.6.9` → `0.11.0` bump | Not started |
+| Phase 0 — cardpack `0.6.9` → `0.11.1` bump | Done (0.14.0, 2026-09-13) |
 | Phase 1 — `Ordinal` bridge + golden test (`src/seal/ordinal.rs`) | Not started |
 | Phase 2 — `TableCrypt` (SlotPile deck, slot-level events, reveal boundary) | Not started |
 | Phase 3 — `commit-reveal` passthrough feature + `ShuffleRound` wiring | Not started |
