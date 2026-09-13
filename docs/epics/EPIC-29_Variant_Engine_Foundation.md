@@ -30,21 +30,25 @@ ships.
 
 ## Status
 
+**Note:** this table dated stale — it was left at its pre-work "Planned" state
+even after the epic shipped. See the [Phase status summary](#phase-status-summary)
+below for the up-to-date, phase-by-phase record; this table now mirrors it.
+
 | Component | Status |
 |---|---|
-| `BettingStructure` enum (`src/games/betting_structure.rs`, new) | Planned |
-| `GameFamily` enum (`src/games/mod.rs`) | Planned |
-| `GameType` accessors `family()` / `betting()` + new flat variants | Planned |
-| `cards_on_board` bug fix for PLO | Planned |
-| `Street` descriptor (`src/games/street.rs`, new) | Planned |
-| Generalized `GamePhase` driven by per-family street descriptors | Planned |
-| `HoleCards` per-card visibility + variable size | Planned |
-| `Board` generalization (community vs none) | Planned |
-| `TableNoCell` construction generalization | Planned |
-| `ForcedBets` extended for ante + bring-in shape | Planned |
-| `nlh_from_seats` becomes thin wrapper over generic constructor | Planned |
-| All existing NLHE tests pass unchanged | Planned |
-| `RELEASE_AUDIT_X.Y.Z.md` clean for all downstream consumers | Planned |
+| `BettingStructure` enum (`src/games/betting_structure.rs`, new) | ✅ Shipped |
+| `GameFamily` enum (`src/games/mod.rs`) | ✅ Shipped |
+| `GameType` accessors `family()` / `betting()` + new flat variants | ✅ Shipped |
+| `cards_on_board` bug fix for PLO | ✅ Shipped |
+| `Street` descriptor (`src/games/street.rs`, new) | ✅ Shipped |
+| Generalized `GamePhase` driven by per-family street descriptors | ✅ Shipped |
+| `HoleCards` per-card visibility + variable size | ✅ Shipped additively |
+| `Board` generalization (community vs none) | 🔒 Deferred — see corrigendum item 3 |
+| `TableNoCell` construction generalization | ✅ Shipped |
+| `ForcedBets` extended for ante + bring-in shape | ✅ Shipped additively |
+| `nlh_from_seats` becomes thin wrapper over generic constructor | ✅ Shipped |
+| All existing NLHE tests pass unchanged | ✅ Shipped |
+| `RELEASE_AUDIT_X.Y.Z.md` clean for all downstream consumers | ✅ Shipped |
 
 ---
 
