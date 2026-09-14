@@ -7,10 +7,11 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-09-13** against `main` @ `ab186a91`, pkcore `0.13.0`
-> (working tree clean). Since the 2026-09-12 pass: `TableManager`/`TableEvent`
-> were removed (`0.13.0`, breaking). DEFECT_025 (all-in run-out never
-> completes) is fixed, in `0.12.4`.
+> Last refreshed **2026-09-13** against `main` @ `11ddc54d`, pkcore `0.14.0`
+> (working tree clean). Since the `ab186a91` pass: `cardpack` bumped to
+> `0.11.1` (EPIC-84 Phase 0); two of the three self-declared missing-test
+> items below closed (`heads_up.rs:150`, `game.rs:345`); EPIC-29/EPIC-87
+> status-table drift fixed (see `docs/BACKLOG.md`).
 > Marker census in `src/` (2026-09-13, `grep -rn 'TODO\|FIXME\|HACK\|XXX\|BUG'
 > --include=*.rs src/`, excluding the `expect("TODO: panic message")` idiom):
 > **60 comment-marker hits**, of which **10 `TODO RF`** and **3 `TODO TD`**.
@@ -59,10 +60,10 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
 _The author flagged these directly in source. They are the clearest violations
 of the `CLAUDE.md` rule that every public fn carries a unit test._
 
-- [ ] **`analysis/store/heads_up.rs`** — `TODO: Write tests!!!` (`src/analysis/store/heads_up.rs:150`)
-- [ ] **`play/game.rs`** — `TODO: Write some fucking tests.` (`src/play/game.rs:345`)
-- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` (`src/play/game.rs:903`)
-- [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. (`src/lib.rs:557`; line moved from `:467` by 2026-09-12)
+- [x] ~~**`analysis/store/heads_up.rs`** — `TODO: Write tests!!!`~~ — **DONE 2026-09-13** in `0.14.0`. Eight tests now colocated in the module; the TODO comment is gone. (`src/analysis/store/heads_up.rs:150`)
+- [x] ~~**`play/game.rs`** — `TODO: Write some fucking tests.`~~ — **DONE 2026-09-13** in `0.14.0`. (`src/play/game.rs:345`)
+- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` Still open; the `0.14.0` test pass covered its two siblings but not this one. (`src/play/game.rs:912`; line moved from `:903`)
+- [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. Still open. (`src/lib.rs:557`; line moved from `:467` by 2026-09-12)
 
 ### Missing `# Errors` documentation
 
