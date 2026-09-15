@@ -72,6 +72,7 @@ impl HUPResult {
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    #[cfg(feature = "hup-charts")]
     pub fn lookup(from: &Two, to: &Two) -> Result<Self, PKError> {
         use crate::analysis::store::embedded::hup_cache;
         let shu = SortedHeadsUp::new(*from, *to);

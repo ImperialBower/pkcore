@@ -316,7 +316,7 @@
 //!
 //! ## Parallelism
 //!
-//! The `parallel` feature (on by default) backs the `par_*` methods on
+//! The `parallel` feature (off by default since 0.16.0; part of `full`) backs the `par_*` methods on
 //! [`Pile`], [`Cards`] and [`Deck`](crate::deck::Deck),
 //! and the multi-threaded drivers inside the equity engine, range equity and
 //! turn evaluation, with [rayon](https://docs.rs/rayon).
@@ -324,11 +324,11 @@
 //! **Turn it off for `wasm32-unknown-unknown`.** A browser target has no
 //! threads to spawn, so a WASM build that links rayon carries a thread pool
 //! that can never run — and the failure shows up at runtime, in the browser,
-//! rather than at compile time. Depend on pkcore with
-//! `default-features = false` and omit `parallel`:
+//! rather than at compile time. The default features leave it off, so a plain
+//! dependency is already safe:
 //!
 //! ```toml
-//! pkcore = { version = "0.11", default-features = false, features = ["equity"] }
+//! pkcore = "0.16"
 //! ```
 //!
 //! With the feature off, `rayon` and `rayon-core` leave the dependency tree
@@ -355,7 +355,7 @@
 //!
 //! About 3×, not 8×. Half the M1's cores are efficiency cores, and the two
 //! exact paths bridge a single `Combinations` iterator with
-//! [`par_bridge`](rayon::iter::ParallelBridge::par_bridge), so the generator
+//! `rayon`'s `par_bridge`, so the generator
 //! itself stays serial and only the evaluation fans out. The Monte Carlo path
 //! splits a plain integer range instead, which is why it scales best.
 //!

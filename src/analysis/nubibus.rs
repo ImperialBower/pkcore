@@ -1,5 +1,6 @@
 use crate::arrays::two::Two;
 use crate::casino::action::TableAction;
+use crate::casino::table::{Player, Seat};
 use crate::games::GamePhase;
 use crate::games::GameType;
 use crate::play::board::Board;
@@ -11,12 +12,15 @@ use crate::{PKError, Pile, Plurable, Unumable};
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
+#[cfg(feature = "persistence")]
 use std::fs;
 use std::ops::Index;
+#[cfg(feature = "persistence")]
 use std::path::Path;
 use std::str::FromStr;
 #[cfg(all(unix, feature = "terminal"))]
 use termion::color;
+use uuid::Uuid;
 #[cfg(not(all(unix, feature = "terminal")))]
 mod color {
     pub struct Fg<T>(pub T);
@@ -387,6 +391,7 @@ impl Nubificus {
     /// # Errors
     ///
     /// Throws an error if path doesn't exist.
+    #[cfg(feature = "persistence")]
     pub fn get_log_files(path: &str) -> Result<Vec<String>, PKError> {
         let dir = Path::new(path);
         let mut log_files = Vec::new();
@@ -429,6 +434,10 @@ impl FromStr for Nubificus {
 /// Every seat is staked to 10,000 — the Pluribus experiment's fixed stack —
 /// and the button sits on the last seat, which makes seat 0 the small blind.
 ///
+/// Ids are derived, not random: each player's id is a UUID v5 of their name,
+/// so a player keeps one id across every hand of a log, and the table's id is
+/// a UUID v5 of the log line. Replaying a hand twice gives equal tables.
+///
 /// Ported from `TryFrom<&Pluribus> for TableCelled` by EPIC-83. Lives here
 /// rather than in `casino::table` to keep the log-replay concern next to
 /// [`Pluribus`].
@@ -436,7 +445,13 @@ impl TryFrom<&Pluribus> for Table {
     type Error = PKError;
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
-        let mut seats = Seats::from(pluribus.players.clone());
+        let mut seats = Seats::new(
+            pluribus
+                .players
+                .iter()
+                .map(|name| Seat::new(Player::with_id(Pluribus::player_id(name), name.clone(), 0)))
+                .collect(),
+        );
         for seat in &mut seats {
             seat.player.chips = Pluribus::STARTING_STACK;
             seat.cards = BoxedCards::blanks(2);
@@ -463,10 +478,11 @@ impl TryFrom<&Pluribus> for Table {
             stacked.push(board[4]);
         }
 
-        let mut table = Table::nlh_primed(
+        let mut table = Table::nlh_primed_with_id(
             seats,
             &Cards::from(stacked),
             ForcedBets::new(Pluribus::SMALL_BLIND, Pluribus::BIG_BLIND),
+            Uuid::new_v5(&Pluribus::ID_NAMESPACE, pluribus.raw.as_bytes()),
         );
 
         table.button = table.seats.size().saturating_sub(1);
@@ -759,6 +775,15 @@ impl Pluribus {
     /// Every seat in the Pluribus experiment started each hand with a fixed
     /// 10,000-chip stack, so a rebuilt table stakes everyone to the same.
     pub const STARTING_STACK: usize = 10_000;
+
+    /// Namespace for the UUID v5 ids a replayed hand gets (see
+    /// `TryFrom<&Pluribus> for Table`).
+    const ID_NAMESPACE: Uuid = Uuid::from_u128(0x3c1e_8f5a_9d2b_4c6e_a7f0_1b2c_3d4e_5f60);
+
+    /// The stable id for the player named `handle`.
+    fn player_id(handle: &str) -> Uuid {
+        Uuid::new_v5(&Pluribus::ID_NAMESPACE, handle.as_bytes())
+    }
     /// Hold'em has four betting rounds, so a full hand carries at most three
     /// dividers — one after every round but the river.
     const LAST_BETTING_ROUND: usize = 3;
@@ -1262,7 +1287,7 @@ impl Pluribus {
     /// `STATE:` line per hand.
     ///
     /// Returns a `String` and **does not touch the filesystem**.
-    /// [`Pluribus::read_in_log`] reads because reading was already there;
+    /// `Pluribus::read_in_log` (feature `persistence`) reads because reading was already there;
     /// writing does not get to add an I/O path to the kernel. `examples/unum.rs`
     /// owns the `fs::write`.
     ///
@@ -1307,21 +1332,36 @@ impl Pluribus {
         log
     }
 
+    /// Every hand in the text of a Pluribus log — the reading twin of
+    /// [`Pluribus::write_log`]. Lines that do not parse as a hand, such as the
+    /// `#` header, are skipped. Touches no filesystem.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::nubibus::Pluribus;
+    ///
+    /// let text = "# header\nSTATE:0:ffr225fr1050ff:JdJh|5c7d|Kc2c|4c9s|Ac8h|6hTs:325|-100|0|0|-225|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus\n";
+    /// let hands = Pluribus::parse_log(text);
+    /// assert_eq!(1, hands.len());
+    /// assert_eq!(0, hands[0].index);
+    /// ```
+    #[must_use]
+    pub fn parse_log(text: &str) -> Vec<Pluribus> {
+        text.lines().filter_map(|line| Pluribus::from_str(line).ok()).collect()
+    }
+
+    /// Reads `filename` and hands its text to [`Pluribus::parse_log`]. A file
+    /// that cannot be read gives no hands.
+    ///
     /// # Errors
     ///
-    /// `PKError::InvalidPluribusIndex`
+    /// None today; the `Result` is kept for API stability.
+    #[cfg(feature = "persistence")]
     pub fn read_in_log(filename: &str) -> Result<Vec<Pluribus>, PKError> {
-        let mut games = Vec::new();
-
-        if let Ok(lines) = Util::read_lines(filename) {
-            for ip in lines.map_while(Result::ok) {
-                if let Ok(pl) = Pluribus::from_str(ip.as_str()) {
-                    games.push(pl);
-                }
-            }
-        }
-
-        Ok(games)
+        Ok(std::fs::read_to_string(filename)
+            .map(|text| Pluribus::parse_log(&text))
+            .unwrap_or_default())
     }
 }
 
@@ -1924,6 +1964,62 @@ mod analysis__nubibus__unum_tests {
     /// An all-in run-out: the betting ends pre-flop, but the board still runs
     /// out and the log terminates all three actionless rounds — `c///`.
     const ALL_IN_RUN_OUT: &str = "STATE:75:fffr225fr1100r2558r6655r10000c///:4s6d|KsKh|Jh5h|9dQc|4hJs|QsQh/5dKdTh/Ac/7d:-50|10050|0|0|0|-10000:MrPink|MrOrange|Pluribus|MrBlue|MrBlonde|MrWhite";
+
+    #[test]
+    fn table_from_pluribus__same_hand_gives_equal_tables() {
+        let hand = Pluribus::from_str(CUMULATIVE).unwrap();
+        assert_eq!(Table::try_from(&hand).unwrap(), Table::try_from(&hand).unwrap());
+    }
+
+    #[test]
+    fn table_from_pluribus__a_player_keeps_one_id_across_hands() {
+        let id_of = |line: &str| {
+            let table = Table::try_from(&Pluribus::from_str(line).unwrap()).unwrap();
+            table
+                .seats
+                .0
+                .iter()
+                .find(|seat| seat.player.handle == "Pluribus")
+                .map(|seat| seat.player.id)
+                .unwrap()
+        };
+        assert_eq!(id_of(CUMULATIVE), id_of(PREFLOP_ONLY));
+    }
+
+    #[test]
+    fn table_from_pluribus__different_players_get_different_ids() {
+        let table = Table::try_from(&Pluribus::from_str(CUMULATIVE).unwrap()).unwrap();
+        let ids: std::collections::HashSet<_> = table.seats.0.iter().map(|seat| seat.player.id).collect();
+        assert_eq!(table.seats.0.len(), ids.len());
+    }
+
+    #[test]
+    fn parse_log__reads_back_what_write_log_wrote() {
+        let hands = vec![
+            Pluribus::from_str(CUMULATIVE).unwrap(),
+            Pluribus::from_str(PREFLOP_ONLY).unwrap(),
+            Pluribus::from_str(ALL_IN_RUN_OUT).unwrap(),
+        ];
+        let log = Pluribus::write_log("sample_game_87", &hands);
+        // `write_log` canonicalises hole-card order, and `raw` keeps the text a
+        // hand was parsed from, so compare the rendered hands rather than `raw`.
+        let rendered = |hands: &[Pluribus]| hands.iter().map(Pluribus::to_pluribus).collect::<Vec<_>>();
+        assert_eq!(rendered(&hands), rendered(&Pluribus::parse_log(&log)));
+    }
+
+    #[test]
+    fn parse_log__skips_lines_that_are_not_hands() {
+        let text = format!("# header\n\nnot a hand\n{PREFLOP_ONLY}\n");
+        assert_eq!(
+            vec![Pluribus::from_str(PREFLOP_ONLY).unwrap()],
+            Pluribus::parse_log(&text)
+        );
+    }
+
+    #[test]
+    fn parse_log__empty_text_gives_no_hands() {
+        assert!(Pluribus::parse_log("").is_empty());
+    }
 
     #[test]
     fn pluribus_event_renders_log_token_not_display() {

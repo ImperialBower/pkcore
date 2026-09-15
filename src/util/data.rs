@@ -18,8 +18,16 @@ use crate::play::hole_cards::HoleCards;
 use crate::prelude::{BoxedCards, ForcedBets, Forgiving, Seats, Table};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
+use uuid::Uuid;
 use wincounter::win::Win;
 use wincounter::wins::Wins;
+
+/// A fixture player with a fixed id, so every fixture table is identical run
+/// to run. Ids are stable per name: the same person is the same id in every
+/// fixture.
+fn fixture_player(id: u128, handle: &str, stack: usize) -> Player {
+    Player::with_id(Uuid::from_u128(id), handle.to_string(), stack)
+}
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)
@@ -248,38 +256,14 @@ impl TestData {
     #[must_use]
     pub fn the_hand_players() -> Vec<Seat> {
         vec![
-            Seat::new_with_cards(
-                Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
-                BoxedCards::blanks(2),
-            ),
+            Seat::new_with_cards(fixture_player(1, "Doyle Brunson", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(2, "Eli Elezra", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(3, "Antonio Esfandari", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(4, "Gus Hansen", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(5, "Daniel Negreanu", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(6, "Cory Zeidman", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(7, "Barry Greenstein", 1_000_000), BoxedCards::blanks(2)),
+            Seat::new_with_cards(fixture_player(8, "Amnon Filippi", 1_000_000), BoxedCards::blanks(2)),
         ]
     }
 
@@ -288,38 +272,14 @@ impl TestData {
     #[must_use]
     pub fn the_hand_seats() -> Vec<Seat> {
         vec![
-            Seat::new_with_cards(
-                Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
-                boxed!("T♠ 2♥"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
-                boxed!("8♠ 3♥"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-                boxed!("A♦ Q♣"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-                boxed!("5♦ 5♣"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
-                boxed!("6♠ 6♥"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
-                boxed!("K♠ J♦"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
-                boxed!("4♣ 4♦"),
-            ),
-            Seat::new_with_cards(
-                Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
-                boxed!("7♣ 2♣"),
-            ),
+            Seat::new_with_cards(fixture_player(1, "Doyle Brunson", 1_000_000), boxed!("T♠ 2♥")),
+            Seat::new_with_cards(fixture_player(2, "Eli Elezra", 1_000_000), boxed!("8♠ 3♥")),
+            Seat::new_with_cards(fixture_player(3, "Antonio Esfandari", 1_000_000), boxed!("A♦ Q♣")),
+            Seat::new_with_cards(fixture_player(4, "Gus Hansen", 1_000_000), boxed!("5♦ 5♣")),
+            Seat::new_with_cards(fixture_player(5, "Daniel Negreanu", 1_000_000), boxed!("6♠ 6♥")),
+            Seat::new_with_cards(fixture_player(6, "Cory Zeidman", 1_000_000), boxed!("K♠ J♦")),
+            Seat::new_with_cards(fixture_player(7, "Barry Greenstein", 1_000_000), boxed!("4♣ 4♦")),
+            Seat::new_with_cards(fixture_player(8, "Amnon Filippi", 1_000_000), boxed!("7♣ 2♣")),
         ]
     }
 
@@ -378,10 +338,11 @@ impl TestData {
         // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
         let primed = TestData::rotated_for_plain_deal(&primed, 3, 2);
-        Table::nlh_primed(
+        Table::nlh_primed_with_id(
             Seats::new(TestData::min_players()),
             &Cards::deck_primed(&primed),
             ForcedBets::new(50, 100),
+            Uuid::nil(),
         )
     }
 
@@ -389,10 +350,11 @@ impl TestData {
     #[must_use]
     pub fn the_hand_table() -> Table {
         let primed = TestData::rotated_for_plain_deal(&TestData::the_hand_cards_dealable(), 8, 2);
-        Table::nlh_primed(
+        Table::nlh_primed_with_id(
             Seats::new(TestData::the_hand_players()),
             &Cards::deck_primed(&primed),
             ForcedBets::new(50, 100),
+            Uuid::nil(),
         )
     }
 
@@ -421,15 +383,12 @@ impl TestData {
     #[must_use]
     pub fn split_pot_table(cards: &Cards) -> Table {
         let seats = Seats::new(vec![
-            Seat::new_with_cards(Player::new_with_chips("Rich Man".to_string(), 10_000), boxed!("Q♦ Q♣")),
-            Seat::new_with_cards(Player::new_with_chips("Poor Man".to_string(), 5_000), boxed!("A♠ A♥")),
-            Seat::new_with_cards(
-                Player::new_with_chips("Average Person".to_string(), 9_000),
-                boxed!("4♣ 4♦"),
-            ),
+            Seat::new_with_cards(fixture_player(9, "Rich Man", 10_000), boxed!("Q♦ Q♣")),
+            Seat::new_with_cards(fixture_player(10, "Poor Man", 5_000), boxed!("A♠ A♥")),
+            Seat::new_with_cards(fixture_player(11, "Average Person", 9_000), boxed!("4♣ 4♦")),
         ]);
 
-        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+        Table::nlh_primed_with_id(seats, cards, ForcedBets::new(50, 100), Uuid::nil())
     }
 }
 

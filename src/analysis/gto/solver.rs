@@ -70,7 +70,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
 use std::path::Path;
 
 /// Pre-computed showdown results keyed by hand pair and optional runout card.
@@ -149,6 +149,7 @@ impl From<std::io::Error> for SolverError {
     }
 }
 
+#[cfg(feature = "json")]
 #[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_json::Error> for SolverError {
     fn from(e: serde_json::Error) -> Self {
@@ -218,7 +219,7 @@ impl SolverResult {
 
     /// Serializes this result to compact binary bytes using postcard.
     ///
-    /// Unlike [`save_binary`][Self::save_binary] this method does **not** touch
+    /// Unlike `save_binary` (feature `persistence`) this method does **not** touch
     /// the filesystem, making it safe to call from any target including
     /// WebAssembly. The caller is responsible for persisting the returned bytes
     /// (e.g. writing to a file on native, or passing to JavaScript on WASM).
@@ -311,6 +312,7 @@ impl SolverResult {
     /// let json = result.to_json_string().unwrap();
     /// assert!(json.contains("iterations"));
     /// ```
+    #[cfg(feature = "json")]
     pub fn to_json_string(&self) -> Result<String, SolverError> {
         Ok(serde_json::to_string_pretty(self)?)
     }
@@ -344,6 +346,7 @@ impl SolverResult {
     /// let loaded = pkcore::analysis::gto::solver::SolverResult::from_json_str(&json).unwrap();
     /// assert_eq!(loaded.iterations, result.iterations);
     /// ```
+    #[cfg(feature = "json")]
     pub fn from_json_str(s: &str) -> Result<Self, SolverError> {
         Ok(serde_json::from_str(s)?)
     }
@@ -385,7 +388,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save("/tmp/my_solve.bin").unwrap();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         #[cfg(feature = "debug-json")]
         {
@@ -417,7 +420,7 @@ impl SolverResult {
     /// let result = SolverResult::load("/tmp/my_solve.bin").unwrap();
     /// println!("iterations={} exploitability={:.4}", result.iterations, result.exploitability);
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         #[cfg(feature = "debug-json")]
         {
@@ -451,7 +454,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_binary("/tmp/my_solve.bin").unwrap();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save_binary(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         let bytes = self.to_binary_bytes()?;
         std::fs::write(path, bytes)?;
@@ -472,7 +475,7 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_binary("/tmp/my_solve.bin").unwrap();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load_binary(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let bytes = std::fs::read(path)?;
         Self::from_binary_bytes(&bytes)
@@ -500,7 +503,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_json("/tmp/my_solve.json").unwrap();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         let json = self.to_json_string()?;
         std::fs::write(path, json)?;
@@ -521,7 +524,7 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_json("/tmp/my_solve.json").unwrap();
     /// ```
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load_json(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let json = std::fs::read_to_string(path)?;
         Self::from_json_str(&json)
@@ -1864,6 +1867,7 @@ mod analysis__gto__solver__tests {
         assert_round_trip_eq(&original, &loaded);
     }
 
+    #[cfg(feature = "json")]
     #[test]
     fn test_solver_result_json_string_round_trip() {
         let original = small_result();
@@ -1872,7 +1876,7 @@ mod analysis__gto__solver__tests {
         assert_round_trip_eq(&original, &loaded);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_binary_round_trip() {
         let original = small_result();
@@ -1883,7 +1887,7 @@ mod analysis__gto__solver__tests {
         let _ = std::fs::remove_file(&path);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_json_round_trip() {
         let original = small_result();
@@ -1894,7 +1898,7 @@ mod analysis__gto__solver__tests {
         let _ = std::fs::remove_file(&path);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_default_save_load_round_trip() {
         // save/load use binary by default (debug-json feature not enabled in tests).
@@ -1920,6 +1924,7 @@ mod analysis__gto__solver__tests {
         );
     }
 
+    #[cfg(feature = "json")]
     #[test]
     fn test_solver_result_from_bad_json_returns_json_error() {
         let result = SolverResult::from_json_str("not valid json {{{{");
@@ -1932,14 +1937,14 @@ mod analysis__gto__solver__tests {
         assert!(matches!(result.unwrap_err(), SolverError::Binary(_)));
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_load_missing_file_returns_io_error() {
         let result = SolverResult::load_binary("/tmp/pkcore_nonexistent_file_xyz.bin");
         assert!(matches!(result.unwrap_err(), SolverError::Io(_)));
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_load_bad_json_returns_json_error() {
         let path = std::env::temp_dir().join("pkcore_test_bad_json.json");
@@ -1949,7 +1954,7 @@ mod analysis__gto__solver__tests {
         let _ = std::fs::remove_file(&path);
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn test_solver_result_load_bad_binary_returns_binary_error() {
         let path = std::env::temp_dir().join("pkcore_test_bad_bin.bin");

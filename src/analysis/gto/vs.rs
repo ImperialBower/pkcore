@@ -10,6 +10,7 @@ use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::flop_eval::FlopEval;
 use crate::{GTO, PKError, Pile, SOK};
+#[cfg(any(feature = "hup-charts", all(feature = "store", not(target_arch = "wasm32"))))]
 use std::collections::HashMap;
 
 use crate::analysis::store::db::hup::HUPResult;
@@ -108,6 +109,7 @@ impl Versus {
     /// Returns `PKError::SqlError` if any matchup is missing from the embedded cache.
     /// A missing entry indicates a corrupt or incomplete cache, so the entire operation fails
     /// rather than returning a partial result that would silently produce wrong equity calculations.
+    #[cfg(feature = "hup-charts")]
     pub fn hups_at_deal(&self) -> Result<HashMap<Two, HUPResult>, PKError> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 

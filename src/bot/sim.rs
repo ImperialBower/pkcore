@@ -198,11 +198,10 @@ pub struct SimResult {
 pub struct SimTable {
     table: Table,
     bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
-    /// Optional seeded RNG. When `Some`, the deck shuffle and every decider
-    /// dispatch route through this generator instead of the thread-local
-    /// [`rand::rng()`]. Attached via [`Self::with_seed`] / [`Self::with_rng`].
-    /// Lets integration tests reproduce a 1,000-hand run deterministically.
-    seed_rng: Option<rand::rngs::SmallRng>,
+    /// The RNG behind the deck shuffle and every decider dispatch. Starts as
+    /// [`Self::unseeded_rng`]; [`Self::with_seed`] / [`Self::with_rng`] replace
+    /// it, which is what lets tests reproduce a 1,000-hand run.
+    seed_rng: rand::rngs::SmallRng,
     /// Optional cash-game buy-in. When `Some(buy_in)`, [`Self::run_n_hands`]
     /// resets every stack to `buy_in` before each hand and accumulates the
     /// per-hand chip delta, so no player is eliminated and strategy strength is
@@ -256,7 +255,7 @@ impl SimTable {
         Self {
             table,
             bots,
-            seed_rng: None,
+            seed_rng: Self::unseeded_rng(),
             cash_mode: None,
             #[cfg(feature = "player-stats")]
             stats_registry: None,
@@ -298,7 +297,7 @@ impl SimTable {
         Self {
             table,
             bots,
-            seed_rng: None,
+            seed_rng: Self::unseeded_rng(),
             cash_mode: None,
             #[cfg(feature = "player-stats")]
             stats_registry: None,
@@ -436,10 +435,28 @@ impl SimTable {
     /// assert!(result.hands_played > 0);
     /// # }
     /// ```
+    /// The seed a `SimTable` uses when none is given and the `entropy`
+    /// feature is off.
+    pub const DEFAULT_SEED: u64 = 0;
+
+    /// The RNG a new `SimTable` starts with: seeded from the OS with the
+    /// `entropy` feature, from [`Self::DEFAULT_SEED`] without it.
+    fn unseeded_rng() -> rand::rngs::SmallRng {
+        use rand::SeedableRng as _;
+        #[cfg(feature = "entropy")]
+        {
+            rand::rngs::SmallRng::from_os_rng()
+        }
+        #[cfg(not(feature = "entropy"))]
+        {
+            rand::rngs::SmallRng::seed_from_u64(Self::DEFAULT_SEED)
+        }
+    }
+
     #[must_use]
     pub fn with_seed(mut self, seed: u64) -> Self {
         use rand::SeedableRng as _;
-        self.seed_rng = Some(rand::rngs::SmallRng::seed_from_u64(seed));
+        self.seed_rng = rand::rngs::SmallRng::seed_from_u64(seed);
         self
     }
 
@@ -450,7 +467,7 @@ impl SimTable {
     /// fresh from a `u64` seed.
     #[must_use]
     pub fn with_rng(mut self, rng: rand::rngs::SmallRng) -> Self {
-        self.seed_rng = Some(rng);
+        self.seed_rng = rng;
         self
     }
 
@@ -553,19 +570,11 @@ impl SimTable {
     pub fn run_hand(&mut self) -> Result<HandResult, PKError> {
         self.eliminate_busted();
 
-        // Seeded path: shuffle with the sim's RNG and notify deciders with the
-        // same RNG so JokerDecider's per-hand profile rotation is reproducible.
-        // Unseeded path preserves the existing thread-local-RNG behavior.
-        if let Some(rng) = self.seed_rng.as_mut() {
-            self.table.deck.shuffle_in_place_with(rng);
-            for (_, _, decider) in &self.bots {
-                decider.on_new_hand_with_rng(rng);
-            }
-        } else {
-            self.table.deck.shuffle_in_place();
-            for (_, _, decider) in &self.bots {
-                decider.on_new_hand();
-            }
+        // Shuffle with the sim's RNG and notify deciders with the same RNG so
+        // JokerDecider's per-hand profile rotation is reproducible.
+        self.table.deck.shuffle_in_place_with(&mut self.seed_rng);
+        for (_, _, decider) in &self.bots {
+            decider.on_new_hand_with_rng(&mut self.seed_rng);
         }
 
         // Pre-hand state for stats ingestion. `None` when no registry attached.
@@ -844,15 +853,11 @@ impl SimTable {
             // Clone profile so we can release the bots borrow before the decide call.
             let profile = self.bots[bot_idx].1.clone();
 
-            // Seeded path uses `decide_seeded` so RuleBasedDecider's internal
-            // probability draws (and any future randomized deciders) consume
-            // from the sim's RNG instead of the thread-local. Unseeded path
-            // preserves the existing thread-local-RNG behavior.
-            let action = if let Some(rng) = self.seed_rng.as_mut() {
-                self.bots[bot_idx].2.decide_seeded(&profile, &snapshot, rng)
-            } else {
-                self.bots[bot_idx].2.decide(&profile, &snapshot)
-            };
+            // RuleBasedDecider's probability draws (and any future randomized
+            // deciders) consume from the sim's RNG.
+            let action = self.bots[bot_idx]
+                .2
+                .decide_seeded(&profile, &snapshot, &mut self.seed_rng);
 
             // Apply and record (borrows self.table mutably). Every accepted
             // action appends at least one entry to the event log; `apply_action`
@@ -1126,9 +1131,15 @@ impl SimTable {
     /// `winnings` and ending stacks, then feeds it into the attached registry.
     #[cfg(feature = "player-stats")]
     fn ingest_completed_hand(&mut self, pre: StatsPreHand, mid: &StatsMidHand, winnings: &Winnings) {
+        #[cfg(feature = "entropy")]
         use std::time::{SystemTime, UNIX_EPOCH};
 
+        // The wall clock is OS nondeterminism too, so it rides the `entropy`
+        // feature; the kernel build stamps 0.
+        #[cfg(feature = "entropy")]
         let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        #[cfg(not(feature = "entropy"))]
+        let ts_secs = 0;
 
         let player_snapshot: Vec<PlayerSnapshot> = pre
             .stacks

@@ -26,6 +26,7 @@ use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::{Player, Seat, Seats, Table};
+use uuid::Uuid;
 
 /// Seed for every self-play session, so runs are comparable across days.
 const SEED: u64 = 42;
@@ -48,11 +49,12 @@ fn six_max_table() -> Result<(Table, Vec<(u8, BotProfile)>), PerfError> {
     let seats = Seats::new(
         profiles
             .iter()
-            .map(|(name, _)| Seat::new(Player::new_with_chips((*name).to_string(), STACK)))
+            .zip(1_u128..)
+            .map(|((name, _), id)| Seat::new(Player::with_id(Uuid::from_u128(id), (*name).to_string(), STACK)))
             .collect(),
     );
 
-    let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    let table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(50, 100), Uuid::nil());
 
     let bots = profiles
         .iter()

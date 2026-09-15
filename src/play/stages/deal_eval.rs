@@ -1,6 +1,10 @@
 use crate::PKError;
-use crate::analysis::equity::{EquityReport, EquityRequest, Method, PlayerEquity, PlayerSpec};
+use crate::analysis::equity::{EquityReport, EquityRequest, PlayerSpec};
+#[cfg(feature = "hup-charts")]
+use crate::analysis::equity::{Method, PlayerEquity};
+#[cfg(feature = "hup-charts")]
 use crate::analysis::gto::odds::WinLoseDraw;
+#[cfg(feature = "hup-charts")]
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::play::hole_cards::HoleCards;
 use std::fmt::Formatter;
@@ -27,7 +31,8 @@ impl DealEval {
     ///
     /// Dispatches on seat count: two seats use the precomputed, wasm-safe
     /// heads-up preflop table (`HUPResult`); three to ten use the multi-way
-    /// equity engine (exact enumeration or seeded Monte Carlo).
+    /// equity engine (exact enumeration or seeded Monte Carlo). Without the
+    /// `hup-charts` feature there is no table, so two seats use the engine too.
     ///
     /// # Errors
     ///
@@ -49,6 +54,7 @@ impl DealEval {
     pub fn new(hands: HoleCards) -> Result<DealEval, PKError> {
         let report = match hands.len() {
             0 | 1 => return Err(PKError::NotEnoughHands),
+            #[cfg(feature = "hup-charts")]
             2 => heads_up_report(&hands)?,
             _ => multiway_report(&hands)?,
         };
@@ -57,6 +63,7 @@ impl DealEval {
 }
 
 /// Converts a heads-up win/lose/draw tally into a single seat's equity.
+#[cfg(feature = "hup-charts")]
 #[allow(clippy::cast_precision_loss)]
 fn player_equity_from_wld(wld: WinLoseDraw) -> PlayerEquity {
     let total = wld.total().max(1) as f64;
@@ -73,6 +80,7 @@ fn player_equity_from_wld(wld: WinLoseDraw) -> PlayerEquity {
 ///
 /// The HUP table is oriented by higher/lower hand, never seat order, so the
 /// odds are assigned to seats by checking which seat holds the higher hand.
+#[cfg(feature = "hup-charts")]
 fn heads_up_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
     let a = *hands.get(0).ok_or(PKError::NotEnoughHands)?;
     let b = *hands.get(1).ok_or(PKError::NotEnoughHands)?;
@@ -92,7 +100,8 @@ fn heads_up_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
     })
 }
 
-/// Multi-way branch (3–10 seats): the equity engine, seeded for reproducibility.
+/// Multi-way branch (3–10 seats, or 2 without `hup-charts`): the equity engine,
+/// seeded for reproducibility.
 fn multiway_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
     let players: Vec<PlayerSpec> = hands.iter().map(|two| PlayerSpec::Exact(*two)).collect();
     let mut req = EquityRequest::new(players);
@@ -135,10 +144,19 @@ mod play__stages__deal_eval_tests {
         HoleCards::from(twos)
     }
 
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn new__heads_up_uses_hup() {
         let eval = DealEval::new(hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH])).unwrap();
         assert_eq!(eval.report.method, Method::Hup);
+        assert_eq!(eval.report.players.len(), 2);
+    }
+
+    #[cfg(not(feature = "hup-charts"))]
+    #[test]
+    fn new__heads_up_without_the_chart_uses_the_equity_engine() {
+        let eval = DealEval::new(hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH])).unwrap();
+        assert_ne!(eval.report.method, Method::Hup);
         assert_eq!(eval.report.players.len(), 2);
     }
 

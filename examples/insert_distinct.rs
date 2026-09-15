@@ -5,7 +5,7 @@ use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;
 use rusqlite::Connection;
 
-/// `cargo run --example insert_distinct`
+/// `cargo run --features store,terminal --example insert_distinct`
 fn main() {
     env_logger::init();
 

@@ -7,8 +7,8 @@
 //!
 //! ```text
 //! # Emit the reference weak / strong configs, then bench them:
-//! cargo run --example bot_capability_bench -- --emit
-//! cargo run --example bot_capability_bench -- --hands 20000 --seed 42 \
+//! cargo run --features full --example bot_capability_bench -- --emit
+//! cargo run --features full --example bot_capability_bench -- --hands 20000 --seed 42 \
 //!     data/bots/strong_all_on.yaml data/bots/weak_all_off.yaml
 //! ```
 //!

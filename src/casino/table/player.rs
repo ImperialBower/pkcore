@@ -64,14 +64,37 @@ impl Player {
     /// assert_eq!(0, p.chips);
     /// ```
     #[must_use]
+    #[cfg(feature = "entropy")]
     pub fn new(handle: String) -> Self {
+        Self::with_id(Uuid::new_v4(), handle, 0)
+    }
+
+    /// Creates a player with a caller-supplied `id` and `stack` chips.
+    ///
+    /// The deterministic constructor: [`Player::new`] and
+    /// [`Player::new_with_chips`] are this with a random v4 id, which reads OS
+    /// entropy. Use this one wherever a replay must come out identical.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use uuid::Uuid;
+    ///
+    /// let id = Uuid::from_u128(7);
+    /// let p = Player::with_id(id, "Dana".to_string(), 2_500);
+    /// assert_eq!(id, p.id);
+    /// assert_eq!(2_500, p.total_chip_count());
+    /// ```
+    #[must_use]
+    pub fn with_id(id: Uuid, handle: String, stack: usize) -> Self {
         Player {
-            id: Uuid::new_v4(),
+            id,
             handle,
-            chips: 0,
+            chips: stack,
             bet: 0,
             chips_in_play: 0,
-            withdrawn: 0,
+            withdrawn: stack,
             state: PlayerState::YetToAct,
         }
     }
@@ -87,16 +110,9 @@ impl Player {
     /// assert_eq!(5_000, p.total_chip_count());
     /// ```
     #[must_use]
+    #[cfg(feature = "entropy")]
     pub fn new_with_chips(handle: String, stack: usize) -> Self {
-        Player {
-            id: Uuid::new_v4(),
-            handle,
-            chips: stack,
-            bet: 0,
-            chips_in_play: 0,
-            withdrawn: stack,
-            state: PlayerState::YetToAct,
-        }
+        Self::with_id(Uuid::new_v4(), handle, stack)
     }
 
     /// Adds `amount` to the player's stack and records it in the cumulative
@@ -672,6 +688,46 @@ impl Display for Player {
 mod casino__table__player_tests {
     use super::*;
     use crate::casino::state::PlayerState;
+
+    #[test]
+    fn with_id__keeps_the_given_id() {
+        let id = Uuid::from_u128(7);
+        let p = Player::with_id(id, "Dana".to_string(), 2_500);
+        assert_eq!(id, p.id);
+        assert_eq!("Dana", p.handle);
+        assert_eq!(2_500, p.chips);
+        assert_eq!(2_500, p.withdrawn);
+        assert_eq!(PlayerState::YetToAct, p.state);
+    }
+
+    #[test]
+    fn with_id__same_inputs_give_equal_players() {
+        let id = Uuid::from_u128(7);
+        assert_eq!(
+            Player::with_id(id, "Dana".to_string(), 100),
+            Player::with_id(id, "Dana".to_string(), 100)
+        );
+    }
+
+    #[test]
+    fn with_id__matches_new_with_chips_apart_from_the_id() {
+        let id = Uuid::from_u128(7);
+        let shim = Player {
+            id,
+            ..Player::new_with_chips("Dana".to_string(), 100)
+        };
+        assert_eq!(shim, Player::with_id(id, "Dana".to_string(), 100));
+    }
+
+    #[test]
+    fn with_id__zero_chips_matches_new_apart_from_the_id() {
+        let id = Uuid::from_u128(7);
+        let shim = Player {
+            id,
+            ..Player::new("Dana".to_string())
+        };
+        assert_eq!(shim, Player::with_id(id, "Dana".to_string(), 0));
+    }
 
     #[test]
     fn player_new() {

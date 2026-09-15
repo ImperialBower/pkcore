@@ -112,7 +112,7 @@ use std::fs::File;
 /// we do the calculations. This is already a really heavy process. We need to save all the
 /// time we can.
 ///
-/// `cargo run --example preflop`
+/// `cargo run --features store,terminal --example preflop`
 fn main() {
     // TODO TD: There should be an easy way to cast this into our error.
     let conn = HUPResult::open_connection().unwrap();

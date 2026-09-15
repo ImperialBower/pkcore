@@ -120,6 +120,7 @@ impl Deck {
     }
 
     #[must_use]
+    #[cfg(feature = "entropy")]
     pub fn poker_cards_shuffled() -> Cards {
         let mut cards = Deck::poker_cards();
         cards.shuffle_in_place();

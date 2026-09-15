@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.14.0"
+version = "0.18.0"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -37,22 +37,25 @@ module_inception = "allow"
 upper_case_acronyms = "allow"
 
 [features]
-## Default features enable the full EPIC-26 stack (player-stats and the
-## optional persistence layer) plus bot-profiles and hand-histories so that
-## examples (e.g. interactive_play, player_stats_session) work with a plain
-## `cargo run --example`.  Downstream consumers who don't need persistence
-## can opt out with `default-features = false` and re-enable just what they
-## want.
+## Pure by default (0.16.0, docs/KERNEL_PURITY_AUDIT.md fix 1): a plain
+## `cargo add pkcore` gets the kernel — table engine, evaluation, equity, the
+## player-stats aggregator and the embedded heads-up chart — and no format crate,
+## file helper or thread pool. `make check-purity` asserts this on the default
+## tree as well as on `--no-default-features`.
 ##
-## `store` and `terminal` were dropped from this list in 0.11.0. They are the two
-## heavyweight I/O layers — `store` builds a **bundled C SQLite** (rusqlite +
-## zstd) and `terminal` pulls termion — and neither is needed to play poker, so
-## a plain `cargo add pkcore` no longer pays for them. Everything pure-compute
-## and every YAML surface stays on by default.
-##
-## Consumers that need them ask explicitly; `pkcore.js` and `pkcore.py` already
-## did (`features = ["store"]`).
+## The YAML surfaces (`bot-profiles`, `hand-histories`,
+## `player-stats-persistence`), rayon (`parallel`), and the JSON and CSV helpers
+## (`json`, `csv`), the filesystem wrappers (`persistence`) and the console
+## helpers (`terminal`) are opt-in. `full` turns all of them on, which restores
+## everything that was on by default before 0.16.0; use it to get the old
+## behaviour back, and for `cargo test`, the examples, and `make`.
 default = [
+    "player-stats",
+    "equity",
+    "hup-charts",
+    "entropy",
+]
+full = [
     "bot-profiles",
     "hand-histories",
     "player-stats",
@@ -60,13 +63,40 @@ default = [
     "equity",
     "parallel",
     "hup-charts",
+    "json",
+    "csv",
+    "persistence",
+    "terminal",
+    "entropy",
 ]
+## OS nondeterminism — randomness and the wall clock (0.18.0,
+## docs/KERNEL_PURITY_AUDIT.md fix 8). On by default. It backs the
+## conveniences that pick a random id or seed for you: `Player::new`,
+## `Table::from_seats` and the `*_from_seats` constructors, the `shuffle`
+## helpers, `Table::act_shuffle_deck`, `PokerSession::start_hand` /
+## `run_hand`, `BotDecider::decide` / `on_new_hand`, `JokerDecider::new`,
+## `casino::dealer`, and a seedless `EquityRequest` or `SimTable`. Each has a
+## twin that takes the id, seed or RNG, and core code uses only the twins, so
+## the `--no-default-features` build reads no OS randomness (`make
+## check-purity` fails on `getrandom` there).
+entropy = ["rand/os_rng", "rand/thread_rng", "uuid/v4", "dep:getrandom_v3"]
+## Filesystem convenience wrappers over the pure serializers:
+## `SolverResult::save`/`load` (+ `_binary`, `_json`), `BotProfile::to_file`/
+## `from_file`, `HandCollection::save`, `Pluribus::read_in_log`. Each has a
+## pure twin that works on bytes or strings and is always available.
+persistence = []
 ## Enables the on-disk storage layer.
-store = ["dep:rusqlite", "dep:zstd"]
-## Enables the interactive terminal layer.
+store = ["dep:rusqlite", "dep:zstd", "csv"]
+## Console helpers for the examples' REPLs: `Terminal::receive_*` (stdin and
+## stdout) and `Terminal::pause` (termion raw mode, unix only).
 terminal = ["dep:termion"]
+## `SolverResult::to_json_string` / `from_json_str` / `save_json` / `load_json`.
+json = ["dep:serde_json"]
+## CSV file helpers: `SortedHeadsUp::generate_csv` / `read_csv`,
+## `IndexCardMap::generate_csv`, and the `util::csv` module.
+csv = ["dep:csv"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable JSON
-debug-json = []
+debug-json = ["json"]
 ## Enables the pure compute multi-way equity engine in `analysis::equity`
 ## (exact enumeration plus seeded Monte Carlo). Parallelism is a separate axis:
 ## with `parallel` the engine fans out across rayon, without it the same
@@ -76,9 +106,9 @@ equity = []
 ## `Deck`, and the multi-threaded drivers inside the equity engine, range equity
 ## and turn evaluation.
 ##
-## On by default, but **not** available on `wasm32-unknown-unknown`, which has no
-## threads to spawn — a browser build must use `default-features = false` and
-## omit this feature, or the thread pool it links can never run. Turning it off
+## Off by default since 0.16.0 (in `full`). **Not** available on
+## `wasm32-unknown-unknown`, which has no threads to spawn — a browser build must
+## leave it off, or the thread pool it links can never run. Turning it off
 ## removes `rayon` and `rayon-core` from the dependency tree entirely and drops
 ## every rayon type from the public API; results are unchanged, only slower.
 parallel = ["dep:rayon", "indexmap/rayon"]
@@ -98,15 +128,16 @@ bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 ## On by default. It is a separate axis because the chart is **15.8 MB** and the
 ## knob that reads it is a *runtime* value, so the linker cannot drop the blob
 ## on the strength of a profile setting alone — a WASM consumer measured an
-## 8x larger download for it. Turning it off removes `hup_equity_vs_range` from
-## the public API and makes `preflop_charts: hup` return no answer, so the
+## 8x larger download for it. Turning it off removes the chart and every function
+## that reads it (`HUPResult::lookup`, `SortedHeadsUp::hup_result`,
+## `Versus::hups_at_deal`, `hup_equity_vs_range`) from the public API, and makes `preflop_charts: hup` return no answer, so the
 ## decider falls back to the preflop frequency roll. `preflop_charts: solver`
 ## does not read the chart and is unaffected; multi-way tables need `solver`
 ## anyway. See EPIC-39 corrigendum 16.
 hup-charts = []
 
 ## Enables the HuggingFace `pokerbench` module.
-pokerbench = []
+pokerbench = ["csv", "json"]
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
 ## 5-card hand enumeration read from a self-generated file).
 generators = []
@@ -114,13 +145,14 @@ generators = []
 [dependencies]
 cardpack = "0.11.1"
 bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
-csv = "1.4"
+csv = { version = "1.4", optional = true }
 indexmap = { version = "2.12" }
 itertools = "0.14"
 log = "0.4"
 percent-encoding = "2.3"
-rand = "0.9"
-random_name_generator = "0.3.6" 
+# No OS entropy unless the `entropy` feature asks for it: seeded `StdRng` /
+# `SmallRng` only.
+rand = { version = "0.9", default-features = false, features = ["std", "std_rng", "small_rng"] }
 rayon = { version = "1.11.0", optional = true }
 regex = { version = "1.12", features = [] }
 # `default-features = false` drops postcard's default `heapless-cas` feature, which
@@ -129,11 +161,11 @@ regex = { version = "1.12", features = [] }
 postcard = { version = "1", default-features = false, features = ["alloc", "use-std"] }
 serde_yaml_bw = { version = "2.5", optional = true }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde_json = { version = "1.0", optional = true }
 strum = { version = "0.28", features = ["derive"] }
 strum_macros = "0.28"
 thousands = "0.2.0"
-uuid = { version = "1.22", features = ["serde", "v4", "v5"] }
+uuid = { version = "1.22", features = ["serde", "v5"] }
 wincounter = "0.1.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -144,13 +176,43 @@ zstd = { version = "0.13", optional = true }
 termion = { version = "4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom_v2 = { package = "getrandom", version = "0.2", features = ["js"] }
-getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
-uuid = { version = "1.22", features = ["serde", "v4", "v5", "js"] }
+getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"], optional = true }
+uuid = { version = "1.22", features = ["serde", "v5", "js"] }
 
 [[example]]
 name = "calc"
 required-features = ["equity"]
+
+# Reads Pluribus logs from disk (`Pluribus::read_in_log`).
+[[example]]
+name = "pluribus"
+required-features = ["persistence"]
+
+[[example]]
+name = "pluribussy"
+required-features = ["persistence"]
+
+[[example]]
+name = "pluriboom"
+required-features = ["persistence"]
+
+[[example]]
+name = "unum"
+required-features = ["persistence"]
+
+# Read the embedded heads-up chart.
+[[example]]
+name = "gto"
+required-features = ["hup-charts"]
+
+[[example]]
+name = "export_hand_order"
+required-features = ["hup-charts"]
+
+# Writes and reads the solve as JSON (`SolverResult::save_json`/`load_json`).
+[[example]]
+name = "gto_solver"
+required-features = ["json", "persistence"]
 
 # Golden-vector dumper for the /deconstruct regeneration pack
 # (docs/deconstruct/). Exercises the equity engine, hand-history YAML
@@ -165,7 +227,7 @@ required-features = ["equity", "bot-profiles", "hand-histories", "player-stats"]
 # generation are absent, so these must not build under `--no-default-features`.
 [[example]]
 name = "audit"
-required-features = ["store"]
+required-features = ["store", "terminal"]
 
 [[example]]
 name = "export_hups_bin"
@@ -181,11 +243,11 @@ required-features = ["store"]
 
 [[example]]
 name = "insert_distinct"
-required-features = ["store"]
+required-features = ["store", "terminal"]
 
 [[example]]
 name = "preflop"
-required-features = ["store"]
+required-features = ["store", "terminal"]
 
 # Uses `Terminal::pause` (raw-mode key reads), which is gated behind `terminal`.
 [[example]]
@@ -198,35 +260,35 @@ required-features = ["equity"]
 
 [[example]]
 name = "bcrepl"
-required-features = ["equity"]
+required-features = ["equity", "terminal"]
 
 [[example]]
 name = "bot_capability_bench"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "persistence"]
 
 [[example]]
 name = "bot_selfplay"
-required-features = ["bot-profiles", "hand-histories"]
+required-features = ["bot-profiles", "hand-histories", "persistence"]
 
 [[example]]
 name = "interactive_play"
-required-features = ["bot-profiles", "hand-histories"]
+required-features = ["bot-profiles", "hand-histories", "persistence"]
 
 [[example]]
 name = "interactive_play_flhe"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "persistence"]
 
 [[example]]
 name = "interactive_play_plo"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "persistence"]
 
 [[example]]
 name = "interactive_play_razz"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "persistence"]
 
 [[example]]
 name = "interactive_play_stud_hi"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "persistence"]
 
 [[example]]
 name = "replay_play"
@@ -252,9 +314,14 @@ required-features = ["bot-profiles", "player-stats"]
 name = "train_exploit_config"
 required-features = ["bot-training"]
 
+# Reads the Pluribus corpus from disk (`Pluribus::read_in_log`) and the chart.
+[[test]]
+name = "heavy_tests"
+required-features = ["persistence", "hup-charts"]
+
 [[test]]
 name = "replay_consistency"
-required-features = ["hand-histories", "bot-profiles"]
+required-features = ["hand-histories", "bot-profiles", "persistence"]
 
 [[test]]
 name = "bot_marathon"
@@ -320,6 +387,13 @@ env_logger = "0.11.9"
 rayon = "1.11.0"
 reedline = "0.38"
 serde_yaml_bw = "2.5"
+# Optional for the library (`json` / `csv`) but unconditional here, for the
+# round-trip tests that exercise serde derives through JSON and the pokerbench
+# CSV error tests. Same reasoning as `rayon` above.
+serde_json = "1.0"
+csv = "1.4"
+# Tests mint throwaway ids with `Uuid::new_v4()`.
+uuid = { version = "1.22", features = ["v4"] }
 
 rstest = "0.26.1"
 serde_test = "1.0.177"

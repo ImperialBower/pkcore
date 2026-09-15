@@ -104,8 +104,8 @@
 //!
 //! # Feature Flags
 //!
-//! - **`debug-json`** — switches [`solver::SolverResult::save`] /
-//!   [`solver::SolverResult::load`] from compact binary (postcard) to
+//! - **`debug-json`** — switches `SolverResult::save` /
+//!   `SolverResult::load` (feature `persistence`) from compact binary (postcard) to
 //!   human-readable JSON. Useful for inspecting solver output during
 //!   development.
 //!

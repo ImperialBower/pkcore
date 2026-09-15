@@ -5,6 +5,212 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-09-15
+
+Fix 8 of [docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md): the kernel
+build reads no OS randomness. Everything that picked a random id, shuffle or
+seed for you now has a twin that takes it, core code uses only the twins, and
+the random versions sit behind a new `entropy` feature that is **on by
+default**. Default users see no API change.
+
+### Added
+
+- **`entropy` feature**, in `default` and `full`. It turns on `rand`'s OS RNG,
+  `uuid`'s `v4`, and on wasm `getrandom`'s JS backend. Without it the crate
+  has no path to `getrandom` at all.
+- **Id-taking twins for every table constructor:** `Table::nlh_from_seats_with_id`,
+  `nlh_primed_with_id`, `limit_holdem_from_seats_with_id`,
+  `plo_from_seats_with_id`, `stud_hi_from_seats_with_id` and
+  `razz_from_seats_with_id` (0.15.0 added `from_seats_with_id` and
+  `Player::with_id`).
+- **RNG-taking twins for the shuffling drivers:** `Table::act_shuffle_deck_with`,
+  `PokerSession::start_hand_with` and `PokerSession::run_hand_with`.
+- `SimTable::DEFAULT_SEED` and `EquityOptions::DEFAULT_SEED` — what an unseeded
+  sim or equity request uses without `entropy`.
+- `tests/kernel_determinism.rs`, the one test target that builds without
+  `entropy`, so the entropy-free kernel is exercised, not just compiled.
+
+### Changed
+
+- **Breaking: `BotDecider::decide_seeded` is now the required method.**
+  `decide` and `on_new_hand` became provided methods (behind `entropy`) that
+  call `decide_seeded` / `on_new_hand_with_rng` with the thread-local RNG.
+  Implementors rename `decide` to `decide_seeded` and draw from the `rng`
+  argument; an `on_new_hand` override moves to `on_new_hand_with_rng`. No
+  sibling repo implements the trait.
+- **Breaking, for `default-features = false` users only:** these need the
+  `entropy` feature — `Player::new`, `Player::new_with_chips`,
+  `Table::from_seats` and the six `*_from_seats` / `nlh_primed` constructors,
+  `Cards::shuffle`/`shuffle_in_place`, `CardsCell::shuffle`/`shuffle_in_place`,
+  `Deck::poker_cards_shuffled`, `Table::act_shuffle_deck`,
+  `PokerSession::start_hand`/`run_hand`, `BotDecider::decide`/`on_new_hand`,
+  `JokerDecider::new` and its `Default`, `From<String> for Seat`,
+  `From<Vec<String>> for Seats`, and the whole `casino::dealer` module
+  (`PokerSession` is the canonical driver). Known lean callers that will need
+  `features = ["entropy"]` on upgrade: pkwasm, pkarena0-web, cardroom.
+- **`SimTable` always holds an RNG.** Unseeded, it is seeded once from the OS
+  (with `entropy`) or from `DEFAULT_SEED` (without). It used to fall back to
+  the thread-local RNG on every draw; results are equally random, and the seeded
+  path is unchanged.
+- **Replays name their players by the record, not at random.**
+  `HandHistory::replay` gives each player their recorded `player_id`, or a UUID
+  v5 of the name for a legacy record, and names the table by a UUID v5 of the
+  hand id. `TryFrom<&Pluribus> for Table` does the same from the player names and
+  the log line, so one player keeps one id across a whole Pluribus log. The
+  `TestData` fixtures and the training evaluator use fixed ids. So the same
+  record always replays to an equal `Table`.
+- Without `entropy`: a seedless `EquityRequest` uses `DEFAULT_SEED`, the
+  stats timestamp `SimTable` records is 0, and `Terminal::random_happy` /
+  `random_sad` return a fixed face (as on wasm).
+- `Table::default()` names its table with the nil id in the event log too; it
+  used to log a random id and then set the field to nil.
+- **`make check-purity` fails on `getrandom` in the `--no-default-features`
+  build**, and only warns on it in the default build. The warn list of the
+  lean build is now empty.
+- `make test-kernel` runs the suite with `--features entropy` (it builds its
+  tables with the random-id conveniences) and then `kernel_determinism` with no
+  features. `make test-serial` adds `entropy`. `make check-features` checks each
+  feature's lib without `entropy` and its lib and tests with it. The CI
+  no-default-features job now calls `make test-kernel` and `make
+  check-features` instead of inlining them.
+- `Nubificus::get_log_files` (it lists a directory) moved behind
+  `persistence`; 0.17.0 missed it. `examples/unum.rs` now requires
+  `persistence`.
+- The standalone `perf/` crate builds its self-play table with fixed ids.
+
+## [0.17.0] - 2026-09-15
+
+Fix 2 of [docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md): the
+filesystem, console and embedded-chart code that was still compiled into every
+build is now behind features. Each one already had a pure twin, or got one.
+
+### Added
+
+- **`persistence` feature** for the filesystem wrappers:
+  `SolverResult::save`/`load`/`save_binary`/`load_binary`/`save_json`/`load_json`,
+  `BotProfile::to_file`/`from_file`, `HandCollection::save` and
+  `Pluribus::read_in_log`. Their pure twins stay always-on:
+  `to_binary_bytes`/`from_binary_bytes`, `to_json_string`/`from_json_str`,
+  `to_yaml_string`/`from_yaml_str`, `HandCollection::to_yaml`, and the new
+  `Pluribus::parse_log`.
+- **`Pluribus::parse_log(text)`**, the reading twin of `Pluribus::write_log`.
+  `read_in_log` now reads the file and calls it.
+- `full` now also turns on `persistence` and `terminal`, so it still restores
+  everything that was on by default before 0.16.0.
+
+### Changed
+
+- **Breaking: the console helpers need the `terminal` feature.**
+  `Terminal::receive_cards`, `receive_cards_in_twos`, `receive_range`,
+  `receive_usize`, `receive_usize_from` and `receive_x_cards` read stdin and
+  print to stdout, and were compiled into every build. `Terminal::index_cleaner`
+  (pure, used by the card parsers) and `random_happy`/`random_sad` stay
+  available. The audit proposed gating the whole `util::terminal` module; that
+  would have broken `Cards::from_str`, which uses `index_cleaner`.
+- **Breaking: the embedded heads-up chart and everything that reads it need
+  `hup-charts`.** `analysis::store::embedded::hup_cache`, `HUPResult::lookup`,
+  `SortedHeadsUp::hup_result`, `Versus::hups_at_deal` and
+  `bot::hand_order::derive_hand_ordering` used to compile without the feature
+  and pulled the 15.8 MB chart into any binary that called them. `hup-charts`
+  is on by default, so default users see no change.
+- **`DealEval::new` with two hands and no `hup-charts` uses the equity engine**
+  (seeded Monte Carlo) instead of the chart. It used to read the chart whatever
+  the features said.
+- **Breaking, for users of the gated items only:** crates that call the
+  wrappers above add `features = ["persistence"]` (or `"full"`). Known sibling
+  callers: `cardroom` (`BotProfile::from_file`) and `pkcore.py`
+  (`Pluribus::read_in_log`).
+- The examples and tests that call gated items now declare them in
+  `required-features`, including `bot_selfplay`, `interactive_play*`,
+  `bot_capability_bench`, `gto_solver`, `bcrepl`, the `pluribus*` examples,
+  `replay_consistency` and `heavy_tests`. Three `BotProfile` tests that check the
+  `data/bots` YAML files now read the file themselves, so they still run
+  without `persistence`.
+- `make check-features` and the CI no-default-features job also check
+  `persistence`, `hup-charts` and `terminal` on their own.
+
+### Removed
+
+- **`Util::read_lines` and `Util::commentary_action_to`.** The first put a path
+  in a public signature and was used once, by `read_in_log`; the second
+  `println!`ed and had no callers.
+
+## [0.16.0] - 2026-09-15
+
+Fix 1 of [docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md): pkcore is
+now pure by default.
+
+### Changed
+
+- **Breaking: the default feature set is now `equity`, `player-stats` and
+  `hup-charts`.** A plain `cargo add pkcore` gets the table engine, evaluation,
+  equity, the stats aggregator and the heads-up chart, and no longer compiles a
+  YAML parser (`serde_yaml_bw`), a thread pool (`rayon`), `serde_json` or
+  `csv`. `bot-profiles`, `hand-histories`, `player-stats-persistence` and
+  `parallel` left the default set. **To keep the old behaviour, add
+  `features = ["full"]`**; `full` is exactly the pre-0.16.0 default set plus
+  the two new features below. Consumers that already use
+  `default-features = false` are unaffected unless they call the JSON or CSV
+  helpers.
+- **`make check-purity` now checks the default build as well as
+  `--no-default-features`, and fails on `csv` and `serde_json`.** "Pure by
+  default" is now a gate, not a comment. Only `getrandom` is still on the warn
+  list.
+- `make`, `make test`, `make clippy`, the docs build and the CI test, clippy,
+  doc, pokerbench, optional-feature, marathon and variant-replay jobs now pass
+  `--features full`, so they test what they tested before. `make
+  check-features` and the CI no-default-features job also check `json` and
+  `csv` on their own.
+- `make generate-hups-bin` passes `--features store`. It had been broken since
+  0.11.0 took `store` out of the defaults.
+
+### Added
+
+- **`json` feature** (`dep:serde_json`) for `SolverResult::to_json_string`,
+  `from_json_str`, `save_json` and `load_json`. `debug-json` now implies it,
+  and so does `pokerbench`. `serde_json` is no longer a required dependency.
+- **`csv` feature** (`dep:csv`) for `SortedHeadsUp::generate_csv`/`read_csv`,
+  `IndexCardMap::generate_csv` and the `util::csv` module. `store` and
+  `pokerbench` imply it. `csv` is no longer a required dependency.
+- **`full` feature**, the umbrella described above.
+
+`rand` stays a required dependency on purpose: `cardpack` needs it anyway, and
+a seeded PRNG is pure. The OS entropy behind it is audit fix 8.
+
+## [0.15.0] - 2026-09-15
+
+Fixes 1a–1c from the re-run of
+[docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md).
+
+### Added
+
+- **`Table::from_seats_with_id` and `Player::with_id`.** Every `Table` and
+  `Player` used to get a random v4 id from OS entropy, and the table wrote its
+  id into the event log as `TableOpen`. So the same seats, seed and actions gave
+  a different `Table` and a different event log each run, and no constructor
+  let a caller fix the id. These two take the id as an argument; with fixed ids
+  the same inputs now give an equal `Table`. `Table::from_seats`, `Player::new`
+  and `Player::new_with_chips` are unchanged in behaviour — they now call the
+  new constructors with `Uuid::new_v4()`.
+
+### Removed
+
+- **`util::name::Name` and `NAMER`, and the `random_name_generator`
+  dependency.** Nothing in pkcore or its sibling repos called them.
+  `Name::generate_with` also put `rnglib::RNG` in a public signature. The crate
+  pulled a CLI parser (`clap`), a second `rand` (0.8) and `getrandom` 0.2 into
+  every build, including `--no-default-features`. Breaking in letter, hence the
+  minor bump. The wasm-only `getrandom` 0.2 pin, which existed to serve that
+  `rand` 0.8, is gone too.
+
+### Changed
+
+- **`make check-purity` now fails on `clap`/`structopt`** in the
+  `--no-default-features` tree, and no longer watches `rand` or `postcard`.
+  A seeded PRNG is pure, and `cardpack` needs `rand` non-optionally, so a ratchet
+  on `rand` could never shut. The warn list keeps `getrandom`, the crate every
+  path to OS entropy goes through; it is the name the gate closes on next.
+
 ## [0.14.0] - 2026-09-13
 
 ### Changed

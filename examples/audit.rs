@@ -6,7 +6,7 @@ use pkcore::util::terminal::Terminal;
 use rand::prelude::IndexedRandom;
 use rusqlite::Connection;
 
-/// `cargo run --example audit`
+/// `cargo run --features store,terminal --example audit`
 fn main() {
     env_logger::init();
     let distinct = distinct_shus_from_csv_as_masked_vec();

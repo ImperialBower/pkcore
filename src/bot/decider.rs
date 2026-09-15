@@ -69,36 +69,33 @@ use crate::games::betting_structure::{BetTier, BettingStructure};
 ///
 /// [`SimTable`]: crate::bot::sim::SimTable
 pub trait BotDecider: Send + Sync {
-    /// Called once at the start of each new hand, before any actions are taken.
+    /// Called once at the start of each new hand, before any actions are
+    /// taken, with the RNG that drives per-hand setup.
     ///
-    /// The default implementation is a no-op.  Override to perform per-hand
-    /// setup — for example, [`JokerDecider`] uses this hook to randomly select
-    /// a new playing style for the upcoming hand.
-    fn on_new_hand(&self) {}
+    /// The default implementation is a no-op. Override to perform per-hand
+    /// setup — for example, [`JokerDecider`] uses this hook to pick a new
+    /// playing style for the upcoming hand.
+    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::RngCore) {}
 
-    /// Seeded variant of [`Self::on_new_hand`].
-    ///
-    /// The default implementation ignores `rng` and delegates to
-    /// [`Self::on_new_hand`].  Override when per-hand state needs to be
-    /// deterministic under a seeded [`crate::bot::sim::SimTable`].
-    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::RngCore) {
-        self.on_new_hand();
+    /// [`Self::on_new_hand_with_rng`] with the thread-local RNG. Needs the
+    /// `entropy` feature.
+    #[cfg(feature = "entropy")]
+    fn on_new_hand(&self) {
+        self.on_new_hand_with_rng(&mut rand::rng());
     }
 
-    /// Choose a [`PlayerAction`] for the given `profile` and table `state`.
-    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
-
-    /// Seeded variant of [`Self::decide`].
+    /// Choose a [`PlayerAction`] for the given `profile` and table `state`,
+    /// drawing any randomness from `rng`.
     ///
-    /// The default implementation ignores `rng` and delegates to
-    /// [`Self::decide`] (which typically uses a thread-local RNG).
-    /// Override to make decisions reproducible under a seeded
-    /// [`crate::bot::sim::SimTable`]. The three shipped deciders
-    /// ([`RuleBasedDecider`], [`JokerDecider`],
-    /// [`crate::bot::exploitative_decider::ExploitativeDecider`]) all
-    /// override this so seeded sim runs are fully deterministic.
-    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, _rng: &mut dyn rand::RngCore) -> PlayerAction {
-        self.decide(profile, state)
+    /// The one required method. With a seeded `rng` the decision is
+    /// reproducible, which is what [`crate::bot::sim::SimTable`] relies on.
+    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction;
+
+    /// [`Self::decide_seeded`] with the thread-local RNG. Needs the `entropy`
+    /// feature.
+    #[cfg(feature = "entropy")]
+    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
+        self.decide_seeded(profile, state, &mut rand::rng())
     }
 }
 
@@ -118,7 +115,8 @@ pub trait BotDecider: Send + Sync {
 /// - `BotProfile.range_strategy.postflop_cbet_frequency` — overrides
 ///   `aggression_factor` for flop bets (continuation-bet frequency).
 ///
-/// A thread-local RNG is used internally; no mutable state is needed.
+/// All randomness comes from the RNG passed to [`BotDecider::decide_seeded`];
+/// no mutable state is needed.
 ///
 /// This type is the library-level promotion of the `decide()` free function
 /// in `examples/bot_selfplay.rs`.
@@ -146,10 +144,6 @@ pub trait BotDecider: Send + Sync {
 pub struct RuleBasedDecider;
 
 impl BotDecider for RuleBasedDecider {
-    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
-        RuleBasedDecider::decide_with_rng(profile, state, &mut rand::rng())
-    }
-
     fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
         RuleBasedDecider::decide_with_rng(profile, state, rng)
     }
@@ -158,8 +152,8 @@ impl BotDecider for RuleBasedDecider {
 impl RuleBasedDecider {
     /// Core decision logic parameterised over any [`rand::Rng`].
     ///
-    /// The public [`BotDecider::decide`] method calls this with the
-    /// thread-local RNG.  Tests call it directly with a seeded
+    /// [`BotDecider::decide_seeded`] calls this with the caller's RNG.
+    /// Tests call it directly with a seeded
     /// [`rand::rngs::SmallRng`] for fully deterministic results.
     #[allow(clippy::too_many_lines)]
     pub(crate) fn decide_with_rng<R: rand::Rng + ?Sized>(
@@ -387,6 +381,7 @@ impl JokerDecider {
     /// let _ = decider; // ready to use in SimTable
     /// ```
     #[must_use]
+    #[cfg(feature = "entropy")]
     pub fn new() -> Self {
         Self::new_with_rng(&mut rand::rng())
     }
@@ -418,6 +413,7 @@ impl JokerDecider {
     }
 }
 
+#[cfg(feature = "entropy")]
 impl Default for JokerDecider {
     fn default() -> Self {
         Self::new()
@@ -435,13 +431,8 @@ impl fmt::Debug for JokerDecider {
 }
 
 impl BotDecider for JokerDecider {
-    /// Randomly picks a new profile from [`BotProfile::default_profiles`] for
-    /// the upcoming hand.
-    fn on_new_hand(&self) {
-        self.on_new_hand_with_rng(&mut rand::rng());
-    }
-
-    /// Seeded variant — picks the next per-hand profile using the supplied RNG.
+    /// Picks the next per-hand profile from [`BotProfile::default_profiles`]
+    /// using the supplied RNG.
     fn on_new_hand_with_rng(&self, rng: &mut dyn rand::RngCore) {
         use rand::Rng as _;
         let profiles = BotProfile::default_profiles();
@@ -454,14 +445,6 @@ impl BotDecider for JokerDecider {
     /// Delegates to [`RuleBasedDecider`] using the profile chosen at hand start,
     /// ignoring the `_profile` argument which is just the placeholder
     /// [`BotProfile::joker()`] stored in the seat entry.
-    fn decide(&self, _profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
-        let active = self
-            .active
-            .lock()
-            .map_or_else(|e| e.into_inner().clone(), |g| g.clone());
-        RuleBasedDecider.decide(&active, state)
-    }
-
     fn decide_seeded(&self, _profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
         let active = self
             .active

@@ -8,7 +8,7 @@ use std::collections::hash_map::Entry;
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
 /// ```txt
-/// ❯ cargo run --example bcrepl
+/// ❯ cargo run --features terminal --example bcrepl
 /// ...
 /// hole cards> A♠ A♥ 6♦ 6♣
 /// Elapsed: 8.27s
@@ -16,7 +16,7 @@ use std::collections::hash_map::Entry;
 /// ```
 ///
 /// ```
-/// pkcore❯ cargo run --example bcrepl
+/// pkcore❯ cargo run --features terminal --example bcrepl
 /// ...
 /// hole cards> A♠ A♥ 6♦ 6♣
 /// Elapsed: 22.00s
@@ -25,7 +25,7 @@ use std::collections::hash_map::Entry;
 ///
 /// This is going to need some investigation.
 ///
-/// `cargo run --example bcrepl`
+/// `cargo run --features terminal --example bcrepl`
 /// `A♠ A♥ A♦ A♣`
 fn main() {
     env_logger::init();

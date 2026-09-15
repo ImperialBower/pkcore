@@ -1,17 +1,23 @@
-#[cfg(not(target_arch = "wasm32"))]
+//! `Terminal` — helpers for the examples' REPLs.
+//!
+//! Everything that reads stdin or writes stdout is behind the `terminal`
+//! feature, so the kernel build does no console I/O. `index_cleaner` is pure
+//! and stays available; the kernel parses card strings with it.
+
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use crate::PKError;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use std::str::FromStr;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use crate::analysis::gto::combos::Combos;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use crate::cards::Cards;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use crate::prelude::HoleCards;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "entropy", not(target_arch = "wasm32")))]
 use rand::prelude::*;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use std::io::{BufRead, Write, stdin, stdout};
 #[cfg(all(unix, feature = "terminal"))]
 use termion::input::TermRead;
@@ -53,13 +59,14 @@ impl Terminal {
         Ok(())
     }
 
-    #[cfg(target_arch = "wasm32")]
+    /// Without OS entropy (the `entropy` feature off, or wasm) the face is fixed.
+    #[cfg(any(target_arch = "wasm32", not(feature = "entropy")))]
     #[must_use]
     pub fn random_happy() -> char {
         '😀'
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "entropy", not(target_arch = "wasm32")))]
     #[must_use]
     pub fn random_happy() -> char {
         let happy_faces = [
@@ -70,13 +77,14 @@ impl Terminal {
         happy_faces[random_index]
     }
 
-    #[cfg(target_arch = "wasm32")]
+    /// Without OS entropy (the `entropy` feature off, or wasm) the face is fixed.
+    #[cfg(any(target_arch = "wasm32", not(feature = "entropy")))]
     #[must_use]
     pub fn random_sad() -> char {
         '😢'
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "entropy", not(target_arch = "wasm32")))]
     #[must_use]
     pub fn random_sad() -> char {
         let sad_faces = [
@@ -90,7 +98,7 @@ impl Terminal {
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     #[must_use]
     pub fn receive_cards(prompt: &str) -> Option<Cards> {
         print!("{prompt}");
@@ -105,7 +113,7 @@ impl Terminal {
     ///
     /// `PKError::InvalidIndex` if `str` doesn't translate into `Cards`
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     pub fn receive_cards_in_twos(prompt: &str) -> Result<HoleCards, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
             return Err(PKError::InvalidCardIndex);
@@ -117,7 +125,7 @@ impl Terminal {
     /// # Errors
     ///
     /// TODO
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     pub fn receive_range(prompt: &str) -> Result<Combos, PKError> {
         print!("{prompt}");
         Combos::from_str(prompt)
@@ -132,7 +140,7 @@ impl Terminal {
     ///
     /// [`PKError::InvalidIO`] if stdin cannot be read. Text that is not a
     /// number reads as `0`.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     pub fn receive_usize(prompt: &str) -> Result<usize, PKError> {
         Self::receive_usize_from(&mut stdin().lock(), prompt)
     }
@@ -143,7 +151,7 @@ impl Terminal {
     /// # Errors
     ///
     /// [`PKError::InvalidIO`] if `reader` fails.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     pub fn receive_usize_from<R: BufRead>(reader: &mut R, prompt: &str) -> Result<usize, PKError> {
         print!("{prompt}");
         let _ = stdout().flush();
@@ -157,7 +165,7 @@ impl Terminal {
     /// `PKError::NotEnoughCards` if `Cards` is less than `x`.
     /// `PKError::TooManyCards` if `Cards` is greater than `x`.
     /// `PKError::InvalidIndex` if the string entered isn't a valid `Cards` index.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
     pub fn receive_x_cards(prompt: &str, x: usize) -> Result<Cards, PKError> {
         if x < 1 {
             return Err(PKError::NotEnoughCards);
@@ -180,7 +188,7 @@ impl Terminal {
     }
 }
 
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, feature = "terminal", not(target_arch = "wasm32")))]
 #[allow(non_snake_case)]
 mod util__terminal_tests {
     use super::*;

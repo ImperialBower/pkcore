@@ -439,15 +439,23 @@ implements:
 
 ```rust,ignore
 pub trait BotDecider: Send + Sync {
-    fn on_new_hand(&self) {}
-    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
+    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::RngCore) {}
+    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction;
+
+    // Conveniences with the thread-local RNG; need the `entropy` feature.
+    fn on_new_hand(&self) { /* on_new_hand_with_rng(&mut rand::rng()) */ }
+    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction { /* decide_seeded(…, &mut rand::rng()) */ }
 }
 ```
 
+`decide_seeded` is the one required method (0.18.0). All randomness comes from
+the `rng` argument, so a seeded RNG makes every decision reproducible, and the
+kernel build — without `entropy` — needs no OS randomness.
+
 Two implementations ship in pkcore:
 
-- **`RuleBasedDecider`** — a zero-sized unit struct. Its `decide` method
-  delegates directly to `decide_with_rng(profile, state, &mut rand::rng())`.
+- **`RuleBasedDecider`** — a zero-sized unit struct. Its `decide_seeded`
+  method delegates directly to `decide_with_rng(profile, state, rng)`.
   The `pub(crate) decide_with_rng<R: Rng>` helper is separated so that tests
   can inject a `SmallRng::seed_from_u64(seed)` for deterministic results
   without any mocking or trait objects.
@@ -947,15 +955,20 @@ use pkcore::bot::table_snapshot::TableSnapshot;
 pub struct AlwaysCheckDecider;
 
 impl BotDecider for AlwaysCheckDecider {
-    fn decide(&self, _profile: &BotProfile, _state: &TableSnapshot) -> PlayerAction {
+    fn decide_seeded(
+        &self,
+        _profile: &BotProfile,
+        _state: &TableSnapshot,
+        _rng: &mut dyn rand::RngCore,
+    ) -> PlayerAction {
         PlayerAction::Check
     }
 }
 ```
 
-### `on_new_hand()` use cases
+### `on_new_hand_with_rng()` use cases
 
-Override `on_new_hand()` for any per-hand reset:
+Override `on_new_hand_with_rng()` for any per-hand reset:
 - Shuffle a per-hand strategy
 - Reset a "have I 3-bet this hand?" flag
 - Pick a random profile (as `JokerDecider` does)
@@ -963,8 +976,8 @@ Override `on_new_hand()` for any per-hand reset:
 ### `JokerDecider` as a reference implementation
 
 `JokerDecider` stores a `Mutex<BotProfile>` — the lock is necessary because
-`on_new_hand()` takes `&self` (shared reference), and `decide()` may run
-concurrently with other seats.
+`on_new_hand_with_rng()` takes `&self` (shared reference), and
+`decide_seeded()` may run concurrently with other seats.
 
 ```rust,ignore
 pub struct JokerDecider {
@@ -972,20 +985,20 @@ pub struct JokerDecider {
 }
 
 impl BotDecider for JokerDecider {
-    fn on_new_hand(&self) {
+    fn on_new_hand_with_rng(&self, rng: &mut dyn rand::RngCore) {
         // Replace active profile from the standard set
         let profiles = BotProfile::default_profiles();
-        let idx = rand::rng().random_range(0..profiles.len());
+        let idx = rng.random_range(0..profiles.len());
         if let Ok(mut guard) = self.active.lock() {
             *guard = profiles[idx].clone();
         }
     }
 
-    fn decide(&self, _profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
+    fn decide_seeded(&self, _profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
         // Note: ignores the passed profile, uses internal active profile
         let active = self.active.lock()
             .map_or_else(|e| e.into_inner().clone(), |g| g.clone());
-        RuleBasedDecider.decide(&active, state)
+        RuleBasedDecider.decide_seeded(&active, state, rng)
     }
 }
 ```

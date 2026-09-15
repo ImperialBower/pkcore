@@ -23,6 +23,19 @@ use rand::{Rng, SeedableRng};
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashSet;
 
+/// The Monte Carlo seed for a request that names none: a fresh one from the OS
+/// with the `entropy` feature, [`EquityOptions::DEFAULT_SEED`] without it.
+fn unseeded() -> u64 {
+    #[cfg(feature = "entropy")]
+    {
+        rand::random()
+    }
+    #[cfg(not(feature = "entropy"))]
+    {
+        crate::analysis::equity::EquityOptions::DEFAULT_SEED
+    }
+}
+
 const MIN_PLAYERS: usize = 2;
 const MAX_PLAYERS: usize = 10;
 
@@ -137,7 +150,7 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
             Method::Exact,
         )
     } else {
-        let rng_seed = req.opts.seed.unwrap_or_else(rand::random);
+        let rng_seed = req.opts.seed.unwrap_or_else(unseeded);
         (
             monte_carlo(
                 &resolved,

@@ -10,6 +10,7 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, Shifty, SuitShift};
+#[cfg(feature = "csv")]
 use csv::{Reader, WriterBuilder};
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rusqlite::Connection;
@@ -18,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+#[cfg(feature = "csv")]
 use std::fs::File;
 use std::str::FromStr;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
@@ -104,6 +106,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    #[cfg(feature = "hup-charts")]
     pub fn hup_result(&self) -> Result<HUPResult, PKError> {
         HUPResult::lookup(&self.higher, &self.lower)
     }
@@ -575,6 +578,7 @@ impl SortedHeadsUp {
     /// # Panics
     ///
     /// When can't write to file system
+    #[cfg(feature = "csv")]
     pub fn generate_csv(path: &str, shus: HashSet<SortedHeadsUp>) -> Result<(), Box<dyn std::error::Error>> {
         let mut v = Vec::from_iter(shus);
         v.sort();
@@ -591,6 +595,7 @@ impl SortedHeadsUp {
     ///
     /// * Throws `PKError::InvalidBinaryFormat` if the csv file is corrupted.
     /// * Throws `PKError::Fubar` if unable to open at all.
+    #[cfg(feature = "csv")]
     pub fn read_csv(path: &str) -> Result<Vec<SortedHeadsUp>, PKError> {
         match File::open(path) {
             Ok(file) => {
