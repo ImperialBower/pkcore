@@ -403,6 +403,26 @@ impl SimTable {
         sim
     }
 
+    /// The seed a `SimTable` uses when none is given and the `entropy`
+    /// feature is off.
+    pub const DEFAULT_SEED: u64 = 0;
+
+    /// The RNG a new `SimTable` starts with: seeded from the OS with the
+    /// `entropy` feature, from [`Self::DEFAULT_SEED`] without it.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: one RNG, always present, so the
+    // kernel build has no thread-local fallback that reads OS entropy.
+    fn unseeded_rng() -> rand::rngs::SmallRng {
+        use rand::SeedableRng as _;
+        #[cfg(feature = "entropy")]
+        {
+            rand::rngs::SmallRng::from_os_rng()
+        }
+        #[cfg(not(feature = "entropy"))]
+        {
+            rand::rngs::SmallRng::seed_from_u64(Self::DEFAULT_SEED)
+        }
+    }
+
     /// Seeds this `SimTable` with a deterministic RNG.
     ///
     /// Once seeded, every deck shuffle and every call to
@@ -411,9 +431,9 @@ impl SimTable {
     /// identically with the same seed will produce byte-identical hand
     /// sequences.
     ///
-    /// Without this call, the simulation uses the thread-local
-    /// [`rand::rng()`] — fine for production, but fragile for integration
-    /// tests that assert statistical properties over many hands.
+    /// Without this call, the RNG is seeded from the OS (with `entropy`) or
+    /// from [`Self::DEFAULT_SEED`] — fine for production, but fragile for
+    /// integration tests that assert statistical properties over many hands.
     ///
     /// # Examples
     ///
@@ -435,24 +455,6 @@ impl SimTable {
     /// assert!(result.hands_played > 0);
     /// # }
     /// ```
-    /// The seed a `SimTable` uses when none is given and the `entropy`
-    /// feature is off.
-    pub const DEFAULT_SEED: u64 = 0;
-
-    /// The RNG a new `SimTable` starts with: seeded from the OS with the
-    /// `entropy` feature, from [`Self::DEFAULT_SEED`] without it.
-    fn unseeded_rng() -> rand::rngs::SmallRng {
-        use rand::SeedableRng as _;
-        #[cfg(feature = "entropy")]
-        {
-            rand::rngs::SmallRng::from_os_rng()
-        }
-        #[cfg(not(feature = "entropy"))]
-        {
-            rand::rngs::SmallRng::seed_from_u64(Self::DEFAULT_SEED)
-        }
-    }
-
     #[must_use]
     pub fn with_seed(mut self, seed: u64) -> Self {
         use rand::SeedableRng as _;
@@ -1134,8 +1136,9 @@ impl SimTable {
         #[cfg(feature = "entropy")]
         use std::time::{SystemTime, UNIX_EPOCH};
 
-        // The wall clock is OS nondeterminism too, so it rides the `entropy`
-        // feature; the kernel build stamps 0.
+        // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the wall clock is OS
+        // nondeterminism too, so it rides the `entropy` feature; the kernel
+        // build stamps 0.
         #[cfg(feature = "entropy")]
         let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
         #[cfg(not(feature = "entropy"))]

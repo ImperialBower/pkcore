@@ -3,6 +3,7 @@
 //! Everything that reads stdin or writes stdout is behind the `terminal`
 //! feature, so the kernel build does no console I/O. `index_cleaner` is pure
 //! and stays available; the kernel parses card strings with it.
+//! See `docs/KERNEL_PURITY_AUDIT.md` §4, fix 2.
 
 #[cfg(all(feature = "terminal", not(target_arch = "wasm32")))]
 use crate::PKError;
@@ -60,6 +61,8 @@ impl Terminal {
     }
 
     /// Without OS entropy (the `entropy` feature off, or wasm) the face is fixed.
+    // `docs/KERNEL_PURITY_AUDIT.md` §4, fix 8: `rand::rng()` reads OS entropy, so the random faces
+    // (here and in `random_sad`) need `entropy`.
     #[cfg(any(target_arch = "wasm32", not(feature = "entropy")))]
     #[must_use]
     pub fn random_happy() -> char {

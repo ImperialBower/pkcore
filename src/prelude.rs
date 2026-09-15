@@ -102,6 +102,7 @@ pub use crate::play::visibility::Visibility;
 
 // casino
 pub use crate::casino::cashier::chips::Stack;
+// `docs/KERNEL_PURITY_AUDIT.md` fix 8: `casino::dealer` needs `entropy`.
 #[cfg(feature = "entropy")]
 pub use crate::casino::dealer::Dealer;
 pub use crate::casino::position::Positions;

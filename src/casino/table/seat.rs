@@ -155,6 +155,7 @@ impl Seat {
 /// The shape a hand history gives you: names, but no stack until the log says
 /// what it was. Mirrors the celled `Seat::from(String)`.
 /// Needs the `entropy` feature: the player gets a random id.
+// `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: `Player::new` reads OS entropy.
 #[cfg(feature = "entropy")]
 impl From<String> for Seat {
     /// # Examples

@@ -110,8 +110,8 @@ fn session_seed(seed: u64, opp_idx: usize, replicate: usize) -> u64 {
 /// bot's BB/100 (seat 0 vs seat 1). `seed` fixes the deck shuffle and every
 /// seeded decider draw, so the session is fully reproducible.
 fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, seed: u64) -> f64 {
-    // Fixed ids: the session is reproducible from `seed`, and random ids
-    // would be the one part of it that is not.
+    // Fixed ids (`docs/KERNEL_PURITY_AUDIT.md` fix 8): the session is reproducible from
+    // `seed`, and random ids would be the one part of it that is not.
     let exploit = Player::with_id(Uuid::from_u128(1), "exploit".to_string(), STARTING_CHIPS);
     let opp = Player::with_id(Uuid::from_u128(2), "opp".to_string(), STARTING_CHIPS);
     let seats = Seats::new(vec![Seat::new(exploit), Seat::new(opp)]);

@@ -63,8 +63,8 @@
 //! once, deliberately.
 
 pub mod cashier;
-// A convenience driver that shuffles and names tables at random, so it needs
-// the `entropy` feature. `session::PokerSession` is the canonical driver.
+// `docs/KERNEL_PURITY_AUDIT.md` fix 8: a convenience driver that shuffles and names
+// tables at random, so it needs `entropy`. `session::PokerSession` is the canonical driver.
 #[cfg(feature = "entropy")]
 pub mod dealer;
 pub mod equity;

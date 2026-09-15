@@ -306,6 +306,7 @@ impl PokerSession {
     /// assert_eq!(session.hand_number, 1);
     /// assert!(session.table.seats.are_dealt());
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `start_hand_with` is the seeded twin.
     #[cfg(feature = "entropy")]
     pub fn start_hand(&mut self) -> Result<(), PKError> {
         self.start_hand_with(&mut rand::rng())
@@ -753,6 +754,7 @@ impl PokerSession {
     /// assert!(!winnings.vec().is_empty());
     /// assert_eq!(session.hand_number, 1);
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `run_hand_with` is the seeded twin.
     #[cfg(feature = "entropy")]
     pub fn run_hand<F>(&mut self, on_action: F) -> Result<Winnings, PKError>
     where

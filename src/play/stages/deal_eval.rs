@@ -54,6 +54,8 @@ impl DealEval {
     pub fn new(hands: HoleCards) -> Result<DealEval, PKError> {
         let report = match hands.len() {
             0 | 1 => return Err(PKError::NotEnoughHands),
+            // `docs/KERNEL_PURITY_AUDIT.md` §3, fix 2: no chart without `hup-charts`, so two
+            // seats fall through to the equity engine.
             #[cfg(feature = "hup-charts")]
             2 => heads_up_report(&hands)?,
             _ => multiway_report(&hands)?,

@@ -2,6 +2,8 @@ use std::borrow::Cow;
 
 use std::str::Utf8Error;
 
+// `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1: `csv` is optional. The module still reads a
+// CWD-relative file (fix 7, open).
 #[cfg(feature = "csv")]
 pub mod csv;
 pub mod data;

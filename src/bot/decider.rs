@@ -79,6 +79,7 @@ pub trait BotDecider: Send + Sync {
 
     /// [`Self::on_new_hand_with_rng`] with the thread-local RNG. Needs the
     /// `entropy` feature.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the thread-local RNG is a convenience behind `entropy`.
     #[cfg(feature = "entropy")]
     fn on_new_hand(&self) {
         self.on_new_hand_with_rng(&mut rand::rng());
@@ -89,10 +90,13 @@ pub trait BotDecider: Send + Sync {
     ///
     /// The one required method. With a seeded `rng` the decision is
     /// reproducible, which is what [`crate::bot::sim::SimTable`] relies on.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a and "The `rand` question", fix 8: the seeded form is the
+    // required one, so no decision reads OS entropy unless a shell asks for it.
     fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction;
 
     /// [`Self::decide_seeded`] with the thread-local RNG. Needs the `entropy`
     /// feature.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the thread-local RNG is a convenience behind `entropy`.
     #[cfg(feature = "entropy")]
     fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
         self.decide_seeded(profile, state, &mut rand::rng())
@@ -381,6 +385,7 @@ impl JokerDecider {
     /// let _ = decider; // ready to use in SimTable
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: reads OS entropy; `new_with_rng` is the seeded twin.
     #[cfg(feature = "entropy")]
     pub fn new() -> Self {
         Self::new_with_rng(&mut rand::rng())
@@ -413,6 +418,7 @@ impl JokerDecider {
     }
 }
 
+// `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: `Default` calls `new`, which reads OS entropy.
 #[cfg(feature = "entropy")]
 impl Default for JokerDecider {
     fn default() -> Self {

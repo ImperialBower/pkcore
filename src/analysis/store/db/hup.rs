@@ -72,6 +72,7 @@ impl HUPResult {
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart.
     #[cfg(feature = "hup-charts")]
     pub fn lookup(from: &Two, to: &Two) -> Result<Self, PKError> {
         use crate::analysis::store::embedded::hup_cache;

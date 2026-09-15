@@ -64,6 +64,8 @@ impl Player {
     /// assert_eq!(0, p.chips);
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. `with_id` is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn new(handle: String) -> Self {
         Self::with_id(Uuid::new_v4(), handle, 0)
@@ -87,6 +89,7 @@ impl Player {
     /// assert_eq!(2_500, p.total_chip_count());
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1a: the id-taking constructor, so a replay can fix every id.
     pub fn with_id(id: Uuid, handle: String, stack: usize) -> Self {
         Player {
             id,
@@ -110,6 +113,8 @@ impl Player {
     /// assert_eq!(5_000, p.total_chip_count());
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. `with_id` is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn new_with_chips(handle: String, stack: usize) -> Self {
         Self::with_id(Uuid::new_v4(), handle, stack)

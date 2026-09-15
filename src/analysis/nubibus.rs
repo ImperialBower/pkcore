@@ -391,6 +391,7 @@ impl Nubificus {
     /// # Errors
     ///
     /// Throws an error if path doesn't exist.
+    // `docs/KERNEL_PURITY_AUDIT.md` fix 2: lists a directory, so it needs `persistence`.
     #[cfg(feature = "persistence")]
     pub fn get_log_files(path: &str) -> Result<Vec<String>, PKError> {
         let dir = Path::new(path);
@@ -445,6 +446,7 @@ impl TryFrom<&Pluribus> for Table {
     type Error = PKError;
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
+        // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: derived ids, not random ones, so a replay repeats.
         let mut seats = Seats::new(
             pluribus
                 .players
@@ -1347,6 +1349,7 @@ impl Pluribus {
     /// assert_eq!(0, hands[0].index);
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` fix 2: the pure twin of `read_in_log`; parses text, does no file I/O.
     pub fn parse_log(text: &str) -> Vec<Pluribus> {
         text.lines().filter_map(|line| Pluribus::from_str(line).ok()).collect()
     }
@@ -1357,6 +1360,8 @@ impl Pluribus {
     /// # Errors
     ///
     /// None today; the `Result` is kept for API stability.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 2: file I/O, so it needs `persistence`. It reads the file
+    // itself: `Util::read_lines`, which put a path in a public signature, is gone.
     #[cfg(feature = "persistence")]
     pub fn read_in_log(filename: &str) -> Result<Vec<Pluribus>, PKError> {
         Ok(std::fs::read_to_string(filename)

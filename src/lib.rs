@@ -328,7 +328,7 @@
 //! dependency is already safe:
 //!
 //! ```toml
-//! pkcore = "0.16"
+//! pkcore = "0.15"
 //! ```
 //!
 //! With the feature off, `rayon` and `rayon-core` leave the dependency tree

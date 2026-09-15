@@ -4,7 +4,7 @@
 //! tables with `Player::new`-style conveniences that mint random ids. This
 //! target uses only the seeded and id-taking APIs, so it compiles against
 //! `--no-default-features` and proves the kernel build plays deterministic
-//! poker (docs/KERNEL_PURITY_AUDIT.md fix 8). It is an integration test, not a
+//! poker (`docs/KERNEL_PURITY_AUDIT.md` §1, fix 8). It is an integration test, not a
 //! colocated one, for exactly that reason: the lib's unit-test binary cannot be
 //! built without `entropy`.
 //!

@@ -25,6 +25,7 @@ use wincounter::wins::Wins;
 /// A fixture player with a fixed id, so every fixture table is identical run
 /// to run. Ids are stable per name: the same person is the same id in every
 /// fixture.
+// `docs/KERNEL_PURITY_AUDIT.md` fix 8: fixtures used to mint random ids.
 fn fixture_player(id: u128, handle: &str, stack: usize) -> Player {
     Player::with_id(Uuid::from_u128(id), handle.to_string(), stack)
 }

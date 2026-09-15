@@ -46,6 +46,7 @@ fn six_max_table() -> Result<(Table, Vec<(u8, BotProfile)>), PerfError> {
         ("maniac", BotProfile::maniac()),
     ];
 
+    // Fixed ids (`docs/KERNEL_PURITY_AUDIT.md` fix 8): the same seed gives the same run.
     let seats = Seats::new(
         profiles
             .iter()
