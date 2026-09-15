@@ -12,7 +12,7 @@
 //! 8. `SolverResult::save_binary` / `save_json` / `load_binary` — serialization
 //!
 //! ```
-//! cargo run --example gto_solver
+//! cargo run --features full --example gto_solver
 //! ```
 
 use pkcore::analysis::gto::combo::Combo;

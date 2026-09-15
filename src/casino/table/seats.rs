@@ -29,6 +29,9 @@ pub struct Seats(pub Vec<Seat>);
 ///
 /// The entry point for replaying a hand history, which names its players
 /// before it says anything about their stacks.
+/// Needs the `entropy` feature: each player gets a random id.
+// `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: `Player::new` reads OS entropy.
+#[cfg(feature = "entropy")]
 impl From<Vec<String>> for Seats {
     /// # Examples
     ///

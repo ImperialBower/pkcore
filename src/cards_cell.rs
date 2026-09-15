@@ -232,6 +232,8 @@ impl CardsCell {
     }
 
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: reads OS entropy, so it needs `entropy`.
+    #[cfg(feature = "entropy")]
     pub fn shuffle(&self) -> Self {
         let internal = self.clone();
         internal.shuffle_in_place();
@@ -246,6 +248,8 @@ impl CardsCell {
     ///
     /// println!("{deck}");
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: reads OS entropy, so it needs `entropy`.
+    #[cfg(feature = "entropy")]
     pub fn shuffle_in_place(&self) {
         let mut internal = self.0.borrow_mut();
         internal.shuffle_in_place();

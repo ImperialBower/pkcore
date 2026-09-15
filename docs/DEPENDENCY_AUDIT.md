@@ -485,6 +485,12 @@ and whether the boundary itself is drawn in the right place.
 
 ### random_name_generator 0.3.6 (first-party) — `absorb`
 
+> **Status (0.15.0, 2026-09-15): removed, not absorbed.** By then the one
+> shipping caller below (`src/casino/player.rs`) was gone, so `util::name` had
+> no caller in pkcore or any sibling repo. The module, the dependency and the
+> wasm-only `getrandom_v2` pin were deleted together, as footnote ² asks. See
+> `CHANGELOG.md` 0.15.0 and `docs/KERNEL_PURITY_AUDIT.md` §3.
+
 - **Relationship:** author `folkengine` (this repo's git user) —
   `https://github.com/folkengine/random_name_generator_rs`. BSD-3-Clause.
   Library name is `rnglib`, which is why a naive `rg random_name_generator`

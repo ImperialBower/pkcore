@@ -965,6 +965,7 @@ mod arrays__matchups__masked_tests {
         assert_eq!(HANDS_6S_6H_V_5D_5C, Masked::from(TestData::the_hand_sorted_headsup()));
     }
 
+    #[cfg(feature = "csv")]
     #[test]
     #[ignore = "rubber biscuit"]
     fn distinct__aces() {

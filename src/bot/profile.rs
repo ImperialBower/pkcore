@@ -16,7 +16,7 @@ use crate::games::betting_structure::BettingStructure;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+#[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
 use std::path::Path;
 
 // ── PlayStyle ─────────────────────────────────────────────────────────────────
@@ -879,7 +879,8 @@ impl BotProfile {
     /// BotProfile::gto().to_file("/tmp/gto.yaml").unwrap();
     /// # }
     /// ```
-    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `to_yaml_string`, so it needs `persistence`.
+    #[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn to_file(&self, path: impl AsRef<Path>) -> Result<(), BotError> {
         let yaml = self.to_yaml_string()?;
         std::fs::write(path, yaml)?;
@@ -905,7 +906,8 @@ impl BotProfile {
     /// assert_eq!(profile.name, "gto");
     /// # }
     /// ```
-    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `from_yaml_str`, so it needs `persistence`.
+    #[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, BotError> {
         let contents = std::fs::read_to_string(path)?;
         Self::from_yaml_str(&contents)
@@ -1294,7 +1296,7 @@ mod bot__profile_tests {
         assert!(!yaml.contains("playbook"), "flat profile should not emit playbook key");
     }
 
-    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    #[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
     #[test]
     fn bot_profile_file_round_trip() {
         let p = BotProfile::loose_aggressive();
@@ -1303,6 +1305,14 @@ mod bot__profile_tests {
         let loaded = BotProfile::from_file(&path).unwrap();
         assert_eq!(p, loaded);
         let _ = std::fs::remove_file(&path);
+    }
+
+    /// Reads a `data/bots` file in the test, so the YAML check runs without the
+    /// `persistence` wrappers (`docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2).
+    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    fn load_data_bot(path: &str) -> BotProfile {
+        let yaml = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {path}: {e}"));
+        BotProfile::from_yaml_str(&yaml).unwrap_or_else(|e| panic!("failed to parse {path}: {e}"))
     }
 
     /// Each file in `data/bots/` must parse without error.
@@ -1321,7 +1331,7 @@ mod bot__profile_tests {
         ];
         for name in names {
             let path = format!("data/bots/{name}.yaml");
-            let loaded = BotProfile::from_file(&path).unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            let loaded = load_data_bot(&path);
             assert_eq!(loaded.name, name, "{path}: name field mismatch");
         }
     }
@@ -1371,7 +1381,7 @@ mod bot__profile_tests {
         // Every existing profile file omits `decision:`; it must load with the
         // default config, leaving behavior unchanged.
         use crate::bot::decision_config::DecisionConfig;
-        let p = BotProfile::from_file("data/bots/tight_aggressive.yaml").unwrap();
+        let p = load_data_bot("data/bots/tight_aggressive.yaml");
         assert_eq!(p.decision, DecisionConfig::default());
     }
 
@@ -1384,7 +1394,7 @@ mod bot__profile_tests {
             ("loose_aggressive", BotProfile::loose_aggressive()),
         ] {
             let path = format!("data/bots/{name}.yaml");
-            let from_file = BotProfile::from_file(&path).unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            let from_file = load_data_bot(&path);
             assert_eq!(from_file, expected, "{path} does not match constructor output");
         }
     }

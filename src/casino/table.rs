@@ -180,8 +180,35 @@ impl Table {
     /// assert_eq!(4, table.deck.len(), "only the primed cards are in the deck");
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn nlh_primed(seats: Seats, dealt: &Cards, forced: ForcedBets) -> Self {
-        let mut table = Table::nlh_from_seats(seats, forced);
+        Self::nlh_primed_with_id(seats, dealt, forced, Uuid::new_v4())
+    }
+
+    /// [`Self::nlh_primed`] with a caller-supplied table `id`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::cards::Cards;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::prelude::Forgiving;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::nlh_primed_with_id(seats, &Cards::forgiving_from_str("A♠ K♠"), ForcedBets::new(50, 100), id);
+    /// assert_eq!(id, t.id);
+    /// ```
+    #[must_use]
+    pub fn nlh_primed_with_id(seats: Seats, dealt: &Cards, forced: ForcedBets, id: Uuid) -> Self {
+        let mut table = Table::nlh_from_seats_with_id(seats, forced, id);
         table.deck = dealt.clone();
         table
     }
@@ -205,8 +232,33 @@ impl Table {
     /// assert_eq!(0, t.pot);
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
-        Self::from_seats(seats, GameType::NoLimitHoldem, forced)
+        Self::nlh_from_seats_with_id(seats, forced, Uuid::new_v4())
+    }
+
+    /// [`Self::nlh_from_seats`] with a caller-supplied table `id`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::nlh_from_seats_with_id(seats, ForcedBets::new(50, 100), id);
+    /// assert_eq!(id, t.id);
+    /// ```
+    #[must_use]
+    pub fn nlh_from_seats_with_id(seats: Seats, forced: ForcedBets, id: Uuid) -> Self {
+        Self::from_seats_with_id(seats, GameType::NoLimitHoldem, forced, id)
     }
 
     /// Constructs a Fixed-Limit Hold'em table (EPIC-30 Phase 4).
@@ -242,9 +294,39 @@ impl Table {
     /// ));
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn limit_holdem_from_seats(seats: Seats, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
+        Self::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, Uuid::new_v4())
+    }
+
+    /// [`Self::limit_holdem_from_seats`] with a caller-supplied table `id`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::limit_holdem_from_seats_with_id(seats, 100, 200, 3, id);
+    /// assert_eq!(id, t.id);
+    /// ```
+    #[must_use]
+    pub fn limit_holdem_from_seats_with_id(
+        seats: Seats,
+        small_bet: usize,
+        big_bet: usize,
+        raise_cap: u8,
+        id: Uuid,
+    ) -> Self {
         let forced = ForcedBets::new(small_bet / 2, small_bet);
-        let mut t = Self::from_seats(seats, GameType::LimitHoldem, forced);
+        let mut t = Self::from_seats_with_id(seats, GameType::LimitHoldem, forced, id);
         t.betting = BettingStructure::FixedLimit {
             small_bet,
             big_bet,
@@ -283,9 +365,33 @@ impl Table {
     /// assert_eq!(4, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn plo_from_seats(seats: Seats, blinds: (usize, usize)) -> Self {
+        Self::plo_from_seats_with_id(seats, blinds, Uuid::new_v4())
+    }
+
+    /// [`Self::plo_from_seats`] with a caller-supplied table `id`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::plo_from_seats_with_id(seats, (5, 10), id);
+    /// assert_eq!(id, t.id);
+    /// ```
+    #[must_use]
+    pub fn plo_from_seats_with_id(seats: Seats, blinds: (usize, usize), id: Uuid) -> Self {
         let forced = ForcedBets::new(blinds.0, blinds.1);
-        Self::from_seats(seats, GameType::PLO, forced)
+        Self::from_seats_with_id(seats, GameType::PLO, forced, id)
     }
 
     /// Constructs a Seven-Card Stud Hi table (EPIC-32 Phase 6).
@@ -327,6 +433,9 @@ impl Table {
     /// [`Self::MAX_STUD_SEATS`]. Nine-handed stud needs 54 cards to reach 6th
     /// street and 63 to reach 7th, against a 52-card deck, so the table could
     /// never be dealt (`DEFECT_018`).
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn stud_hi_from_seats(
         seats: Seats,
         ante: usize,
@@ -334,7 +443,39 @@ impl Table {
         small_bet: usize,
         big_bet: usize,
     ) -> Result<Self, PKError> {
-        Self::stud_family_from_seats(seats, GameType::StudHi, ante, bring_in, small_bet, big_bet)
+        Self::stud_hi_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, Uuid::new_v4())
+    }
+
+    /// [`Self::stud_hi_from_seats`] with a caller-supplied table `id`.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::TooManyPlayers`] if `seats` holds more than
+    /// [`Self::MAX_STUD_SEATS`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::stud_hi_from_seats_with_id(seats, 2, 5, 20, 40, id).unwrap();
+    /// assert_eq!(id, t.id);
+    /// ```
+    pub fn stud_hi_from_seats_with_id(
+        seats: Seats,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+        id: Uuid,
+    ) -> Result<Self, PKError> {
+        Self::stud_family_from_seats(seats, GameType::StudHi, ante, bring_in, small_bet, big_bet, id)
     }
 
     /// Largest stud/Razz field a single 52-card deck can serve.
@@ -353,12 +494,13 @@ impl Table {
         bring_in: usize,
         small_bet: usize,
         big_bet: usize,
+        id: Uuid,
     ) -> Result<Self, PKError> {
         if seats.size() as usize > Self::MAX_STUD_SEATS {
             return Err(PKError::TooManyPlayers);
         }
         let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
-        let mut t = Self::from_seats(seats, game, forced);
+        let mut t = Self::from_seats_with_id(seats, game, forced, id);
         t.betting = BettingStructure::FixedLimit {
             small_bet,
             big_bet,
@@ -405,6 +547,9 @@ impl Table {
     ///
     /// [`PKError::TooManyPlayers`] if `seats` holds more than
     /// [`Self::MAX_STUD_SEATS`] (`DEFECT_018`).
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
     pub fn razz_from_seats(
         seats: Seats,
         ante: usize,
@@ -412,7 +557,39 @@ impl Table {
         small_bet: usize,
         big_bet: usize,
     ) -> Result<Self, PKError> {
-        Self::stud_family_from_seats(seats, GameType::Razz, ante, bring_in, small_bet, big_bet)
+        Self::razz_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, Uuid::new_v4())
+    }
+
+    /// [`Self::razz_from_seats`] with a caller-supplied table `id`.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::TooManyPlayers`] if `seats` holds more than
+    /// [`Self::MAX_STUD_SEATS`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::razz_from_seats_with_id(seats, 2, 5, 20, 40, id).unwrap();
+    /// assert_eq!(id, t.id);
+    /// ```
+    pub fn razz_from_seats_with_id(
+        seats: Seats,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+        id: Uuid,
+    ) -> Result<Self, PKError> {
+        Self::stud_family_from_seats(seats, GameType::Razz, ante, bring_in, small_bet, big_bet, id)
     }
 
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
@@ -441,8 +618,41 @@ impl Table {
     /// assert_eq!(GameType::NoLimitHoldem, t.game);
     /// ```
     #[must_use]
-    pub fn from_seats(mut seats: Seats, game: GameType, forced: ForcedBets) -> Self {
-        let id = Uuid::new_v4();
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
+    #[cfg(feature = "entropy")]
+    pub fn from_seats(seats: Seats, game: GameType, forced: ForcedBets) -> Self {
+        Self::from_seats_with_id(seats, game, forced, Uuid::new_v4())
+    }
+
+    /// [`Table::from_seats`] with a caller-supplied table `id`, which becomes
+    /// both `Table::id` and the event log's opening [`TableAction::TableOpen`].
+    ///
+    /// The deterministic constructor: `from_seats` is this with a random v4
+    /// id, which reads OS entropy. With fixed seat ids (see
+    /// [`Player::with_id`]) the same inputs give an equal `Table`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::action::TableAction;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::games::GameType;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 5_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 5_000)),
+    /// ]);
+    /// let id = Uuid::from_u128(42);
+    /// let t = Table::from_seats_with_id(seats, GameType::NoLimitHoldem, ForcedBets::new(50, 100), id);
+    /// assert_eq!(id, t.id);
+    /// assert_eq!(Some(&TableAction::TableOpen(id)), t.event_log.first());
+    /// ```
+    #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1a: the id-taking constructor, so equal inputs give an equal `Table`.
+    pub fn from_seats_with_id(mut seats: Seats, game: GameType, forced: ForcedBets, id: Uuid) -> Self {
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
 
@@ -1366,9 +1576,38 @@ impl Table {
     /// assert_eq!(GamePhase::ShuffleNewDeck, table.phase);
     /// assert_eq!(dealt_before, table.deck.len(), "shuffling loses no cards");
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `act_shuffle_deck_with` is the seeded twin.
+    #[cfg(feature = "entropy")]
     pub fn act_shuffle_deck(&mut self) {
+        self.act_shuffle_deck_with(&mut rand::rng());
+    }
+
+    /// [`Self::act_shuffle_deck`] with a caller-supplied RNG, so the same seed
+    /// gives the same deck.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = || Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 1_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 1_000)),
+    /// ]);
+    /// let shuffled = || {
+    ///     let mut t = Table::nlh_from_seats_with_id(seats(), ForcedBets::new(50, 100), Uuid::nil());
+    ///     t.act_shuffle_deck_with(&mut SmallRng::seed_from_u64(7));
+    ///     t.deck.to_string() // `Cards` equality ignores order; the string does not
+    /// };
+    /// assert_eq!(shuffled(), shuffled());
+    /// ```
+    pub fn act_shuffle_deck_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
         self.phase = GamePhase::ShuffleNewDeck;
-        self.deck.shuffle_in_place();
+        self.deck.shuffle_in_place_with(rng);
         self.log(TableAction::ShuffleDeck);
     }
 
@@ -3014,8 +3253,8 @@ impl Default for Table {
                 })
                 .collect(),
         );
-        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-        table.id = Uuid::default();
+        // `docs/KERNEL_PURITY_AUDIT.md` fix 1a: nil from the start, so `TableOpen` logs nil too.
+        let mut table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(50, 100), Uuid::nil());
         table.name = "Default No Limit Hold'em Table".to_string();
         table
     }
@@ -3044,6 +3283,185 @@ mod casino__table_tests {
     use crate::casino::state::PlayerState;
     use crate::prelude::Forgiving;
     use crate::util::data::TestData;
+
+    fn seats_with_fixed_ids() -> Seats {
+        Seats::new(vec![
+            Seat::new(Player::with_id(Uuid::from_u128(1), "Alice".to_string(), 10_000)),
+            Seat::new(Player::with_id(Uuid::from_u128(2), "Bob".to_string(), 10_000)),
+        ])
+    }
+
+    const TABLE_ID: Uuid = Uuid::from_u128(42);
+
+    #[test]
+    fn act_shuffle_deck_with__same_seed_gives_same_deck() {
+        use rand::SeedableRng;
+        let shuffled = |seed: u64| {
+            let mut table = Table::nlh_from_seats_with_id(seats_with_fixed_ids(), ForcedBets::new(50, 100), TABLE_ID);
+            table.act_shuffle_deck_with(&mut rand::rngs::SmallRng::seed_from_u64(seed));
+            // `Cards` compares as a set, so compare the ordered rendering.
+            table.deck.to_string()
+        };
+        assert_eq!(shuffled(7), shuffled(7));
+        assert_ne!(shuffled(7), shuffled(8));
+    }
+
+    #[test]
+    fn act_shuffle_deck_with__logs_the_shuffle_and_keeps_every_card() {
+        use rand::SeedableRng;
+        let mut table = Table::nlh_from_seats_with_id(seats_with_fixed_ids(), ForcedBets::new(50, 100), TABLE_ID);
+        let before = table.deck.len();
+        table.act_shuffle_deck_with(&mut rand::rngs::SmallRng::seed_from_u64(7));
+        assert_eq!(GamePhase::ShuffleNewDeck, table.phase);
+        assert_eq!(Some(&TableAction::ShuffleDeck), table.event_log.last());
+        assert_eq!(before, table.deck.len());
+    }
+
+    fn assert_opened_with(table: &Table, id: Uuid) {
+        assert_eq!(id, table.id);
+        assert_eq!(Some(&TableAction::TableOpen(id)), table.event_log.first());
+    }
+
+    #[test]
+    fn nlh_from_seats_with_id__uses_the_given_id() {
+        let table = Table::nlh_from_seats_with_id(seats_with_fixed_ids(), ForcedBets::new(50, 100), TABLE_ID);
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+    }
+
+    #[test]
+    fn nlh_primed_with_id__uses_the_given_id_and_the_primed_deck() {
+        let primed = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠");
+        let table = Table::nlh_primed_with_id(seats_with_fixed_ids(), &primed, ForcedBets::new(50, 100), TABLE_ID);
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(primed, table.deck);
+    }
+
+    #[test]
+    fn limit_holdem_from_seats_with_id__uses_the_given_id() {
+        let table = Table::limit_holdem_from_seats_with_id(seats_with_fixed_ids(), 100, 200, 3, TABLE_ID);
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(GameType::LimitHoldem, table.game);
+    }
+
+    #[test]
+    fn plo_from_seats_with_id__uses_the_given_id() {
+        let table = Table::plo_from_seats_with_id(seats_with_fixed_ids(), (5, 10), TABLE_ID);
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(GameType::PLO, table.game);
+    }
+
+    #[test]
+    fn stud_hi_from_seats_with_id__uses_the_given_id() {
+        let table = Table::stud_hi_from_seats_with_id(seats_with_fixed_ids(), 2, 5, 20, 40, TABLE_ID).unwrap();
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(GameType::StudHi, table.game);
+    }
+
+    #[test]
+    fn razz_from_seats_with_id__uses_the_given_id() {
+        let table = Table::razz_from_seats_with_id(seats_with_fixed_ids(), 2, 5, 20, 40, TABLE_ID).unwrap();
+        assert_opened_with(&table, TABLE_ID);
+        assert_eq!(GameType::Razz, table.game);
+    }
+
+    #[test]
+    fn stud_family_with_id__too_many_seats_errors() {
+        let seats = Seats::new(
+            (0..=Table::MAX_STUD_SEATS)
+                .map(|i| Seat::new(Player::with_id(Uuid::from_u128(i as u128 + 1), format!("P{i}"), 100)))
+                .collect(),
+        );
+        assert!(Table::stud_hi_from_seats_with_id(seats.clone(), 2, 5, 20, 40, TABLE_ID).is_err());
+        assert!(Table::razz_from_seats_with_id(seats, 2, 5, 20, 40, TABLE_ID).is_err());
+    }
+
+    #[cfg(feature = "entropy")]
+    #[test]
+    fn variant_with_id_twins_match_their_entropy_shims_apart_from_the_id() {
+        fn renamed(mut table: Table) -> Table {
+            table.id = TABLE_ID;
+            table.event_log[0] = TableAction::TableOpen(TABLE_ID);
+            table
+        }
+        let seats = seats_with_fixed_ids;
+        let forced = ForcedBets::new(50, 100);
+        let primed = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠");
+        assert_eq!(
+            renamed(Table::nlh_from_seats(seats(), forced)),
+            Table::nlh_from_seats_with_id(seats(), forced, TABLE_ID)
+        );
+        assert_eq!(
+            renamed(Table::nlh_primed(seats(), &primed, forced)),
+            Table::nlh_primed_with_id(seats(), &primed, forced, TABLE_ID)
+        );
+        assert_eq!(
+            renamed(Table::limit_holdem_from_seats(seats(), 100, 200, 3)),
+            Table::limit_holdem_from_seats_with_id(seats(), 100, 200, 3, TABLE_ID)
+        );
+        assert_eq!(
+            renamed(Table::plo_from_seats(seats(), (5, 10))),
+            Table::plo_from_seats_with_id(seats(), (5, 10), TABLE_ID)
+        );
+        assert_eq!(
+            renamed(Table::stud_hi_from_seats(seats(), 2, 5, 20, 40).unwrap()),
+            Table::stud_hi_from_seats_with_id(seats(), 2, 5, 20, 40, TABLE_ID).unwrap()
+        );
+        assert_eq!(
+            renamed(Table::razz_from_seats(seats(), 2, 5, 20, 40).unwrap()),
+            Table::razz_from_seats_with_id(seats(), 2, 5, 20, 40, TABLE_ID).unwrap()
+        );
+    }
+
+    #[test]
+    fn from_seats_with_id__opens_the_event_log_with_the_given_id() {
+        let id = Uuid::from_u128(42);
+        let table = Table::from_seats_with_id(
+            seats_with_fixed_ids(),
+            GameType::NoLimitHoldem,
+            ForcedBets::new(50, 100),
+            id,
+        );
+        assert_eq!(id, table.id);
+        assert_eq!(Some(&TableAction::TableOpen(id)), table.event_log.first());
+    }
+
+    #[test]
+    fn from_seats_with_id__same_inputs_give_equal_tables() {
+        let id = Uuid::from_u128(42);
+        let first = Table::from_seats_with_id(
+            seats_with_fixed_ids(),
+            GameType::NoLimitHoldem,
+            ForcedBets::new(50, 100),
+            id,
+        );
+        let second = Table::from_seats_with_id(
+            seats_with_fixed_ids(),
+            GameType::NoLimitHoldem,
+            ForcedBets::new(50, 100),
+            id,
+        );
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn from_seats_with_id__matches_from_seats_apart_from_the_table_id() {
+        let id = Uuid::from_u128(42);
+        let mut shim = Table::from_seats(
+            seats_with_fixed_ids(),
+            GameType::NoLimitHoldem,
+            ForcedBets::new(50, 100),
+        );
+        shim.id = id;
+        shim.event_log[0] = TableAction::TableOpen(id);
+        let injected = Table::from_seats_with_id(
+            seats_with_fixed_ids(),
+            GameType::NoLimitHoldem,
+            ForcedBets::new(50, 100),
+            id,
+        );
+        assert_eq!(shim, injected);
+    }
 
     fn make_two_player_table() -> Table {
         let seats = Seats::new(vec![

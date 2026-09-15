@@ -26,8 +26,8 @@ jobs:
       # The pokerbench module is gated off by default, so the plain `test` job
       # never compiles it. Exercise it explicitly here (tests, doc tests, lints).
       # clippy comes from rust-toolchain.toml's components on the pinned toolchain.
-      - run: cargo test --features pokerbench
-      - run: cargo clippy --features pokerbench -- -D warnings
+      - run: cargo test --features full,pokerbench
+      - run: cargo clippy --features full,pokerbench -- -D warnings
 
   optional-features:
     name: Optional features (bot-training, debug-json)
@@ -40,8 +40,8 @@ jobs:
       # so they could silently rot (audit VI.4 / P7). Exercise both explicitly.
       # The heavy `training_integration` run stays #[ignore]d (release-only), so
       # this only compiles the feature + runs the fast unit/doc tests.
-      - run: cargo test --features bot-training
-      - run: cargo test --features debug-json
+      - run: cargo test --features full,bot-training
+      - run: cargo test --features full,debug-json
 
   marathon:
     name: Bot Marathon (1 000 hands)
@@ -53,7 +53,7 @@ jobs:
       - name: Run bot marathon
         env:
           MARATHON_DUMP_PATH: marathon_failure.yaml
-        run: cargo test --test bot_marathon -- --include-ignored --nocapture
+        run: cargo test --features full --test bot_marathon -- --include-ignored --nocapture
       - name: Upload failure YAML
         if: failure()
         uses: actions/upload-artifact@v7
@@ -76,7 +76,7 @@ jobs:
       # dead money) end to end. They are `#[ignore]`d for local speed, so run
       # them explicitly here.
       - name: Run variant replay round-trips
-        run: cargo test --test replay_consistency -- --include-ignored --nocapture
+        run: cargo test --features full --test replay_consistency -- --include-ignored --nocapture
 
   okf:
     name: OKF bundle conformance

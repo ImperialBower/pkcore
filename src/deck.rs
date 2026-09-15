@@ -120,6 +120,8 @@ impl Deck {
     }
 
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: reads OS entropy, so it needs `entropy`.
+    #[cfg(feature = "entropy")]
     pub fn poker_cards_shuffled() -> Cards {
         let mut cards = Deck::poker_cards();
         cards.shuffle_in_place();

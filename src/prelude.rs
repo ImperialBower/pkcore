@@ -63,7 +63,6 @@ pub use crate::suit::Suit;
 pub use crate::util::Percentage;
 pub use crate::util::Util;
 pub use crate::util::data::TestData;
-pub use crate::util::name::Name;
 pub use crate::util::terminal::Terminal;
 
 // Re-export core traits
@@ -103,6 +102,8 @@ pub use crate::play::visibility::Visibility;
 
 // casino
 pub use crate::casino::cashier::chips::Stack;
+// `docs/KERNEL_PURITY_AUDIT.md` fix 8: `casino::dealer` needs `entropy`.
+#[cfg(feature = "entropy")]
 pub use crate::casino::dealer::Dealer;
 pub use crate::casino::position::Positions;
 pub use crate::casino::table::{BettingState, Player, SNAPSHOT_VERSION, Seat, SeatState, Seats, Table, TableState};

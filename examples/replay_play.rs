@@ -197,7 +197,7 @@ fn resolve_path() -> PathBuf {
     }
     most_recent_yaml("generated").unwrap_or_else(|| {
         eprintln!("error: no YAML files found in generated/ and no path argument given.");
-        eprintln!("  Run `cargo run --example interactive_play` first to generate a session.");
+        eprintln!("  Run `cargo run --features full --example interactive_play` first to generate a session.");
         std::process::exit(1);
     })
 }

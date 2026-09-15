@@ -18,7 +18,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --example player_stats_session
+//! cargo run --features full --example player_stats_session
 //! ```
 //!
 //! (The required features — `bot-profiles`, `hand-histories`,

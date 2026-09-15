@@ -13,6 +13,7 @@ use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
 use itertools::Itertools;
 use rand::prelude::SliceRandom;
+#[cfg(feature = "entropy")]
 use rand::rng;
 #[cfg(feature = "parallel")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -463,12 +464,18 @@ impl Cards {
     }
 
     #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: reads OS entropy; `shuffle_in_place_with` is the seeded twin.
+    #[cfg(feature = "entropy")]
     pub fn shuffle(&self) -> Cards {
         let mut shuffled = self.clone();
         shuffled.shuffle_in_place();
         shuffled
     }
 
+    /// Shuffle in place with the thread-local RNG. Needs the `entropy` feature;
+    /// [`Self::shuffle_in_place_with`] is the seeded twin.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: `rng()` reads OS entropy, and the checker missed it.
+    #[cfg(feature = "entropy")]
     pub fn shuffle_in_place(&mut self) {
         let mut rng = rng();
         self.shuffle_in_place_with(&mut rng);

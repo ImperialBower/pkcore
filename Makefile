@@ -3,6 +3,12 @@
 # Default target
 default: ayce
 
+# Default features are the pure kernel since 0.15.0 (docs/KERNEL_PURITY_AUDIT.md
+# fix 1). Dev targets build and test with `full`, which restores everything that
+# used to be on by default — YAML, bots, rayon, JSON, CSV, file and console
+# helpers. test-kernel and check-purity are what cover the lean builds.
+FULL := --features full
+
 # Display help information
 help:
 	@echo "Available targets:"
@@ -22,7 +28,7 @@ help:
 	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
-	@echo "  make test-kernel     - cargo test --no-default-features (the bare kernel, as CI runs it)"
+	@echo "  make test-kernel     - the bare kernel, as CI runs it: the suite with only entropy, plus kernel_determinism with nothing"
 	@echo "  make test-serial     - Run the test suite with parallel OFF (exercises the serial arms)"
 	@echo "  make check-features  - cargo check each feature alone on top of --no-default-features"
 	@echo "  make ayce            - Run fmt, actionlint, build_test, test-kernel, test-serial, check-features, check-purity, check-wasm, clippy, and docs"
@@ -44,7 +50,7 @@ help:
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
-	@echo "  make check-purity       - Assert no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features"
+	@echo "  make check-purity       - Fail on rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon/clap/csv/serde_json in the default and --no-default-features builds; warn on the rest"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -66,16 +72,16 @@ clean:
 
 # Build the project
 build:
-	cargo build
+	cargo build $(FULL)
 
 # Run tests
 test:
-	cargo test
+	cargo test $(FULL)
 
 # Mirror the GitHub Actions test job exactly: warnings are hard errors and
 # incremental compilation is off. Uses the CURRENT Cargo.lock.
 ci:
-	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all
+	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all $(FULL)
 
 # Like `ci`, but first re-resolves dependencies to the latest compatible
 # versions. CI has no committed Cargo.lock and resolves fresh on every run,
@@ -83,15 +89,15 @@ ci:
 # in a point release) before it reaches GitHub.
 ci-fresh:
 	cargo update
-	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all
+	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all $(FULL)
 
 # Run ignored heavy tests
 heavy:
-	cargo test --test heavy_tests -- --ignored
+	cargo test $(FULL) --test heavy_tests -- --ignored
 
 # Run the 1000-hand bot marathon stress test
 marathon:
-	cargo test --test bot_marathon -- --include-ignored --nocapture
+	cargo test $(FULL) --test bot_marathon -- --include-ignored --nocapture
 
 # Run tests with cargo-nextest (installs if not present)
 nextest:
@@ -106,15 +112,15 @@ nextest:
 			exit 1; \
 		fi; \
 	fi
-	cargo nextest run
+	cargo nextest run $(FULL)
 
 # Run tests with the debug-json feature enabled (SolverResult::save/load use JSON)
 test-debug-json:
-	cargo test --features debug-json
+	cargo test --features full,debug-json
 
 # Clean once, then build, run nextest, and run doc tests
 build_test: clean build nextest
-	cargo test --doc
+	cargo test --doc $(FULL)
 
 # Format code
 fmt:
@@ -122,7 +128,7 @@ fmt:
 
 # Run clippy linter
 clippy:
-	cargo clippy
+	cargo clippy $(FULL)
 
 test-nightly:
 	cargo +nightly test --all-targets --all-features
@@ -172,7 +178,7 @@ unused-deps:
 
 # Create documentation
 create_docs:
-	cargo doc --no-deps
+	cargo doc --no-deps $(FULL)
 
 # Open documentation in browser
 docs: create_docs
@@ -203,12 +209,18 @@ actionlint:
 		echo "WARNING: actionlint not installed — skipping workflow lint. Please install it: https://github.com/rhysd/actionlint#installation"; \
 	fi
 
-# Mirror the CI kernel job. `build_test` runs with default features on, which
+# Mirror the CI kernel job. `build_test` runs with `--features full`, which
 # is how a test written against a feature-gated impl passed `ayce` and failed
 # only on GitHub (2026-08-21). The bare kernel must build and pass its own
 # tests with every default feature off, and each feature must compile alone.
+#
+# Since 0.15.0 the suite itself needs `entropy`: its tables are built with
+# `Player::new`-style conveniences that mint random ids. So the suite runs with
+# `entropy` on, and `tests/kernel_determinism.rs` — which uses only the seeded
+# APIs — runs against the real entropy-free build.
 test-kernel:
-	cargo test --no-default-features
+	cargo test --no-default-features --features entropy
+	cargo test --no-default-features --test kernel_determinism
 
 # Runs the library WITHOUT `parallel`, so the serial arms of the equity engine,
 # range equity and turn evaluation are executed rather than merely compiled.
@@ -216,12 +228,18 @@ test-kernel:
 # and the rayon reduce agree (see
 # `exact_enumerate__counts_are_identical_serial_or_parallel`).
 test-serial:
-	cargo test --no-default-features --features equity,bot-profiles,hand-histories,player-stats
+	cargo test --no-default-features --features equity,bot-profiles,hand-histories,player-stats,entropy
 
+# Each feature twice: the lib alone without `entropy` (so no core path leans on
+# OS randomness), then lib and tests with it (the tests need it, see
+# test-kernel).
 check-features:
-	@for f in hand-histories bot-profiles player-stats player-stats-persistence equity; do \
-		echo "--- cargo check --no-default-features --features $$f --lib --tests"; \
-		cargo check --no-default-features --features $$f --lib --tests || exit 1; \
+	@cargo check --no-default-features --lib || exit 1; \
+	for f in hand-histories bot-profiles player-stats player-stats-persistence equity json csv persistence hup-charts terminal entropy; do \
+		echo "--- cargo check --no-default-features --features $$f --lib"; \
+		cargo check --no-default-features --features $$f --lib || exit 1; \
+		echo "--- cargo check --no-default-features --features $$f,entropy --lib --tests"; \
+		cargo check --no-default-features --features $$f,entropy --lib --tests || exit 1; \
 	done
 
 ayce: export RUSTFLAGS := -Dwarnings
@@ -249,18 +267,19 @@ install-watch:
 	cargo install cargo-watch
 
 # Check that the library compiles for WebAssembly
-# Two configurations, because they fail differently. The default build proves
-# the crate still *compiles* for wasm; the second proves the configuration we
-# actually tell browser consumers to use — `default-features = false` without
-# `parallel` — builds, so a WASM target never links a rayon thread pool it has
-# no threads to run (see the Parallelism section in src/lib.rs).
+# Two configurations, because they fail differently. The default build is what
+# a plain browser dependency gets — since 0.15.0 it carries no `parallel`, so no
+# rayon thread pool it has no threads to run (see the Parallelism section in
+# src/lib.rs). The second adds the YAML surfaces the wasm apps turn on.
 check-wasm:
 	cargo check --target wasm32-unknown-unknown
 	cargo check --target wasm32-unknown-unknown --no-default-features --features equity,bot-profiles,hand-histories,player-stats
 
-# Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that with default
-# features off, the storage/terminal/YAML layers drop out and no rusqlite/zstd/
-# termion/dotenvy/serde_yaml_bw/rayon remains in the dependency tree.
+# Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that neither the
+# `--no-default-features` build nor the plain default build (what `cargo add
+# pkcore` resolves) holds any crate on the HARD list. Checking the default tree
+# is what makes "pure by default" (KERNEL_PURITY_AUDIT.md fix 1, 0.15.0) a
+# tested property rather than a Cargo.toml comment.
 #
 # serde_yaml_bw used to be a documented exception: it arrived transitively via
 # `pkstate`, so the bot-profiles/hand-histories gates could not actually keep a
@@ -274,18 +293,54 @@ check-wasm:
 # basic.yaml invokes `make check-purity` rather than re-inlining the pipeline
 # (audit P9j.4). The `::error::` prefix is a GitHub Actions annotation in CI and
 # a harmless plain line locally.
+# Two lists, on purpose. HARD is what the crate already keeps out of the pure
+# build, and it fails the gate. WARN is the rest of the domain-kernel skill's
+# banned set (docs/KERNEL_PURITY_AUDIT.md) — those crates are still in the pure
+# tree today, so naming them here reports without blocking. As each one leaves
+# the pure tree, move it from WARN to HARD and the gate ratchets shut.
+#
+# `rand` and `postcard` are deliberately on neither list. A seeded PRNG is pure
+# arithmetic, and cardpack needs `rand` non-optionally, so it can never leave.
+# The OS entropy behind `rand::rng()` and `Uuid::new_v4()` is the real leak, and
+# every path to it goes through `getrandom` — that is the name the ratchet
+# closes on. `postcard` never appears in a public signature (audit §3).
+PURITY_HARD := rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon|clap|structopt|csv|serde_json
+# The kernel build must also be free of OS entropy (audit fix 8, 0.15.0). The
+# default build keeps it: the `entropy` feature is on by default, for the
+# random-id and ambient-shuffle conveniences, so there it is only warned.
+PURITY_HARD_KERNEL := $(PURITY_HARD)|getrandom
+PURITY_WARN := serde_yaml|serde_cbor|ciborium|bincode|rmp|toml|ron|quick-xml|serde-xml-rs|plist|tokio|async-std|smol|reqwest|hyper|ureq|tonic|axum|actix-web|warp|rocket|sqlx|diesel|sled|redb|getrandom|fastrand|oorandom
+
+# Match a whole crate name in a `cargo tree` line ("├── getrandom v0.3.4"), so a
+# longer name that contains a banned one (`serde_json_lenient`) is not a match.
+PURITY_MATCH = (^|[^[:alnum:]_-])($(1)) v[0-9]
+
+# `$$mode` is left unquoted on purpose: empty, it expands to no argument at all,
+# which is the plain default build.
 check-purity:
-	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon' || true); \
-	if [ -n "$$leaked" ]; then \
-		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal/bot-profiles/parallel:"; \
-		echo "$$leaked"; \
-		exit 1; \
-	fi; \
-	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features."
+	@for mode in --no-default-features ""; do \
+		label=$${mode:-default features}; \
+		tree=$$(cargo tree $$mode -e no-dev) || exit 1; \
+		if [ -n "$$mode" ]; then hard='$(call PURITY_MATCH,$(PURITY_HARD_KERNEL))'; names='$(PURITY_HARD_KERNEL)'; \
+		else hard='$(call PURITY_MATCH,$(PURITY_HARD))'; names='$(PURITY_HARD)'; fi; \
+		leaked=$$(echo "$$tree" | grep -iE "$$hard" || true); \
+		if [ -n "$$leaked" ]; then \
+			echo "::error::Purity gate failed ($$label) — these crates must stay out of the pure build:"; \
+			echo "$$leaked"; \
+			exit 1; \
+		fi; \
+		echo "Purity gate passed ($$label): none of $$names."; \
+		watched=$$(echo "$$tree" | grep -iE '$(call PURITY_MATCH,$(PURITY_WARN))' || true); \
+		if [ -n "$$watched" ]; then \
+			echo "::warning::Not yet pure ($$label) — these banned crates survive:"; \
+			echo "$$watched"; \
+			echo "See docs/KERNEL_PURITY_AUDIT.md. This does not fail the build yet."; \
+		fi; \
+	done
 
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:
-	cargo run --example export_hups_bin
+	cargo run --features store --example export_hups_bin
 
 # Download the full PokerBench dataset (EPIC-43) — both the test and train
 # splits, CSV + JSON (~720 MB total) — into POKERBENCH_DATA_DIR (default

@@ -39,7 +39,9 @@ jobs:
           toolchain: ${{matrix.rust}}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --all
+      # `full` is the 0.14.0 default set; the lean builds are covered by
+      # the no-default-features job and `make check-purity`.
+      - run: cargo test --all --features full
 
   clippy:
     name: Clippy
@@ -52,7 +54,7 @@ jobs:
         with:
           components: clippy, rust-src
       - uses: Swatinem/rust-cache@v2
-      - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
+      - run: cargo clippy --features full -- -Dclippy::all -Dclippy::pedantic
 
   # Semver posture (AUDIT_Fable_5.md P6): compares the crate's public API against
   # the last version published to crates.io and fails if the change is breaking
@@ -91,7 +93,7 @@ jobs:
           toolchain: stable
           components: rust-src
       - uses: Swatinem/rust-cache@v2
-      - run: cargo doc --no-deps
+      - run: cargo doc --no-deps --features full
         env:
           RUSTDOCFLAGS: -Dwarnings
 
@@ -109,16 +111,14 @@ jobs:
       # examples (which `--lib --tests` skips) and runs the non-gated suite.
       # Building examples is what surfaces one that uses a feature-gated API
       # without a `required-features` entry (audit II.11 / P7) — the reason a
-      # plain `cargo check --lib --tests` never caught it. ~9,600 tests run here.
-      - run: cargo test --no-default-features
-      - run: cargo check --no-default-features --features hand-histories --lib --tests
-      - run: cargo check --no-default-features --features bot-profiles --lib --tests
-      - run: cargo check --no-default-features --features player-stats --lib --tests
-      - run: cargo check --no-default-features --features player-stats-persistence --lib --tests
-      # Equity in isolation: the `pkodds` service builds pkcore with just this
-      # feature. Guards against the equity engine bit-rotting or coupling to the
-      # default stack (it silently broke once because nothing on CI built it).
-      - run: cargo check --no-default-features --features equity --lib --tests
+      # plain `cargo check --lib --tests` never caught it. The suite needs
+      # `entropy` (0.15.0); `kernel_determinism` runs with nothing at all.
+      # Single source for both, and for the per-feature checks: the Makefile.
+      - run: make test-kernel
+      # Every feature alone — lib without `entropy`, lib and tests with it.
+      # Equity in isolation matters in particular: the `pkodds` service builds
+      # pkcore with just that feature.
+      - run: make check-features
       # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): with default
       # features off, the storage (`store`) and terminal (`terminal`) layers must
       # drop out entirely — no rusqlite/zstd/termion/dotenvy in the dependency

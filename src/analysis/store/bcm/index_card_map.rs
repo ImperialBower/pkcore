@@ -4,9 +4,12 @@ use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::card::Card;
+#[cfg(feature = "csv")]
 use crate::cards::Cards;
+#[cfg(feature = "csv")]
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "csv")]
 use std::error::Error;
 
 /// # V1 - Cards
@@ -51,6 +54,8 @@ impl IndexCardMap {
     /// # Errors
     ///
     /// Trips if the Card combinations are off, which shouldn't be possible.
+    // `docs/KERNEL_PURITY_AUDIT.md` §3, fix 1: `csv` is optional, behind the `csv` feature.
+    #[cfg(feature = "csv")]
     pub fn generate_csv(path: &str) -> Result<(), Box<dyn Error>> {
         let mut wtr = WriterBuilder::new().has_headers(false).from_path(path)?;
 

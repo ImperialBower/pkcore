@@ -17,7 +17,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --example interactive_play
+//! cargo run --features full --example interactive_play
 //! ```
 
 use pkcore::analysis::eval::Eval;

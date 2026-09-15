@@ -14,11 +14,16 @@
 
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combos::Combos;
+#[cfg(feature = "hup-charts")]
 use crate::analysis::store::db::hup::HUPResult;
+#[cfg(feature = "hup-charts")]
 use crate::arrays::two::Two;
+#[cfg(feature = "hup-charts")]
 use crate::bard::Bard;
 use crate::bot::hand_order_table::HAND_ORDER;
+#[cfg(feature = "hup-charts")]
 use crate::cards::Cards;
+#[cfg(feature = "hup-charts")]
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -118,6 +123,8 @@ const TOTAL_HANDS: usize = 1_326;
 /// 169 numbers.
 #[doc(hidden)]
 #[must_use]
+// `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.
+#[cfg(feature = "hup-charts")]
 pub fn derive_hand_ordering() -> Vec<(Combo, f64)> {
     let field: Vec<Two> = Cards::deck()
         .combinations(2)
@@ -149,6 +156,7 @@ pub fn derive_hand_ordering() -> Vec<(Combo, f64)> {
 /// selectively. `72o` found only 820 of its 1,225 matchups that way and scored
 /// `0.3845` instead of `0.3469`, because the skipped matchups were mostly the
 /// ones it loses. Returns `None` unless every eligible matchup resolves.
+#[cfg(feature = "hup-charts")]
 fn equity_vs_field(hero: Two, field: &[Two]) -> Option<f64> {
     let hero_bard: Bard = hero.into();
     let mut total = 0.0;
@@ -190,6 +198,7 @@ fn equity_vs_field(hero: Two, field: &[Two]) -> Option<f64> {
 }
 
 /// Returns `true` when the two hands cannot be dealt at the same time.
+#[cfg(feature = "hup-charts")]
 fn shares_a_card(hero: Two, villain: Two) -> bool {
     let (first, second) = (hero.first(), hero.second());
     villain.first() == first || villain.first() == second || villain.second() == first || villain.second() == second
@@ -266,6 +275,7 @@ mod bot__hand_order_tests {
     /// Every hand must score against all `C(50, 2)` opponents it can face. A
     /// partial average is silently biased, so `equity_vs_field` returns `None`
     /// rather than a number built from part of the field.
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn every_class_scores_against_the_whole_field() {
         assert_eq!(
@@ -314,6 +324,7 @@ mod bot__hand_order_tests {
     /// cannot drift from the chart it was generated from. Living in a test is
     /// deliberate: the test binary may read the 15.8 MB chart, a WASM build
     /// linking only `hand_ordering()` never does.
+    #[cfg(feature = "hup-charts")]
     #[test]
     fn table_matches_the_chart() {
         let derived = derive_hand_ordering();

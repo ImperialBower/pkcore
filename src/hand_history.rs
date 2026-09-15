@@ -633,7 +633,8 @@ impl HandHistory {
             .max(max_action_seat + 1);
         let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
-            seats_vec[p.seat as usize] = Seat::new(Player::new_with_chips(p.name.clone(), p.stack as usize));
+            seats_vec[p.seat as usize] =
+                Seat::new(Player::with_id(replay_player_id(p), p.name.clone(), p.stack as usize));
         }
         let seats = Seats::new(seats_vec);
         // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
@@ -650,6 +651,10 @@ impl HandHistory {
         // semantics — the only difference at replay time is which
         // `*_from_seats` constructor sets the `GameType` tag, which
         // drives the showdown evaluator dispatch.
+        // `docs/KERNEL_PURITY_AUDIT.md` fix 8: ids are the record's own, not random, so a
+        // replay is the same table every time: players keep their recorded ids,
+        // the table is named by the hand id.
+        let table_id = Uuid::new_v5(&REPLAY_ID_NAMESPACE, self.hand.id.as_bytes());
         let is_stud_family = self.hand.game == HandVariant::Stud || self.hand.game == HandVariant::Razz;
         let mut table = if is_stud_family {
             let ante = self.table.stakes.ante.map_or(0, |x| x as usize);
@@ -664,20 +669,20 @@ impl HandHistory {
             // `Table::MAX_STUD_SEATS` chairs describes a table that cannot be
             // dealt, so the replay reports it rather than reconstructing it.
             if self.hand.game == HandVariant::Razz {
-                Table::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)?
+                Table::razz_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, table_id)?
             } else {
-                Table::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)?
+                Table::stud_hi_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, table_id)?
             }
         } else if self.hand.game == HandVariant::Omaha {
-            Table::plo_from_seats(seats, (sb, bb))
+            Table::plo_from_seats_with_id(seats, (sb, bb), table_id)
         } else {
             match self.table.betting_structure {
                 crate::games::betting_structure::BettingStructure::FixedLimit {
                     small_bet,
                     big_bet,
                     raise_cap,
-                } => Table::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
-                _ => Table::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+                } => Table::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, table_id),
+                _ => Table::nlh_from_seats_with_id(seats, ForcedBets::new(sb, bb), table_id),
             }
         };
         table.button = button;
@@ -1331,7 +1336,7 @@ impl HandCollection {
     /// # Examples
     ///
     /// ```no_run
-    /// # #[cfg(feature = "hand-histories")]
+    /// # #[cfg(all(feature = "hand-histories", feature = "persistence"))]
     /// # {
     /// use pkcore::hand_history::HandCollection;
     ///
@@ -1340,6 +1345,9 @@ impl HandCollection {
     /// assert!(path.starts_with("generated/my_session_"));
     /// # }
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 2: clock, fixed `generated/` path and file write, so it
+    // needs `persistence`. `to_yaml` is the pure half.
+    #[cfg(feature = "persistence")]
     pub fn save(&self, run_name: &str) -> Result<String, Box<dyn std::error::Error>> {
         use std::time::{SystemTime, UNIX_EPOCH};
         let ts = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
@@ -2653,6 +2661,19 @@ impl AnalysisContext {
 // Replay
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Namespace for the UUID v5 ids [`HandHistory::replay`] derives.
+#[cfg(feature = "bot-profiles")]
+const REPLAY_ID_NAMESPACE: Uuid = Uuid::from_u128(0x9b7e_2a41_c3d5_4f68_8e19_a0b2_c4d6_e8f0);
+
+/// The id a replayed player gets: the one the record carries, or, for a legacy
+/// record without one, a UUID v5 of the player's name.
+#[cfg(feature = "bot-profiles")]
+fn replay_player_id(entry: &PlayerEntry) -> Uuid {
+    entry
+        .player_id
+        .unwrap_or_else(|| Uuid::new_v5(&REPLAY_ID_NAMESPACE, entry.name.as_bytes()))
+}
+
 /// Result of replaying a [`HandHistory`] through the game engine.
 ///
 /// Returned by [`HandHistory::replay`].
@@ -2776,8 +2797,43 @@ fn build_replay_result(
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
+
+    #[cfg(feature = "bot-profiles")]
+    fn id_entry(name: &str, player_id: Option<Uuid>) -> PlayerEntry {
+        PlayerEntry {
+            seat: 1,
+            name: name.to_string(),
+            stack: 500.0,
+            player_id,
+            hole_cards: None,
+            posted: None,
+            hole_cards_visibility: None,
+            withdrawn: None,
+        }
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn replay_player_id__uses_the_recorded_id() {
+        let id = Uuid::from_u128(9);
+        assert_eq!(id, replay_player_id(&id_entry("Alice", Some(id))));
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn replay_player_id__without_a_recorded_id_derives_one_from_the_name() {
+        assert_eq!(
+            replay_player_id(&id_entry("Alice", None)),
+            replay_player_id(&id_entry("Alice", None))
+        );
+        assert_ne!(
+            replay_player_id(&id_entry("Alice", None)),
+            replay_player_id(&id_entry("Bob", None))
+        );
+    }
 
     /// The `DEFECT_014` dead-button hand, as `bot_marathon` recorded it.
     ///

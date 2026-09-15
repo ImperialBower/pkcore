@@ -10,6 +10,7 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, Shifty, SuitShift};
+#[cfg(feature = "csv")]
 use csv::{Reader, WriterBuilder};
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rusqlite::Connection;
@@ -18,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+#[cfg(feature = "csv")]
 use std::fs::File;
 use std::str::FromStr;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
@@ -104,6 +106,8 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart.
+    #[cfg(feature = "hup-charts")]
     pub fn hup_result(&self) -> Result<HUPResult, PKError> {
         HUPResult::lookup(&self.higher, &self.lower)
     }
@@ -575,6 +579,9 @@ impl SortedHeadsUp {
     /// # Panics
     ///
     /// When can't write to file system
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1: file I/O through `csv`, so both CSV helpers need `csv`.
+    // They still take CWD-relative paths (fix 7, open).
+    #[cfg(feature = "csv")]
     pub fn generate_csv(path: &str, shus: HashSet<SortedHeadsUp>) -> Result<(), Box<dyn std::error::Error>> {
         let mut v = Vec::from_iter(shus);
         v.sort();
@@ -591,6 +598,8 @@ impl SortedHeadsUp {
     ///
     /// * Throws `PKError::InvalidBinaryFormat` if the csv file is corrupted.
     /// * Throws `PKError::Fubar` if unable to open at all.
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1: behind `csv`, like `generate_csv`.
+    #[cfg(feature = "csv")]
     pub fn read_csv(path: &str) -> Result<Vec<SortedHeadsUp>, PKError> {
         match File::open(path) {
             Ok(file) => {

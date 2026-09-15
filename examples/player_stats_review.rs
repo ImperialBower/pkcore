@@ -11,8 +11,7 @@
 //!     --features bot-profiles,hand-histories,player-stats
 //! ```
 //!
-//! The features are also pkcore's defaults, so plain
-//! `cargo run --example player_stats_review` works in this repo.
+//! `--features full` turns on all three as well.
 
 use pkcore::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
 use pkcore::bot::profile::BotProfile;

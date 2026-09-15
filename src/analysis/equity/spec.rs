@@ -77,8 +77,16 @@ pub struct EquityOptions {
     /// call in a browser.
     pub max_samples: u64,
     /// Optional RNG seed. When `Some`, Monte Carlo results are deterministic
-    /// regardless of thread scheduling, which makes tests reproducible.
+    /// regardless of thread scheduling, which makes tests reproducible. When
+    /// `None`, the seed comes from the OS with the `entropy` feature, and is
+    /// [`EquityOptions::DEFAULT_SEED`] without it.
     pub seed: Option<u64>,
+}
+
+impl EquityOptions {
+    /// The Monte Carlo seed for a request with `seed: None` when the `entropy`
+    /// feature is off.
+    pub const DEFAULT_SEED: u64 = 0;
 }
 
 impl Default for EquityOptions {

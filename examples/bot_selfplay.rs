@@ -6,7 +6,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --example bot_selfplay
+//! cargo run --features full --example bot_selfplay
 //! ```
 
 use pkcore::analysis::eval::Eval;

@@ -301,8 +301,8 @@ impl TryFrom<&TableState> for Table {
 
         let mut seats: Vec<Seat> = Vec::with_capacity(state.seats.len());
         for seat_state in &state.seats {
-            let mut player = Player::new(seat_state.handle.clone());
-            player.id = seat_state.id;
+            // `docs/KERNEL_PURITY_AUDIT.md` fix 1a: take the stored id, don't mint a random one first.
+            let mut player = Player::with_id(seat_state.id, seat_state.handle.clone(), 0);
             player.chips = seat_state.chips;
             player.bet = seat_state.bet;
             player.chips_in_play = seat_state.chips_in_play;

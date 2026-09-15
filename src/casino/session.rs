@@ -306,12 +306,45 @@ impl PokerSession {
     /// assert_eq!(session.hand_number, 1);
     /// assert!(session.table.seats.are_dealt());
     /// ```
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `start_hand_with` is the seeded twin.
+    #[cfg(feature = "entropy")]
     pub fn start_hand(&mut self) -> Result<(), PKError> {
+        self.start_hand_with(&mut rand::rng())
+    }
+
+    /// [`Self::start_hand`] with a caller-supplied RNG for the shuffle, so the
+    /// same seed deals the same hand.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::start_hand`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 1_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     Table::nlh_from_seats_with_id(seats, ForcedBets::new(10, 20), Uuid::nil())
+    /// );
+    /// session.start_hand_with(&mut SmallRng::seed_from_u64(7)).unwrap();
+    /// assert_eq!(session.hand_number, 1);
+    /// ```
+    pub fn start_hand_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), PKError> {
         if let Some(pending) = self.pending_forced.take() {
             self.table.forced = pending;
         }
         self.forced_at_hand_start = self.table.forced;
-        self.table.deck.shuffle_in_place();
+        self.table.deck.shuffle_in_place_with(rng);
         self.shuffled_deck_str = Some(self.table.deck.to_string());
         self.table.act_forced_bets()?;
         // EPIC-32 Phase 6: dispatch on family. Hold'em-family games deal
@@ -721,11 +754,51 @@ impl PokerSession {
     /// assert!(!winnings.vec().is_empty());
     /// assert_eq!(session.hand_number, 1);
     /// ```
-    pub fn run_hand<F>(&mut self, mut on_action: F) -> Result<Winnings, PKError>
+    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `run_hand_with` is the seeded twin.
+    #[cfg(feature = "entropy")]
+    pub fn run_hand<F>(&mut self, on_action: F) -> Result<Winnings, PKError>
     where
         F: FnMut(&Table, u8) -> PlayerAction,
     {
-        self.start_hand()?;
+        self.run_hand_with(&mut rand::rng(), on_action)
+    }
+
+    /// [`Self::run_hand`] with a caller-supplied RNG for the shuffle, so the
+    /// same seed and the same choices play the same hand.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::run_hand`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "Alice".to_string(), 2_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "Bob".to_string(), 2_000)),
+    /// ]);
+    /// let table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(10, 20), Uuid::nil());
+    /// let mut session = PokerSession::new(table);
+    ///
+    /// let winnings = session
+    ///     .run_hand_with(&mut SmallRng::seed_from_u64(7), |_table, _seat| PlayerAction::Call)
+    ///     .unwrap();
+    /// assert!(!winnings.vec().is_empty());
+    /// ```
+    pub fn run_hand_with<R, F>(&mut self, rng: &mut R, mut on_action: F) -> Result<Winnings, PKError>
+    where
+        R: rand::Rng + ?Sized,
+        F: FnMut(&Table, u8) -> PlayerAction,
+    {
+        self.start_hand_with(rng)?;
         while let Some(seat) = self.next_actor()? {
             let action = on_action(&self.table, seat);
             self.apply_action(seat, action)?;
@@ -967,6 +1040,7 @@ pub struct SessionView {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
     use crate::casino::game::ForcedBets;
@@ -978,6 +1052,67 @@ mod tests {
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
         PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)))
+    }
+
+    fn seeded_two_player_session() -> PokerSession {
+        let seats = Seats::new(vec![
+            Seat::new(Player::with_id(uuid::Uuid::from_u128(1), "Alice".to_string(), 10_000)),
+            Seat::new(Player::with_id(uuid::Uuid::from_u128(2), "Bob".to_string(), 10_000)),
+        ]);
+        PokerSession::new(Table::nlh_from_seats_with_id(
+            seats,
+            ForcedBets::new(50, 100),
+            uuid::Uuid::from_u128(42),
+        ))
+    }
+
+    #[test]
+    fn start_hand_with__same_seed_gives_same_hand() {
+        use rand::SeedableRng;
+        let started = |seed: u64| {
+            let mut session = seeded_two_player_session();
+            session
+                .start_hand_with(&mut rand::rngs::SmallRng::seed_from_u64(seed))
+                .unwrap();
+            session
+        };
+        assert_eq!(started(7).shuffled_deck_str, started(7).shuffled_deck_str);
+        assert_ne!(started(7).shuffled_deck_str, started(8).shuffled_deck_str);
+    }
+
+    #[test]
+    fn run_hand_with__same_seed_gives_same_result() {
+        use rand::SeedableRng;
+        let played = |seed: u64| {
+            let mut session = seeded_two_player_session();
+            let winnings = session
+                .run_hand_with(&mut rand::rngs::SmallRng::seed_from_u64(seed), |_table, _seat| {
+                    crate::casino::action::PlayerAction::Call
+                })
+                .unwrap();
+            (winnings, session.table.event_log.clone())
+        };
+        assert_eq!(played(7), played(7));
+        assert_eq!(1, {
+            let mut session = seeded_two_player_session();
+            session
+                .run_hand_with(&mut rand::rngs::SmallRng::seed_from_u64(7), |_t, _s| {
+                    crate::casino::action::PlayerAction::Call
+                })
+                .unwrap();
+            session.hand_number
+        });
+    }
+
+    #[test]
+    fn start_hand_with__deals_and_counts_the_hand() {
+        use rand::SeedableRng;
+        let mut session = seeded_two_player_session();
+        session
+            .start_hand_with(&mut rand::rngs::SmallRng::seed_from_u64(7))
+            .unwrap();
+        assert_eq!(1, session.hand_number);
+        assert!(session.table.seats.are_dealt());
     }
 
     // ── EPIC-88: snapshot / restore ───────────────────────────────────────

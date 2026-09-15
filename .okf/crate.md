@@ -29,18 +29,27 @@ features.
 
 # Feature flags
 
-Default features enable the full player-stats stack plus bot profiles
-and hand histories so examples run with a plain `cargo run --example`.
-Downstream consumers can opt out with `default-features = false`.
+Since 0.15.0 the crate is pure by default: the default set is `equity`,
+`player-stats` and `hup-charts`, with no format crate, file helper or
+thread pool. `full` turns on the 0.14.0 default set — use it for
+`cargo test`, the examples, or to keep the old behaviour downstream.
+`make check-purity` asserts the default tree stays pure.
 
 | Feature | Purpose |
 |---|---|
-| `store` | On-disk storage layer (`rusqlite`, `zstd`). |
-| `terminal` | Interactive terminal layer (`termion`). |
-| `equity` | Pure-compute multi-way equity engine in `analysis::equity` (exact enumeration + seeded Monte Carlo, parallelized with rayon). |
+| `full` | Umbrella: every feature below except `store`, `pokerbench`, `bot-training`, `debug-json`, `generators`. |
+| `store` | On-disk storage layer (`rusqlite`, `zstd`, `csv`). |
+| `terminal` | Console helpers for the REPL examples: `Terminal::receive_*` (stdin/stdout) and `Terminal::pause` (`termion`). |
+| `entropy` | OS randomness and the wall clock, for the conveniences that pick an id or seed for you (`Player::new`, `*_from_seats`, `start_hand`, `decide`, `casino::dealer`). Default. Each has a seeded or id-taking twin; the `--no-default-features` build has no OS entropy. |
+| `persistence` | Filesystem wrappers over the pure serializers (`SolverResult::save`/`load`, `BotProfile::to_file`/`from_file`, `HandCollection::save`, `Pluribus::read_in_log`). |
+| `equity` | Pure-compute multi-way equity engine in `analysis::equity` (exact enumeration + seeded Monte Carlo). Default. |
+| `parallel` | rayon-backed parallelism for the equity engine and `par_*` methods. |
+| `hup-charts` | Embedded heads-up preflop chart and every function that reads it (`HUPResult::lookup`, `Versus::hups_at_deal`). Default. |
 | `bot-profiles` | YAML serialization for `BotProfile` (`serde_yaml_bw`). |
 | `hand-histories` | YAML serialization for `HandHistory`. |
-| `player-stats` / `player-stats-persistence` | Per-player aggregator and its optional persistence. |
+| `player-stats` / `player-stats-persistence` | Per-player aggregator (default) and its optional YAML persistence. |
+| `json` | `SolverResult` JSON helpers (`serde_json`). |
+| `csv` | CSV file helpers (`SortedHeadsUp`, `IndexCardMap`, `util::csv`). |
 | `debug-json` | Human-readable JSON for `SolverResult::save`/`load`. |
 
 # Lint posture
