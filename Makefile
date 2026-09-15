@@ -44,7 +44,7 @@ help:
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
-	@echo "  make check-purity       - Assert no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features"
+	@echo "  make check-purity       - Fail on rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon in --no-default-features; warn on the rest of the banned set"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -274,14 +274,34 @@ check-wasm:
 # basic.yaml invokes `make check-purity` rather than re-inlining the pipeline
 # (audit P9j.4). The `::error::` prefix is a GitHub Actions annotation in CI and
 # a harmless plain line locally.
+# Two lists, on purpose. HARD is what the crate already keeps out of the pure
+# build, and it fails the gate. WARN is the rest of the domain-kernel skill's
+# banned set (docs/KERNEL_PURITY_AUDIT.md) — those crates are still in the pure
+# tree today, so naming them here reports without blocking. When pure-by-default
+# lands (audit fix 1: csv/serde_json/rand/postcard become optional), move the
+# WARN names into HARD and the gate ratchets shut.
+PURITY_HARD := rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon
+PURITY_WARN := serde_json|serde_yaml|serde_cbor|ciborium|bincode|postcard|rmp|toml|ron|csv|quick-xml|serde-xml-rs|plist|tokio|async-std|smol|reqwest|hyper|ureq|tonic|axum|actix-web|warp|rocket|sqlx|diesel|sled|redb|rand|getrandom|fastrand|oorandom|clap|structopt
+
+# Match a whole crate name in a `cargo tree` line ("├── rand v0.9.4"), so
+# `random_name_generator` is not mistaken for `rand`.
+PURITY_MATCH = (^|[^[:alnum:]_-])($(1)) v[0-9]
+
 check-purity:
-	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon' || true); \
+	@tree=$$(cargo tree --no-default-features -e no-dev); \
+	leaked=$$(echo "$$tree" | grep -iE '$(call PURITY_MATCH,$(PURITY_HARD))' || true); \
 	if [ -n "$$leaked" ]; then \
 		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal/bot-profiles/parallel:"; \
 		echo "$$leaked"; \
 		exit 1; \
 	fi; \
-	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features."
+	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon with --no-default-features."; \
+	watched=$$(echo "$$tree" | grep -iE '$(call PURITY_MATCH,$(PURITY_WARN))' || true); \
+	if [ -n "$$watched" ]; then \
+		echo "::warning::Not yet pure by default — these banned crates survive --no-default-features:"; \
+		echo "$$watched"; \
+		echo "See docs/KERNEL_PURITY_AUDIT.md fix 1. This does not fail the build yet."; \
+	fi
 
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:
