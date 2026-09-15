@@ -29,9 +29,9 @@ features.
 
 # Feature flags
 
-Since 0.16.0 the crate is pure by default: the default set is `equity`,
+Since 0.15.0 the crate is pure by default: the default set is `equity`,
 `player-stats` and `hup-charts`, with no format crate, file helper or
-thread pool. `full` turns on the pre-0.16.0 default set — use it for
+thread pool. `full` turns on the 0.14.0 default set — use it for
 `cargo test`, the examples, or to keep the old behaviour downstream.
 `make check-purity` asserts the default tree stays pure.
 

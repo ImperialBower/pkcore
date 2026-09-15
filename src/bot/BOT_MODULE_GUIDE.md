@@ -448,7 +448,7 @@ pub trait BotDecider: Send + Sync {
 }
 ```
 
-`decide_seeded` is the one required method (0.18.0). All randomness comes from
+`decide_seeded` is the one required method (0.15.0). All randomness comes from
 the `rng` argument, so a seeded RNG makes every decision reproducible, and the
 kernel build — without `entropy` — needs no OS randomness.
 

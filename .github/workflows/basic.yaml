@@ -39,7 +39,7 @@ jobs:
           toolchain: ${{matrix.rust}}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
-      # `full` is the pre-0.16.0 default set; the lean builds are covered by
+      # `full` is the 0.14.0 default set; the lean builds are covered by
       # the no-default-features job and `make check-purity`.
       - run: cargo test --all --features full
 
@@ -112,7 +112,7 @@ jobs:
       # Building examples is what surfaces one that uses a feature-gated API
       # without a `required-features` entry (audit II.11 / P7) — the reason a
       # plain `cargo check --lib --tests` never caught it. The suite needs
-      # `entropy` (0.18.0); `kernel_determinism` runs with nothing at all.
+      # `entropy` (0.15.0); `kernel_determinism` runs with nothing at all.
       # Single source for both, and for the per-feature checks: the Makefile.
       - run: make test-kernel
       # Every feature alone — lib without `entropy`, lib and tests with it.

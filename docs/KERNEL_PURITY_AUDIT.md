@@ -47,10 +47,10 @@ The cost of fixing everything mechanical in this report is about **three days**.
 
 | # | Invariant | Verdict | Why |
 |---|---|---|---|
-| 1 | Pure — no I/O of its own | ~~**Fail**~~ **Pass for the kernel build, 0.18.0** (default build: by choice, see fix 8) | ~12 real filesystem / clock / ambient-RNG sites in always-compiled code, **plus OS-random IDs minted by `Table::from_seats` and `Player::new`** (re-run); the rest is behind `store`, `pokerbench`, `generators`. **0.15.0–0.17.0:** IDs injectable; the file wrappers moved behind `persistence`, `csv`, `json`. **0.18.0:** every ambient site has a seeded or id-taking twin, core code uses only the twins, the ambient forms and `SimTable`'s clock are behind `entropy` (on by default), and `make check-purity` fails on `getrandom` in `--no-default-features`. Still open: `HandCollection::save`'s clock (behind `persistence`, an adapter anyway) and `util::csv`'s CWD-relative read (behind `csv`; fix 7) |
+| 1 | Pure — no I/O of its own | ~~**Fail**~~ **Pass for the kernel build, 0.15.0** (default build: by choice, see fix 8) | ~12 real filesystem / clock / ambient-RNG sites in always-compiled code, **plus OS-random IDs minted by `Table::from_seats` and `Player::new`** (re-run); the rest is behind `store`, `pokerbench`, `generators`. **0.15.0:** IDs injectable; the file wrappers moved behind `persistence`, `csv`, `json`; every ambient site has a seeded or id-taking twin, core code uses only the twins, the ambient forms and `SimTable`'s clock are behind `entropy` (on by default), and `make check-purity` fails on `getrandom` in `--no-default-features`. Still open: `HandCollection::save`'s clock (behind `persistence`, an adapter anyway) and `util::csv`'s CWD-relative read (behind `csv`; fix 7) |
 | 2 | No format/transport crate in the public API | **Pass** | Every error type stringifies its format cause (`BotError::Yaml(String)`, `SolverError::Json(String)`, `PokerBenchError::Csv(String)`). Only `rusqlite` remains, behind the non-default `store` |
-| 3 | Pure by default | ~~**Fail**~~ **Pass, 0.16.0** | Was: `default` pulled `serde_yaml_bw` and `rayon`; `csv` and `serde_json` were non-optional. Now `default = ["equity", "player-stats", "hup-charts"]`, `csv`/`serde_json` are optional, and `make check-purity` gates the default tree too. Only `getrandom` remains (warned, fix 8) |
-| 4 | Delivery-agnostic | ~~**Fail** (narrow)~~ **Partial, 0.17.0** | Was: `util::terminal` (stdin/stdout, termion) and `Util::commentary_action_to` (`println!`) ungated. Now the console functions need `terminal` and `commentary_action_to` is deleted. Still open: `TableAction` is the kernel's event type *and* a declared wire enum (fix 10). No gRPC/HTTP/CLI in the lib |
+| 3 | Pure by default | ~~**Fail**~~ **Pass, 0.15.0** | Was: `default` pulled `serde_yaml_bw` and `rayon`; `csv` and `serde_json` were non-optional. Now `default = ["equity", "player-stats", "hup-charts"]`, `csv`/`serde_json` are optional, and `make check-purity` gates the default tree too. Only `getrandom` remains (warned, fix 8) |
+| 4 | Delivery-agnostic | ~~**Fail** (narrow)~~ **Partial, 0.15.0** | Was: `util::terminal` (stdin/stdout, termion) and `Util::commentary_action_to` (`println!`) ungated. Now the console functions need `terminal` and `commentary_action_to` is deleted. Still open: `TableAction` is the kernel's event type *and* a declared wire enum (fix 10). No gRPC/HTTP/CLI in the lib |
 | 5 | Hidden-information projection | **Pass in the kernel** | `PokerSession::view(Option<Principal>)` and `TableSnapshot::from_table` both redact by construction. The consumer ignores them — see §8 |
 | 6 | Narrow, stable boundary | **Partial** | The `legal_actions`/`apply_action` pair exists and is feature-free (up from **Fail** in v0.1.8). But `Table` has 21 public mutable fields and `apply_action` returns `()`, not events |
 | 7 | Things that change together live in one kernel | **Pass, unanswered** | Everything is in one `Table`, so nothing all-or-nothing crosses a kernel line. The intra-kernel question has never been asked; `PokerSession::advance_street` composes two mutating calls with no in-between state |
@@ -180,7 +180,7 @@ Worth recording so the next run does not re-litigate them.
 
 ### The `rand` question, answered
 
-> **Status (0.18.0): point 1 fixed, point 2 open.** The defaults are inverted:
+> **Status (0.15.0): point 1 fixed, point 2 open.** The defaults are inverted:
 > `BotDecider::decide_seeded` is the required method, `decide`/`on_new_hand`
 > are `entropy`-gated conveniences, and the same holds for ids, shuffles,
 > `PokerSession::start_hand`/`run_hand`, `SimTable` and seedless equity.
@@ -246,9 +246,9 @@ a defect.
 
 ---
 
-## 3 — Pure by default · FAIL → PASS in 0.16.0
+## 3 — Pure by default · FAIL → PASS in 0.15.0
 
-> **Status (0.16.0, 2026-09-15): fixed.** Default is `equity`, `player-stats`,
+> **Status (0.15.0, 2026-09-15): fixed.** Default is `equity`, `player-stats`,
 > `hup-charts`; `full` restores the old set. `csv` and `serde_json` became
 > optional behind new `csv` and `json` features. `make check-purity` now fails
 > on either crate — or on any other HARD name — in the default tree as well as
@@ -336,7 +336,7 @@ prep work already: `Cargo.toml` declares `required-features` on 24 examples and
 — downstream consumers who relied on default YAML must add
 `features = ["bot-profiles", "hand-histories"]`.
 
-> **Status (0.17.0): fixed.** `hup_cache` is `#[cfg(feature = "hup-charts")]`,
+> **Status (0.15.0): fixed.** `hup_cache` is `#[cfg(feature = "hup-charts")]`,
 > and so is everything that reads it — which the source reading below missed:
 > `HUPResult::lookup`, `SortedHeadsUp::hup_result`, `Versus::hups_at_deal`,
 > `derive_hand_ordering`, and the heads-up branch of `DealEval::new` (which now
@@ -363,7 +363,7 @@ belongs. `clap` is a dev-dependency.
 
 Two things are still delivery-shaped:
 
-- **Status (0.17.0): fixed differently than proposed.** Gating the whole
+- **Status (0.15.0): fixed differently than proposed.** Gating the whole
   module would break the kernel: `Cards::from_str` and `arrays::sliced` call the
   pure `Terminal::index_cleaner`, and `nubibus` calls `random_happy`/`random_sad`.
   So only the six stdin/stdout functions went behind `terminal`.
@@ -636,17 +636,17 @@ Highest leverage first. Effort is engineering time, excluding review.
 
 | # | Fix | Invariants | Effort | Risk |
 |---|---|---|---|---|
-| 1 | ~~**Flip `default` to `["equity", "player-stats", "hup-charts"]`, add `full`, make `csv`/`serde_json`/`rand` optional, widen `make check-purity` to the skill's banned list**~~ **Done, 0.16.0** — `rand` deliberately left required (§3 re-run) | 3 | 1 day | Low — consumers relying on default YAML add `features = ["full"]` |
+| 1 | ~~**Flip `default` to `["equity", "player-stats", "hup-charts"]`, add `full`, make `csv`/`serde_json`/`rand` optional, widen `make check-purity` to the skill's banned list**~~ **Done, 0.15.0** — `rand` deliberately left required (§3 re-run) | 3 | 1 day | Low — consumers relying on default YAML add `features = ["full"]` |
 | 1a | ~~**Inject IDs**: `Table::from_seats_with_id`, `Player::with_id`; current constructors become shims (§1a, re-run)~~ **Done, 0.15.0** | 1 | half a day | None — additive |
 | 1b | ~~**Delete `util::name`** and drop `random_name_generator`: removes `clap`, `rand` 0.8, `getrandom` 0.2 from the pure build (§3, re-run)~~ **Done, 0.15.0** | 3, 4 | 15 min | Low — no caller anywhere; breaking in letter |
 | 1c | ~~**Re-aim the purity ratchet at `getrandom`**, not `rand`; drop `postcard` from WARN (§3, re-run)~~ **Done, 0.15.0** — `clap`/`structopt` now HARD | 1, 3 | 15 min | None |
-| 2 | ~~**Gate the six adapter wrappers**: `HandCollection::save`, `SolverResult::save_*`/`load_*`, `BotProfile::to_file`/`from_file` behind a `persistence` feature; `util::terminal` behind `terminal`; `hup_cache` behind `hup-charts`; delete `Util::read_lines` and `Util::commentary_action_to`~~ **Done, 0.17.0** — plus `Pluribus::read_in_log` (new pure twin `parse_log`); `terminal` gates functions, not the module (§4) | 1, 4 | 1 day | Low |
+| 2 | ~~**Gate the six adapter wrappers**: `HandCollection::save`, `SolverResult::save_*`/`load_*`, `BotProfile::to_file`/`from_file` behind a `persistence` feature; `util::terminal` behind `terminal`; `hup_cache` behind `hup-charts`; delete `Util::read_lines` and `Util::commentary_action_to`~~ **Done, 0.15.0** — plus `Pluribus::read_in_log` (new pure twin `parse_log`); `terminal` gates functions, not the module (§4) | 1, 4 | 1 day | Low |
 | 3 | **Adopt `PokerSession::view` in pkdealer** and delete `card_visibility_from_metadata` / `hole_cards_string` | 5, 8 | **1 day** | Medium — crosses repos, needs a pkdealer bump to 0.14 |
 | 4 | **Write `docs/KERNEL_ADR.md`**: name the cluster of data that changes together, record the intra-kernel answer from §7, record delegate-ownership from §8, name the rejected wider (multi-table) and narrower (seat) boundaries | 7, 8 | **half a day** | None |
 | 5 | **Make the street boundary all-or-nothing**: `Table::advance_street` that validates the deal before sweeping bets | 7 | **half a day** | Low — same pattern as `act_raise`'s pre-validation |
 | 6 | **Move the cap into the kernel**: `Table::cap_stacks`, logging a `TableAction` and staying inside the chip audit | 8 | **half a day** | Low |
-| 7 | **Fix `src/util/csv.rs` and `sorted_heads_up.rs`**: take rows as parameters instead of reading CWD-relative files. *No longer a prerequisite for #1:* 0.16.0 gated both behind the `csv` feature instead, so they are out of the pure build but still read CWD-relative paths when on | 1 | **1 day** | Low |
-| 8 | ~~**Invert the randomness defaults**: seeded form becomes the method, ambient becomes a shim behind `entropy`; inject the two `SystemTime::now` sites~~ **Done, 0.18.0** — `entropy` on by default; `getrandom` now HARD for the kernel build; replays and fixtures got derived or fixed ids; `HandCollection::save`'s clock left to `persistence` | 1 | 1–2 days | Medium — `BotDecider` trait inverted |
+| 7 | **Fix `src/util/csv.rs` and `sorted_heads_up.rs`**: take rows as parameters instead of reading CWD-relative files. *No longer a prerequisite for #1:* 0.15.0 gated both behind the `csv` feature instead, so they are out of the pure build but still read CWD-relative paths when on | 1 | **1 day** | Low |
+| 8 | ~~**Invert the randomness defaults**: seeded form becomes the method, ambient becomes a shim behind `entropy`; inject the two `SystemTime::now` sites~~ **Done, 0.15.0** — `entropy` on by default; `getrandom` now HARD for the kernel build; replays and fixtures got derived or fixed ids; `HandCollection::save`'s clock left to `persistence` | 1 | 1–2 days | Medium — `BotDecider` trait inverted |
 | 9 | **Own the entropy seam**: `pkcore::Entropy` replacing `rand::Rng` in six public signatures | 1, 6 | **2 days** | Breaking |
 | 10 | **Split `TableAction`** into the internal event and a `TableActionDto` versioned with `SNAPSHOT_VERSION` | 4 | **2 days** | Low if added alongside for one release |
 | 11 | **Return events from `apply_action`** (`Result<Vec<TableAction>, PKError>`) so consumers stop slicing `event_log` by index | 6 | **3 days** | Breaking |

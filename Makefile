@@ -3,7 +3,7 @@
 # Default target
 default: ayce
 
-# Default features are the pure kernel since 0.16.0 (docs/KERNEL_PURITY_AUDIT.md
+# Default features are the pure kernel since 0.15.0 (docs/KERNEL_PURITY_AUDIT.md
 # fix 1). Dev targets build and test with `full`, which restores everything that
 # used to be on by default — YAML, bots, rayon, JSON, CSV, file and console
 # helpers. test-kernel and check-purity are what cover the lean builds.
@@ -214,7 +214,7 @@ actionlint:
 # only on GitHub (2026-08-21). The bare kernel must build and pass its own
 # tests with every default feature off, and each feature must compile alone.
 #
-# Since 0.18.0 the suite itself needs `entropy`: its tables are built with
+# Since 0.15.0 the suite itself needs `entropy`: its tables are built with
 # `Player::new`-style conveniences that mint random ids. So the suite runs with
 # `entropy` on, and `tests/kernel_determinism.rs` — which uses only the seeded
 # APIs — runs against the real entropy-free build.
@@ -268,7 +268,7 @@ install-watch:
 
 # Check that the library compiles for WebAssembly
 # Two configurations, because they fail differently. The default build is what
-# a plain browser dependency gets — since 0.16.0 it carries no `parallel`, so no
+# a plain browser dependency gets — since 0.15.0 it carries no `parallel`, so no
 # rayon thread pool it has no threads to run (see the Parallelism section in
 # src/lib.rs). The second adds the YAML surfaces the wasm apps turn on.
 check-wasm:
@@ -278,7 +278,7 @@ check-wasm:
 # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that neither the
 # `--no-default-features` build nor the plain default build (what `cargo add
 # pkcore` resolves) holds any crate on the HARD list. Checking the default tree
-# is what makes "pure by default" (KERNEL_PURITY_AUDIT.md fix 1, 0.16.0) a
+# is what makes "pure by default" (KERNEL_PURITY_AUDIT.md fix 1, 0.15.0) a
 # tested property rather than a Cargo.toml comment.
 #
 # serde_yaml_bw used to be a documented exception: it arrived transitively via
@@ -305,7 +305,7 @@ check-wasm:
 # every path to it goes through `getrandom` — that is the name the ratchet
 # closes on. `postcard` never appears in a public signature (audit §3).
 PURITY_HARD := rusqlite|zstd|termion|dotenvy|serde_yaml_bw|rayon|clap|structopt|csv|serde_json
-# The kernel build must also be free of OS entropy (audit fix 8, 0.18.0). The
+# The kernel build must also be free of OS entropy (audit fix 8, 0.15.0). The
 # default build keeps it: the `entropy` feature is on by default, for the
 # random-id and ambient-shuffle conveniences, so there it is only warned.
 PURITY_HARD_KERNEL := $(PURITY_HARD)|getrandom

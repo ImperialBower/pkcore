@@ -37,7 +37,7 @@ module_inception = "allow"
 upper_case_acronyms = "allow"
 
 [features]
-## Pure by default (0.16.0, docs/KERNEL_PURITY_AUDIT.md fix 1): a plain
+## Pure by default (0.15.0, docs/KERNEL_PURITY_AUDIT.md fix 1): a plain
 ## `cargo add pkcore` gets the kernel — table engine, evaluation, equity, the
 ## player-stats aggregator and the embedded heads-up chart — and no format crate,
 ## file helper or thread pool. `make check-purity` asserts this on the default
@@ -47,7 +47,7 @@ upper_case_acronyms = "allow"
 ## `player-stats-persistence`), rayon (`parallel`), and the JSON and CSV helpers
 ## (`json`, `csv`), the filesystem wrappers (`persistence`) and the console
 ## helpers (`terminal`) are opt-in. `full` turns all of them on, which restores
-## everything that was on by default before 0.16.0; use it to get the old
+## everything that was on by default before 0.15.0; use it to get the old
 ## behaviour back, and for `cargo test`, the examples, and `make`.
 default = [
     "player-stats",
@@ -69,7 +69,7 @@ full = [
     "terminal",
     "entropy",
 ]
-## OS nondeterminism — randomness and the wall clock (0.18.0,
+## OS nondeterminism — randomness and the wall clock (0.15.0,
 ## docs/KERNEL_PURITY_AUDIT.md fix 8). On by default. It backs the
 ## conveniences that pick a random id or seed for you: `Player::new`,
 ## `Table::from_seats` and the `*_from_seats` constructors, the `shuffle`
@@ -106,7 +106,7 @@ equity = []
 ## `Deck`, and the multi-threaded drivers inside the equity engine, range equity
 ## and turn evaluation.
 ##
-## Off by default since 0.16.0 (in `full`). **Not** available on
+## Off by default since 0.15.0 (in `full`). **Not** available on
 ## `wasm32-unknown-unknown`, which has no threads to spawn — a browser build must
 ## leave it off, or the thread pool it links can never run. Turning it off
 ## removes `rayon` and `rayon-core` from the dependency tree entirely and drops

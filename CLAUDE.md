@@ -88,7 +88,7 @@ still gets a changelog line if it changes what a user is told.
 
 ## Commands you would not guess
 
-Default features are the lean, pure kernel (0.16.0). Plain `cargo test` skips
+Default features are the lean, pure kernel (0.15.0). Plain `cargo test` skips
 the YAML, bot, rayon, JSON and CSV code; use `cargo test --features full` (what
 `make test` runs) for the whole suite, and `--features full` on
 `cargo run --example`. These do not work as you would guess either:

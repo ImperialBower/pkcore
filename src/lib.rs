@@ -316,7 +316,7 @@
 //!
 //! ## Parallelism
 //!
-//! The `parallel` feature (off by default since 0.16.0; part of `full`) backs the `par_*` methods on
+//! The `parallel` feature (off by default since 0.15.0; part of `full`) backs the `par_*` methods on
 //! [`Pile`], [`Cards`] and [`Deck`](crate::deck::Deck),
 //! and the multi-threaded drivers inside the equity engine, range equity and
 //! turn evaluation, with [rayon](https://docs.rs/rayon).
