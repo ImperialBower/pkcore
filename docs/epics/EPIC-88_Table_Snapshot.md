@@ -6,7 +6,7 @@ identically. One serializable **`TableState`** DTO, one `snapshot` / `restore`
 pair on both tiers, and a chip-conservation acceptance test that compares a
 resumed hand against an uninterrupted control.
 
-This is the last open discontinuity in `docs/MURATORI_AUDIT.md` — the one
+This is the last open discontinuity in `docs/REUSABILITY_AUDIT.md` — the one
 finding that survived the 0.11.0 fixes.
 
 **Why this is its own EPIC and not EPIC-37 Phase 3.** The capability was
@@ -47,7 +47,7 @@ on a third. EPIC-37 keeps the mobile-specific work and consumes this.
 | Mid-hand resume acceptance test vs uninterrupted control | **Complete** — `snapshot_mid_street_resumes_to_identical_winnings`, `session_restore_continues_the_step_loop` |
 | Per-variant round-trip (NLHE / PLO / Stud-hi / Razz / FLHE) | **Complete** — 5 tests, incl. `snapshot_preserves_stud_up_card_visibility` |
 | `Winnings` serde derive | **Deferred** — not needed; `Winnings` never crosses the snapshot boundary. Revisit with EPIC-37's FFI. |
-| `MURATORI_AUDIT.md` retention row 3/5 → 4/5 | **Complete** |
+| `REUSABILITY_AUDIT.md` retention row 3/5 → 4/5 | **Complete** |
 | Mobile FFI surface, `SolveJob`, UniFFI targets | Out of scope — stays EPIC-37 |
 
 ---
@@ -63,7 +63,7 @@ serde either: `Seats` (`table/seats.rs:25`), `Seat` (`table/seat.rs:22`),
 (`casino/game.rs:21`), `SeatHand` (`src/play/seat_hand.rs:44`), `HoleCard`
 (`src/play/hole_card.rs:29`), `Visibility` (`src/play/visibility.rs:27`).
 `serde_json::to_string(&table)` does not compile — verified in
-`MURATORI_AUDIT.md` Sketch 2, which is what pins retention at 3/5.
+`REUSABILITY_AUDIT.md` Sketch 2, which is what pins retention at 3/5.
 
 **Nothing exists to read state back into.** `rg 'pub fn snapshot|pub fn restore'
 src/` returns zero hits. The one bidirectional bridge, `TryFrom<&Table> for
@@ -407,7 +407,7 @@ SnapshotCorrupt,
 
 ### Phase 5 — Documentation & registration
 
-- [ ] **5a.** Flip `MURATORI_AUDIT.md`'s retention row to 4/5 with the new
+- [ ] **5a.** Flip `REUSABILITY_AUDIT.md`'s retention row to 4/5 with the new
       `path:line` evidence, and retire its recommendation 1 — which asked for
       derives on `Table` directly, written before this EPIC's ABI rationale.
 - [ ] **5b.** Update `EPIC-37_Mobile_Engine.md`: point its
@@ -452,7 +452,7 @@ SnapshotCorrupt,
 | `src/casino/winnings.rs` | serde on `Winnings` (`:6`). |
 | `src/lib.rs` | Two `PKError` variants (`:509`). |
 | `src/prelude.rs` | Export `TableState`. |
-| `docs/MURATORI_AUDIT.md` | Retention 3/5 → 4/5. |
+| `docs/REUSABILITY_AUDIT.md` | Retention 3/5 → 4/5. |
 | `docs/epics/EPIC-37_Mobile_Engine.md` | Phase 3 lifted out; Status row repointed. |
 | `ROADMAP.md` | Numbering policy: next free → `EPIC-89`. |
 
@@ -499,7 +499,7 @@ SnapshotCorrupt,
   `Table` to serialize instead of two; `EPIC-87 Pluribus Export`, whose
   `TryFrom` pair is the precedent.
 - **Related:** `EPIC-82 The Betting Kernel` — `TableState` is the `state` in
-  `apply(state, action) -> state`. `docs/MURATORI_AUDIT.md` recommends running
+  `apply(state, action) -> state`. `docs/REUSABILITY_AUDIT.md` recommends running
   `/domain-kernel` Mode A **before** this lands, so the state type is designed
   against the kernel invariants rather than retrofitted onto them.
 
@@ -528,7 +528,7 @@ Exit criteria:
 4. The whole path builds and its tests pass under `--no-default-features`, and
    `make check-purity` stays green: no filesystem, environment or database
    access anywhere in snapshot or restore.
-5. `MURATORI_AUDIT.md` retention moves 3/5 → 4/5 with `path:line` evidence, and
+5. `REUSABILITY_AUDIT.md` retention moves 3/5 → 4/5 with `path:line` evidence, and
    `serde_json::to_string` on a `TableState` compiles — the assertion Sketch 2
    currently fails on.
 6. `RELEASE_AUDIT` confirms no downstream repo depended on the blank-card

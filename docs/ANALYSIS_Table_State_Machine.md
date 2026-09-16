@@ -5,7 +5,7 @@
 `src/casino/table/seats.rs`, `src/casino/table/player.rs`,
 `src/casino/state.rs`, `src/games/mod.rs`
 **Companion docs:** [`ANALYSIS_TableCelled_vs_Table.md`](./ANALYSIS_TableCelled_vs_Table.md),
-[`MURATORI_AUDIT.md`](./MURATORI_AUDIT.md)
+[`REUSABILITY_AUDIT.md`](./REUSABILITY_AUDIT.md)
 
 This document gives a pure, implementation-independent definition of the state
 machine that `casino::table::Table` implements for a poker hand: its state

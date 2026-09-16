@@ -263,7 +263,13 @@ names as a starting point, not a checklist._
 These are full re-runnable audits, not one-line debt items. Read them before
 attacking the areas they cover.
 
+- [`docs/KERNEL_PURITY_AUDIT.md`](KERNEL_PURITY_AUDIT.md) — the eight kernel invariants, with a ranked fix list. Refreshed against 0.15.0.
+- [`docs/TESTKIT_AUDIT.md`](TESTKIT_AUDIT.md) — controllability: fake data, textures and state coverage (T1–T7). **Stale — last run against 0.8.0.**
 - [`docs/DEPENDENCY_AUDIT.md`](DEPENDENCY_AUDIT.md) — dependency entanglement and extraction cost.
-- [`docs/MURATORI_AUDIT.md`](MURATORI_AUDIT.md) — public-API reusability against the five Muratori characteristics.
+- [`docs/REUSABILITY_AUDIT.md`](REUSABILITY_AUDIT.md) — public-API reusability against the five Muratori characteristics.
 - [`docs/PARALLELISM_AUDIT.md`](PARALLELISM_AUDIT.md) — SIMD / SWAR / MIMD opportunities in the evaluator hot path.
 - [`docs/audits/`](audits/) — four independent model audits of the codebase (Claude Code max, Fable 5, Gemini 3.1, GPT-5.4).
+
+And the decision record the purity audit feeds:
+
+- [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) — why the kernel boundary is *one hand, one table*; which wider and narrower boundaries were rejected; who may write table state.

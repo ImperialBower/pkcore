@@ -235,7 +235,7 @@ network. Generated 2026-08-25 against `pkcore 0.8.0` at commit `37c0d84a`
 ### 1. The deterministic checker
 
 ```bash
-python3 ~/.claude/skills/kernel-testkit/scripts/check_testkit.py .
+python3 <dkskills>/skills/kernel-testkit/scripts/check_testkit.py .   # github.com/folkengine/dkskills
 ```
 
 Python-only; no Rust toolchain needed. It greps for: a testkit crate or feature
@@ -320,7 +320,7 @@ rather than on a token match:
 ### 5. Re-running it
 
 ```bash
-python3 ~/.claude/skills/kernel-testkit/scripts/check_testkit.py .
+python3 <dkskills>/skills/kernel-testkit/scripts/check_testkit.py .   # github.com/folkengine/dkskills
 ```
 
 then re-read the sections above against the current tree. The verdict table is

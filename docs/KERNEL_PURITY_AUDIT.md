@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| Subject | `pkcore` 0.14.0 — the poker engine (`casino::table::Table`), its drivers (`PokerSession`, `Dealer`), the bot stack, and `analysis::*` |
-| Commit | `cda90569` (2026-09-13), branch `main`, tree clean |
-| Date | 2026-09-15 |
+| Subject | `pkcore` 0.15.0 — the poker engine (`casino::table::Table`), its drivers (`PokerSession`, `Dealer`), the bot stack, and `analysis::*` |
+| Commit | `2f5b6c7c` (2026-09-16), branch `main`, tree clean |
+| Date | 2026-09-16 |
 | Method | `/domain-kernel` Mode A (Assess). Invariants 1–8 from `references/invariants.md`; every mechanical finding re-read against the source |
-| What was run | `python3 ~/.claude/skills/domain-kernel/scripts/check_purity.py .` — **94 hard, 0 warn, exit 1**. It is a **grep**, not a compiler: it does not see `#[cfg]`, does not see `pub(crate)`, and does not follow an aliased import. No build, no test and no `cargo tree` was run for this audit |
-| Re-run | 2026-09-15 at `d6df2d00`: checker **105 hard, 0 warn, exit 1** — the 11 extra are the checker's new alias detection (`SmallRng`, `WriterBuilder`, `Reader`, `Connection`, `rng`), not source changes; no `src/` or `Cargo.toml` change since `cda90569`. `make check-purity` run (passes, warns) and `cargo tree -i` traced every survivor. Findings in §1a (random IDs) and §3 (dependency tree) |
+| What was run | `python3 <dkskills>/skills/domain-kernel/scripts/check_purity.py .` — **117 hard, 0 warn, exit 1** — plus `cargo tree --no-default-features -e no-dev` (44 crates) and a per-finding read of every always-compiled file. The checker is a **grep**, not a compiler: it does not see `#[cfg]`, does not see `pub(crate)`, and does not follow an aliased import. **Its count is not a score.** It rose 94 → 105 → 117 while the crate got *purer*: each `#[cfg(feature = "entropy")]` twin added in 0.15.0 reads as a fresh finding. The build-level tree, not the grep, is the measure of invariant 3 |
+| Lineage | 0.14.0 audit at `cda90569` (2026-09-15), 94 hard. Re-run 2026-09-15 at `d6df2d00`: checker **105 hard, 0 warn, exit 1** — the 11 extra are the checker's new alias detection (`SmallRng`, `WriterBuilder`, `Reader`, `Connection`, `rng`), not source changes; no `src/` or `Cargo.toml` change since `cda90569`. `make check-purity` run (passes, warns) and `cargo tree -i` traced every survivor. Findings in §1a (random IDs) and §3 (dependency tree). **This refresh** is the first read against 0.15.0, the release that closed fixes 1, 1a–1c, 2 and 8 |
 | Supersedes | the domain-kernel sections of [`docs/audits/AUDIT_Fable_5.md`](audits/AUDIT_Fable_5.md) (2026-07-03, v0.1.8, graded **D+**). Parts I, II and IV of that audit still stand |
 
 ---
@@ -15,33 +15,45 @@
 ## Verdict
 
 **pkcore is a working poker library that grew a kernel rather than being built as
-one, and it is now about two-thirds of the way there.** Five of the eight
-invariants either pass or fail only cosmetically. Since v0.1.8 the crate has
-acquired everything a kernel is hard to retrofit with: a feature-free transition
-surface (`legal_actions` / `apply_action`), a redacting projection keyed on
-identity (`PokerSession::view`), a versioned wire form separate from the engine
-type (`TableState`), injected randomness on every path that matters, and a CI
-purity gate. Those are the expensive parts and they are done.
+one. As of 0.15.0 the mechanical half is done, and what remains is design.** Four
+of the eight invariants pass, two are partial, one is a live failure and one has
+never been answered. Since v0.1.8 the crate has acquired everything a kernel is
+hard to retrofit with: a feature-free transition surface (`legal_actions` /
+`apply_action`), a redacting projection keyed on identity (`PokerSession::view`),
+a versioned wire form separate from the engine type (`TableState`), injected
+randomness on every path that matters, and a CI purity gate.
 
-What is left is bookkeeping and one genuine design debt. The bookkeeping: the
-default feature set still turns on a YAML format crate and a thread pool, four
-banned crates are non-optional so they survive `--no-default-features`, and
-roughly a dozen filesystem calls sit in always-compiled modules that are honestly
-adapters and want a feature gate, not a rewrite. The design debt: **pkcore has
-never said who owns its state**, and a downstream service has quietly answered
-for it — `pkdealer_service` writes chip stacks directly onto seats and
-re-implements hole-card redaction rather than calling the projection pkcore
-ships. That is invariant 8 failing in the field, not in theory.
+**0.15.0 closed fixes 1, 1a–1c, 2 and 8 — the whole bookkeeping pile.** `default`
+is now `["equity", "player-stats", "hup-charts", "entropy"]`. `serde_yaml_bw`,
+`rayon`, `serde_json`, `csv`, `rusqlite`, `zstd` and `termion` are all optional.
+The filesystem and console wrappers sit behind `persistence`, `csv`, `json` and
+`terminal`, each with an always-on pure twin. Every ambient-randomness call has a
+seeded or id-taking twin, core code calls only the twins, and the ambient forms
+live behind `entropy`. `cargo tree --no-default-features -e no-dev` resolves
+**44 crates**; the only banned-list survivors are `rand`, `postcard` and `uuid`,
+and **`getrandom` is absent entirely** — so the kernel build cannot reach OS
+entropy even by accident. `tests/kernel_determinism.rs` builds without `entropy`,
+so that claim is exercised rather than merely compiled.
 
-**The single highest-leverage change is to flip `default` to a pure set and widen
-`make check-purity` to the skill's banned list.** It is near-zero risk — CI
-already runs `--no-default-features`, and every example and test that needs a
-feature already declares `required-features` — and it is what makes `cargo add
-pkcore` yield a kernel instead of a kernel plus a YAML parser plus rayon.
+What is left is the design debt the mechanical work was always hiding. **pkcore
+has still never said who owns its state**, and a downstream service has quietly
+answered for it: `pkdealer_service` writes `seat.player.chips` directly
+(`crates/pkdealer_service/src/main.rs:1188`, `:4581`) and re-implements hole-card
+redaction (`card_visibility_from_metadata:1052`, `hole_cards_string:1090`) rather
+than calling the projection pkcore ships. It calls `PokerSession::view` **nowhere**.
+That is invariant 8 failing in the field, not in theory, and 0.15.0 did not touch it.
+
+**The single highest-leverage change is now fix 4 — write `docs/KERNEL_ADR.md`.**
+It costs half a day, breaks nothing, and it is the prerequisite for the rest:
+invariant 7 has no answer to check against until the record names the cluster of
+data that changes together, and invariant 8's remedy in pkdealer is unarguable
+only once pkcore has written down that it owns chip stacks. Fix 3 (adopt
+`PokerSession::view` in pkdealer) follows directly from it.
 
 The honest cost of becoming a kernel end-to-end, including the boundary work in
-§7 and §8 and one breaking release, is on the order of **three to four weeks**.
-The cost of fixing everything mechanical in this report is about **three days**.
+§7 and §8 and one breaking release, is on the order of **two to three weeks** —
+down from three to four, because 0.15.0 spent the first week. Everything still
+mechanical in this report is about **a day and a half**.
 
 ### The eight invariants
 
@@ -49,19 +61,22 @@ The cost of fixing everything mechanical in this report is about **three days**.
 |---|---|---|---|
 | 1 | Pure — no I/O of its own | ~~**Fail**~~ **Pass for the kernel build, 0.15.0** (default build: by choice, see fix 8) | ~12 real filesystem / clock / ambient-RNG sites in always-compiled code, **plus OS-random IDs minted by `Table::from_seats` and `Player::new`** (re-run); the rest is behind `store`, `pokerbench`, `generators`. **0.15.0:** IDs injectable; the file wrappers moved behind `persistence`, `csv`, `json`; every ambient site has a seeded or id-taking twin, core code uses only the twins, the ambient forms and `SimTable`'s clock are behind `entropy` (on by default), and `make check-purity` fails on `getrandom` in `--no-default-features`. Still open: `HandCollection::save`'s clock (behind `persistence`, an adapter anyway) and `util::csv`'s CWD-relative read (behind `csv`; fix 7) |
 | 2 | No format/transport crate in the public API | **Pass** | Every error type stringifies its format cause (`BotError::Yaml(String)`, `SolverError::Json(String)`, `PokerBenchError::Csv(String)`). Only `rusqlite` remains, behind the non-default `store` |
-| 3 | Pure by default | ~~**Fail**~~ **Pass, 0.15.0** | Was: `default` pulled `serde_yaml_bw` and `rayon`; `csv` and `serde_json` were non-optional. Now `default = ["equity", "player-stats", "hup-charts"]`, `csv`/`serde_json` are optional, and `make check-purity` gates the default tree too. Only `getrandom` remains (warned, fix 8) |
+| 3 | Pure by default | ~~**Fail**~~ **Pass, 0.15.0** | Was: `default` pulled `serde_yaml_bw` and `rayon`; `csv` and `serde_json` were non-optional. Now `default = ["equity", "player-stats", "hup-charts", "entropy"]`, `csv`/`serde_json` are optional, and `make check-purity` gates the default tree too. Only `getrandom` remains (warned, fix 8) |
 | 4 | Delivery-agnostic | ~~**Fail** (narrow)~~ **Partial, 0.15.0** | Was: `util::terminal` (stdin/stdout, termion) and `Util::commentary_action_to` (`println!`) ungated. Now the console functions need `terminal` and `commentary_action_to` is deleted. Still open: `TableAction` is the kernel's event type *and* a declared wire enum (fix 10). No gRPC/HTTP/CLI in the lib |
 | 5 | Hidden-information projection | **Pass in the kernel** | `PokerSession::view(Option<Principal>)` and `TableSnapshot::from_table` both redact by construction. The consumer ignores them — see §8 |
-| 6 | Narrow, stable boundary | **Partial** | The `legal_actions`/`apply_action` pair exists and is feature-free (up from **Fail** in v0.1.8). But `Table` has 21 public mutable fields and `apply_action` returns `()`, not events |
-| 7 | Things that change together live in one kernel | **Pass, unanswered** | Everything is in one `Table`, so nothing all-or-nothing crosses a kernel line. The intra-kernel question has never been asked; `PokerSession::advance_street` composes two mutating calls with no in-between state |
-| 8 | State belongs to the kernel that changes it | **Fail** | `pkdealer_service` writes `seat.player.chips` directly and re-implements card visibility; 21 public mutable fields make every consumer a potential writer |
+| 6 | Narrow, stable boundary | **Partial** | The `legal_actions`/`apply_action` pair exists and is feature-free (up from **Fail** in v0.1.8). But `Table` has **22** public mutable fields (21 at 0.14.0) and `apply_action` still returns `Result<(), PKError>`, not events |
+| 7 | Things that change together live in one kernel | ~~**Pass, unanswered**~~ **Pass, answered 2026-09-16** | Everything is in one `Table`, so nothing all-or-nothing crosses a kernel line. The intra-kernel answer — *one `apply_action` changes the betting group only* — is now recorded in [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) §5. Still open: `PokerSession::advance_street` composes two mutating calls with no in-between state (fix 5) |
+| 8 | State belongs to the kernel that changes it | **Fail** (ownership now *recorded* — [`KERNEL_ADR.md`](KERNEL_ADR.md) §6 — but not enforced) | `pkdealer_service` writes `seat.player.chips` directly and re-implements card visibility; 22 public mutable fields make every consumer a potential writer |
 
 ---
 
-## 1 — Pure: no I/O of its own · FAIL, concentrated
+## 1 — Pure: no I/O of its own · PASS for the kernel build (0.15.0)
 
-The checker's 94 findings sort into three piles. Only the first is a kernel
-problem.
+The checker's 117 findings sort into three piles. **At 0.15.0 the first pile is
+empty** — everything in it was fixed by fixes 1, 1a–1c, 2 and 8. The sections
+below are kept as the record of what was found and what closed it; the live
+question is now pile three, which has grown, because every `#[cfg(feature =
+"entropy")]` twin 0.15.0 added is a finding the grep cannot discount.
 
 ### 1a. Real leaks in always-compiled code — HARD
 
@@ -161,9 +176,23 @@ crate; the right short-term move is nothing.
   lookups are configuration policy and belong to the shell, but all three are
   `store`-gated.
 
-### 1c. False positives — 6 of 94
+### 1c. False positives — 6 of 94 at the original audit; the dominant pile at 0.15.0
 
 Worth recording so the next run does not re-litigate them.
+
+**At 0.15.0 this is no longer a short list.** Of the 117 findings, the 51 `rand::`
+hits are almost entirely `#[cfg(feature = "entropy")]` items with a documented
+pure twin — `Cards::shuffle_in_place` (`src/cards.rs:479`),
+`PokerSession::start_hand` (`src/casino/session.rs:311`),
+`Table::act_shuffle_deck` (`src/casino/table.rs:1581`) and their peers each carry
+the gate on the line above and a doc comment naming this audit. The three
+`src/util/terminal.rs` hits are gated the same way, per item, in the
+`#[cfg(all(feature = "terminal", …))]` form the grep does not match. **Read the
+gate before treating any finding here as a leak**, and prefer
+`cargo tree --no-default-features` as the measure — it resolves 44 crates with no
+`getrandom` at all.
+
+The six originally recorded:
 
 - `src/arrays/five/hands.rs:5` — `use std::fs::read_to_string` carries
   `#[cfg(feature = "generators")]` on line 4. The grep reads line 5 alone.
@@ -463,7 +492,7 @@ Three gaps keep it from a pass:
    effect, so consumers slice the log by index to find what just happened —
    `pkdealer_service` keeps a `hand_event_log_start: usize` for exactly this.
 3. **No `outcome` on the surface.** `end_hand` returns `Winnings` and also
-   resets, which `MURATORI_AUDIT.md` covers in more depth.
+   resets, which `REUSABILITY_AUDIT.md` covers in more depth.
 
 **`src/games/kuhn.rs` is the in-repo reference implementation** and should be
 cited in any ADR: `KuhnState::apply(&self, action) -> Result<KuhnState, PKError>`
@@ -501,10 +530,12 @@ in force and undocumented.
 Yes, and the good news is that it does not cross a *kernel* boundary — because
 there is only one kernel. Every field involved lives on one `Table`.
 
-But it does cross **two calls**, and the composition is in the shell:
+But it does cross **two calls**. *(Corrected at 0.15.0: the composition is not in
+the shell — `advance_street` is **private** to `PokerSession`, so it is inside the
+kernel's driver tier. The hazard is unchanged; the blast radius is smaller.)*
 
 ```rust
-// src/casino/session.rs:744-771 — PokerSession::advance_street
+// src/casino/session.rs:818 — PokerSession::advance_street (private)
 3 => {
     self.table.bring_it_in()?;   // sweeps every seat's bet into the pot
     self.table.deal_turn()?;     // can fail: NotEnoughCards, AlreadyDealt
@@ -641,8 +672,8 @@ Highest leverage first. Effort is engineering time, excluding review.
 | 1b | ~~**Delete `util::name`** and drop `random_name_generator`: removes `clap`, `rand` 0.8, `getrandom` 0.2 from the pure build (§3, re-run)~~ **Done, 0.15.0** | 3, 4 | 15 min | Low — no caller anywhere; breaking in letter |
 | 1c | ~~**Re-aim the purity ratchet at `getrandom`**, not `rand`; drop `postcard` from WARN (§3, re-run)~~ **Done, 0.15.0** — `clap`/`structopt` now HARD | 1, 3 | 15 min | None |
 | 2 | ~~**Gate the six adapter wrappers**: `HandCollection::save`, `SolverResult::save_*`/`load_*`, `BotProfile::to_file`/`from_file` behind a `persistence` feature; `util::terminal` behind `terminal`; `hup_cache` behind `hup-charts`; delete `Util::read_lines` and `Util::commentary_action_to`~~ **Done, 0.15.0** — plus `Pluribus::read_in_log` (new pure twin `parse_log`); `terminal` gates functions, not the module (§4) | 1, 4 | 1 day | Low |
-| 3 | **Adopt `PokerSession::view` in pkdealer** and delete `card_visibility_from_metadata` / `hole_cards_string` | 5, 8 | **1 day** | Medium — crosses repos, needs a pkdealer bump to 0.14 |
-| 4 | **Write `docs/KERNEL_ADR.md`**: name the cluster of data that changes together, record the intra-kernel answer from §7, record delegate-ownership from §8, name the rejected wider (multi-table) and narrower (seat) boundaries | 7, 8 | **half a day** | None |
+| 3 | **Adopt `PokerSession::view` in pkdealer** and delete `card_visibility_from_metadata` / `hole_cards_string` | 5, 8 | **1 day** | Medium — crosses repos, needs a pkdealer bump to 0.15 |
+| 4 | ~~**Write `docs/KERNEL_ADR.md`**: name the cluster of data that changes together, record the intra-kernel answer from §7, record delegate-ownership from §8, name the rejected wider (multi-table) and narrower (seat) boundaries~~ **Done, 2026-09-16** — [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) | 7, 8 | half a day | None |
 | 5 | **Make the street boundary all-or-nothing**: `Table::advance_street` that validates the deal before sweeping bets | 7 | **half a day** | Low — same pattern as `act_raise`'s pre-validation |
 | 6 | **Move the cap into the kernel**: `Table::cap_stacks`, logging a `TableAction` and staying inside the chip audit | 8 | **half a day** | Low |
 | 7 | **Fix `src/util/csv.rs` and `sorted_heads_up.rs`**: take rows as parameters instead of reading CWD-relative files. *No longer a prerequisite for #1:* 0.15.0 gated both behind the `csv` feature instead, so they are out of the pure build but still read CWD-relative paths when on | 1 | **1 day** | Low |
@@ -662,7 +693,7 @@ eight invariants. Items 9–12 are one breaking release and should be batched.
 
 ```bash
 cd /path/to/pkcore
-python3 ~/.claude/skills/domain-kernel/scripts/check_purity.py .
+python3 <dkskills>/skills/domain-kernel/scripts/check_purity.py .   # github.com/folkengine/dkskills
 ```
 
 Exit 1 with a per-file list of hard findings. It needs only Python — no Rust

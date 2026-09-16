@@ -522,7 +522,7 @@ Recorded in full in the EPIC-39 corrigendum:
   the board, the hole cards and the phase untouched, so a spectator UI can
   render the result *before* the table resets. Previously the only way to see
   that state was to `clone` the whole `Table` and diff it.
-  ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md) recommendation 3 — granularity
+  ([MURATORI_AUDIT.md](docs/REUSABILITY_AUDIT.md) recommendation 3 — granularity
   4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
   following `end_hand()` would resolve an empty one.
 
@@ -614,7 +614,7 @@ Recorded in full in the EPIC-39 corrigendum:
   each of the other two is for, and that moving a call site between them is a
   rewrite rather than a swap. `TableManager` gets the module and item docs it
   never had, including that it is a multi-table sketch with no hand-lifecycle
-  gating of its own. ([MURATORI_AUDIT.md](docs/MURATORI_AUDIT.md)
+  gating of its own. ([MURATORI_AUDIT.md](docs/REUSABILITY_AUDIT.md)
   recommendation 2 — redundancy 3/5 → 4/5.)
 
 ### Changed
