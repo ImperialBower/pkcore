@@ -31,6 +31,12 @@ use crate::cards::Cards;
 /// Returns `None` unless the board holds three or four cards, or when no
 /// holding in the range survives the dead cards.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `None` unless the board holds 3 or 4 cards
+///
 /// # Examples
 ///
 /// ```
@@ -40,7 +46,7 @@ use crate::cards::Cards;
 /// use pkcore::cards::Cards;
 /// use std::str::FromStr;
 ///
-// A♥K♥ on 7♥2♥3♦ draws to the nut flush: nine hearts plus three aces
+/// // A♥K♥ on 7♥2♥3♦ draws to the nut flush: nine hearts plus three aces
 /// // and three kings for top pair — the textbook fifteen outs.
 /// let outs = outs_against(
 ///     Two::from_str("AH KH").unwrap(),
@@ -72,6 +78,12 @@ pub fn outs_against(hero: Two, board: &Cards, range: &Combos) -> Option<usize> {
 /// each out is worth about 4% with two cards to come and 2% with one.
 ///
 /// Capped at `1.0`, since the rule overshoots badly for very large counts.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - result is at most `1.0`
 ///
 /// # Examples
 ///

@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Sub, SubAssign};
 
+/// A set of seats as a bitmask.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - bit `n` is seat `n`
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Seatbit(pub u16);
 

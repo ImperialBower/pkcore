@@ -22,6 +22,13 @@ use std::str::FromStr;
 /// It's the best five cards that determine who wins.
 ///
 /// IDEA: The hub and spoke.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - exactly five card slots
+///   - ranked only when dealt
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five(pub(crate) [Card; 5]);
 

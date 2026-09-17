@@ -55,6 +55,10 @@ pub use snapshot::{BettingState, SNAPSHOT_VERSION, SeatState, TableState};
 /// `HighStud` picks the seat with the *best* visible hand (used by Stud
 /// Hi on 4th+); `LowRazz` picks the seat with the *worst* visible hand
 /// (used by Razz, EPIC-33).
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum VisibleHandMode {
     HighStud,
@@ -70,6 +74,15 @@ pub enum VisibleHandMode {
 /// cannot hold a reference into `self.seats` while also calling `&mut self`
 /// methods — use explicit scoping or extract values before calling further
 /// methods.
+///
+/// # Domain
+///
+/// - **Role:** consistency boundary (DDD: aggregate)
+/// - **Invariants:**
+///   - chips are conserved across a hand (`audit_chip_total`)
+///   - every action in `legal_actions` is accepted by `apply_action`
+///   - raise count is capped per street under fixed limit
+///   - street counters reset at each street
 ///
 /// # Examples
 ///

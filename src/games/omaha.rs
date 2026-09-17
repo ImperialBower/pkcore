@@ -25,6 +25,13 @@ pub const OMAHA_BOARD_PERMUTATIONS: [[usize; 3]; 10] = [
     [2, 3, 4],
 ];
 
+/// A four-card Omaha high holding.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - a hand plays exactly two hole cards and three board cards
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[allow(clippy::pedantic)]
 pub struct OmahaHigh {

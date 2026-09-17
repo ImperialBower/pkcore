@@ -41,6 +41,11 @@ pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|
     Hands::from(hands)
 });
 
+/// A list of five-card hands.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hands(Vec<Five>);
 

@@ -43,6 +43,12 @@ static ORDERING: LazyLock<Vec<(Combo, f64)>> = LazyLock::new(|| {
 /// from the embedded chart rather than sampled — precomputed by
 /// `examples/export_hand_order.rs`, parsed on first use.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - classes are ordered strongest first
+///
 /// # Examples
 ///
 /// ```
@@ -65,6 +71,13 @@ pub fn hand_ordering() -> &'static [(Combo, f64)] {
 /// strongest-first until the accumulated hand count reaches the target, which
 /// makes the result **nested**: a wider fraction always contains a narrower
 /// one. Returns `None` unless `fraction` lies in `(0.0, 1.0]`.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `None` unless `fraction` is in `(0.0, 1.0]`
+///   - a wider fraction contains every narrower one
 ///
 /// # Examples
 ///
@@ -121,6 +134,10 @@ const TOTAL_HANDS: usize = 1_326;
 /// test that keeps the table honest. Nothing on the reads path calls it, which
 /// is what keeps the 15.8 MB chart out of a linked binary that only needs the
 /// 169 numbers.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 #[doc(hidden)]
 #[must_use]
 // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.

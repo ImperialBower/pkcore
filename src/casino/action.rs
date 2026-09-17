@@ -28,6 +28,10 @@ use uuid::Uuid;
 /// [`Table::apply_action`](crate::casino::table::Table::apply_action);
 /// also the value bot deciders produce.
 ///
+/// # Domain
+///
+/// - **Role:** action (DDD: command)
+///
 /// # Examples
 ///
 /// ```
@@ -72,6 +76,10 @@ impl std::fmt::Display for PlayerAction {
 ///
 /// [`Table`](crate::casino::table::Table) records hand history as a sequence
 /// of these, in its `event_log: Vec<TableAction>` field.
+///
+/// # Domain
+///
+/// - **Role:** domain event
 ///
 /// # Examples
 ///

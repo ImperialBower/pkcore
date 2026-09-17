@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 /// `HandRankClass` represents the more specific type of the five card `PokerHand`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[allow(clippy::module_name_repetitions)]
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum HandRankClass {

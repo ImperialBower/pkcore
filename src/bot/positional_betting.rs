@@ -20,6 +20,12 @@ use std::collections::HashMap;
 /// configuration with [`PositionalBetting::new`] and
 /// [`PositionalBetting::insert`].
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - an unmapped position falls back to the default
+///
 /// # Examples
 ///
 /// ```

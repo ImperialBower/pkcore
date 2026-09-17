@@ -94,6 +94,10 @@ pub const FORMAT_VERSION: u32 = 1;
 /// strings in pkcore's card notation and converted to native types via bridge
 /// methods such as [`HandHistory::to_board`].
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -191,6 +195,10 @@ fn default_format_version() -> u32 {
 /// the per-player [`Uuid`] (typically `Player.id`); pass `None` when
 /// identity threading is not needed (or use the simpler 4-tuple
 /// [`HandHistory::from_table_state`] entry point).
+///
+/// # Domain
+///
+/// - **Role:** value object
 pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
 
 impl HandHistory {
@@ -978,6 +986,12 @@ impl HandHistory {
 /// whole file. [`HandCollection::push`] automatically clears the per-hand
 /// `pkcore_version` so it is never repeated in the serialized output.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `push` clears each hand's `pkcore_version`; the root version applies to all
+///
 /// # Examples
 ///
 /// ```
@@ -1365,6 +1379,10 @@ impl HandCollection {
 
 /// Metadata about a hand: unique id, game variant, and provenance.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -1404,6 +1422,10 @@ pub struct HandMeta {
 ///
 /// Serializes as `snake_case` in YAML (e.g., `holdem`, `omaha_hi_lo`, `kuhn`).
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -1440,6 +1462,10 @@ pub enum HandVariant {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Table-level configuration for a hand.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -1483,6 +1509,10 @@ pub struct TableInfo {
 
 /// Blind and ante structure for a hand.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -1518,6 +1548,10 @@ pub struct Stakes {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// A single player's state at the start of the hand.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -1690,6 +1724,10 @@ impl PlayerEntry {
 
 /// What blind or ante a player posted at the start of the hand.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -1721,6 +1759,10 @@ pub enum PostedBlind {
 ///
 /// Every street is optional; omit streets that did not occur (e.g., everyone
 /// folds preflop, so no flop/turn/river).
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -1966,6 +2008,10 @@ fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uui
 
 /// Preflop betting round (no community cards).
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -1988,6 +2034,10 @@ pub struct PreflopStreet {
 }
 
 /// Flop: three community cards plus actions.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -2040,6 +2090,10 @@ impl FlopStreet {
 
 /// Turn: one community card plus actions.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -2086,6 +2140,10 @@ impl TurnStreet {
 }
 
 /// River: one community card plus actions.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -2355,6 +2413,10 @@ pub struct AgentFidelity {
 
 /// A single player action within a betting round.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -2406,6 +2468,10 @@ pub struct Action {
 
 /// The set of possible player actions in a betting round.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -2446,6 +2512,10 @@ pub enum ActionType {
 ///
 /// [`HandRankName`]: crate::analysis::name::HandRankName
 /// [`HandRankClass`]: crate::analysis::class::HandRankClass
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -2528,6 +2598,10 @@ impl ResultEntry {
 
 /// Outcome for a player at showdown or hand end.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -2556,6 +2630,10 @@ pub enum Outcome {
 ///
 /// The `villain_range` and `hero_range` fields use pkcore's
 /// [`Combos::from_str`] notation (e.g., `"66+,AJs+,KQs,AJo+,KQo"`).
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -2677,6 +2755,12 @@ fn replay_player_id(entry: &PlayerEntry) -> Uuid {
 /// Result of replaying a [`HandHistory`] through the game engine.
 ///
 /// Returned by [`HandHistory::replay`].
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `is_consistent` tolerates ±1 chip against each recorded `net`
 ///
 /// # Examples
 ///

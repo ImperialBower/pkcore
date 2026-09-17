@@ -22,6 +22,10 @@ use std::collections::HashMap;
 /// or `"limp"`. Values are [`WeightedRange`] instances that may include
 /// mixed-strategy frequencies.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -97,6 +101,12 @@ impl ActionRanges {
 /// Named constructors provide GTO-approximate preflop ranges for 6-max and
 /// 9-max. Build a custom configuration with [`PositionRanges::new`] and
 /// [`PositionRanges::insert`].
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - an unmapped position falls back to the default
 ///
 /// # Examples
 ///

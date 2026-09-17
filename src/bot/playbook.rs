@@ -21,6 +21,10 @@ use std::collections::HashMap;
 /// Holds one [`PositionRanges`] (preflop ranges keyed by position and action)
 /// and one [`PositionalBetting`] (bet sizing / aggression keyed by position).
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -75,6 +79,10 @@ impl PlaybookEntry {
 ///
 /// Named constructors pre-populate entries for 6-max and 9-max (the two most
 /// common online formats).
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///

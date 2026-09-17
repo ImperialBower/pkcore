@@ -56,6 +56,14 @@ enum Resolved {
 /// otherwise it runs **Monte Carlo** sampling. Both paths use a bounded `rayon`
 /// pool and the on-the-fly Cactus-Kev evaluator.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - 2..=10 seats; board holds 0, 3, 4 or 5 cards
+///   - no known card may repeat
+///   - exact enumeration only when every seat is exact and runouts are within `exact_threshold`; otherwise seeded Monte Carlo
+///
 /// # Errors
 ///
 /// - [`PKError::NotEnoughHands`] if there are fewer than two or more than ten seats.

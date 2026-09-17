@@ -23,6 +23,10 @@ use std::fmt::Display;
 /// [`PotOdds`]. Use [`is_positive`](Ev::is_positive) for the call/fold decision
 /// and [`as_chips`](Ev::as_chips) for display or logging.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::ev::Ev;

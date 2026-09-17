@@ -23,6 +23,10 @@ pub const PB_EFFECTIVE_STACK: u32 = 100;
 /// PokerBench reports metrics separately for the two splits, so the split is
 /// carried through to aggregation.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::pokerbench::PokerBenchSplit;
@@ -54,6 +58,10 @@ impl fmt::Display for PokerBenchSplit {
 /// [`load_json`](PokerBenchScenario::load_json)). Sizes (`pot`, `to_call`, and
 /// the amounts inside `optimal`/`history`/`legal`) are in the dataset's native
 /// big-blind unit (see [`PB_BIG_BLIND`]).
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 /// ```
@@ -105,6 +113,10 @@ pub struct PokerBenchScenario {
 }
 
 /// One seat in a scenario's canonical 6-max seating.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CanonicalSeat {
     /// 0-based seat index (button at seat 0; see [`PokerBenchScenario::canonical_seating`]).

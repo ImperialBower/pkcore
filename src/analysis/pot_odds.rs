@@ -13,6 +13,10 @@ use std::fmt::Display;
 /// Use [`PotOdds::breakeven`] to find the minimum equity needed to call profitably,
 /// then compare against [`WinLoseDraw::win_percentage`](crate::analysis::gto::odds::WinLoseDraw::win_percentage).
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::pot_odds::PotOdds;

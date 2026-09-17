@@ -96,6 +96,15 @@ pub enum SessionStep {
 /// (busted player removal, button progression). See the [module-level
 /// documentation](self) for usage examples.
 ///
+/// # Domain
+///
+/// - **Role:** consistency boundary (DDD: aggregate)
+/// - **Invariants:**
+///   - a blind change during a hand waits for the next `start_hand`
+///   - `forced_at_hand_start` is the blinds this hand posted
+///   - `shuffled_deck_str` is the deck before any card is drawn
+///   - `hand_number` counts hands started without error
+///
 /// # Examples
 ///
 /// ```
@@ -933,6 +942,12 @@ impl PokerSession {
 /// string encoding (the `lib.rs` wire contract), so the view is transport-
 /// and language-agnostic.
 ///
+/// # Domain
+///
+/// - **Role:** read model
+/// - **Invariants:**
+///   - `hole_cards` is `None` unless the viewer owns the seat
+///
 /// # Examples
 ///
 /// ```
@@ -999,6 +1014,12 @@ pub struct SessionState {
 /// internal engine layout never leaks across an FFI or network boundary —
 /// and, critically, the type carries no deck field, so no view of any
 /// principal can ever reveal an undealt card.
+///
+/// # Domain
+///
+/// - **Role:** read model
+/// - **Invariants:**
+///   - carries no deck
 ///
 /// # Examples
 ///

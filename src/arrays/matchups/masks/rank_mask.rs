@@ -2,6 +2,11 @@ use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+/// The rank bits of each side of a heads-up matchup.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct RankMask {

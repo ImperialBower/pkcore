@@ -24,6 +24,12 @@ use serde::{Deserialize, Serialize};
 /// Use the named constructors for common archetypes or build a custom
 /// strategy with [`RangeStrategy::new`].
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `postflop_cbet_frequency` is in 0..=100
+///
 /// # Examples
 ///
 /// ```

@@ -7,6 +7,10 @@ use std::fmt::{self, Display, Formatter};
 
 /// Struct representing the potential equity at a specific point in a hand by a specific collection
 /// of `Seats`, stored in the `Seatbit` struct.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct SeatEquity {
     pub chips: usize,

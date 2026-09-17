@@ -32,9 +32,17 @@ const STARTING_CHIPS: usize = BB * 1_000;
 const NO_RESULT_FITNESS: f64 = -1_000_000.0;
 
 /// A labelled opponent entry: `(display_name, profile)`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 pub type FieldEntry = (String, BotProfile);
 
 /// Returns all eight standard opponent profiles as the default training field.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///
@@ -65,6 +73,12 @@ pub fn default_field() -> Vec<FieldEntry> {
 /// *same* hands (common random numbers), which both removes the RNG noise that
 /// made training irreproducible (audit II.9) and reduces the variance the
 /// optimiser sees between candidates.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - deterministic for a given `seed`
 ///
 /// # Examples
 ///

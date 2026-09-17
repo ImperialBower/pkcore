@@ -15,6 +15,10 @@ use std::fmt::{Display, Formatter};
 /// Hold'em and Omaha use only `Down`. Stud and Razz interleave `Down` and
 /// `Up` per street.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```

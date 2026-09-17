@@ -1,6 +1,10 @@
 //! Output types for the [`equity`](crate::analysis::equity) engine.
 
 /// Which strategy produced an [`EquityReport`].
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Method {
     /// Every board runout was enumerated; the result is exact.
@@ -17,6 +21,10 @@ pub enum Method {
 /// already folds split pots in. `win` is the probability of being the *sole*
 /// winner and `tie` the probability of being *in* a tie, so
 /// `win + tie >= equity`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct PlayerEquity {
     /// Probability this seat is the sole winner.
@@ -49,6 +57,12 @@ impl PlayerEquity {
 
 /// The result of an equity calculation: one [`PlayerEquity`] per seat (in input
 /// order), plus how it was computed.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - one `PlayerEquity` per request seat, in input order
 #[derive(Clone, Debug)]
 pub struct EquityReport {
     /// Per-seat equity, aligned with the request's `players`.

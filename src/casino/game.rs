@@ -8,6 +8,10 @@ use serde::{Deserialize, Serialize};
 /// ignored by NLHE / FLHE / PLO; no existing caller is required to pass
 /// it.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```

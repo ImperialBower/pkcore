@@ -31,6 +31,10 @@ use std::fmt::Display;
 /// [`WinLoseDraw`] across all hero hands. Preflop range vs. range is not yet
 /// supported — a board with at least the flop dealt is required.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use std::str::FromStr;

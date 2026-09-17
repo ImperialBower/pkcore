@@ -59,10 +59,20 @@ mod games__razz__california__ace_low_tests {
     }
 }
 
+/// Numeric value of a [`CaliforniaHandRank`].
+///
+/// # Domain
+///
+/// - **Role:** value object
 pub type CaliforniaHandRankValue = u16;
 
 pub const NO_RAZZ_HAND_RANK_VALUE: CaliforniaHandRankValue = 0;
 
+/// The rank of a five-card California lowball (Razz) hand.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, AsRefStr, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[allow(non_camel_case_types)]
 pub enum CaliforniaHandRank {

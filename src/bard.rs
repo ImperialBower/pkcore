@@ -142,6 +142,13 @@ use std::str::FromStr;
 /// test failing as a reminder of what my priorities are. Yes, this has been fun, but as they say,
 /// ABC... always be closing. Luckily, I want a cup of coffee, and coffee is for closers.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - one bit per card
+///   - blank is `0`
+///
 /// # EPIC 6: Pre flop
 ///
 /// Returning to this type now that I want a very easy way to story combinations of cards as single

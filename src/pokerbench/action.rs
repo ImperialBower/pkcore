@@ -14,6 +14,10 @@ use std::str::FromStr;
 /// chips. Both are in the dataset's native unit (big blinds — see
 /// [`PB_BIG_BLIND`](crate::pokerbench::PB_BIG_BLIND)).
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use std::str::FromStr;

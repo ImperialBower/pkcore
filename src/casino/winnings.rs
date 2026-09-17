@@ -2,6 +2,11 @@ use crate::prelude::{Eval, SeatEquity};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+/// The pot wins from one showdown.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq)]
 pub struct Winnings(Vec<PotWin>);
 
@@ -60,6 +65,11 @@ impl From<PotWin> for Winnings {
     }
 }
 
+/// One pot share and the hand that won it.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialOrd, PartialEq)]
 pub struct PotWin {
     pub equity: SeatEquity,

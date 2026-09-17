@@ -23,6 +23,14 @@ use std::sync::mpsc;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::thread;
 
+/// The hole cards of up to nine players.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - at most nine hands
+///   - unused slots are blank
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StartingHands([Two; 9]);
 

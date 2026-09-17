@@ -31,6 +31,12 @@ const VILLAIN_ACTION: &str = "open_raise";
 ///
 /// [`PlayerSpec::Range`]: crate::analysis::equity::PlayerSpec::Range
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - zero-frequency entries are dropped
+///
 /// # Examples
 ///
 /// ```
@@ -71,6 +77,12 @@ pub fn combos_from_weighted(range: &WeightedRange) -> Option<Combos> {
 ///
 /// Returns `None` when the index is out of range, names the hero, names a seat
 /// that is no longer active, or when no position or range can be resolved.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `None` for the hero's own seat or an inactive seat
 ///
 /// # Examples
 ///
@@ -163,6 +175,12 @@ fn widen_by_reads(_state: &TableSnapshot, _villain_index: usize, charted: Combos
 /// [`PlayerSpec::Random`]: crate::analysis::equity::PlayerSpec::Random
 /// [`RangeMode::PositionAware`]: crate::bot::decision_config::RangeMode::PositionAware
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - one spec per active villain, in seat order
+///
 /// # Examples
 ///
 /// ```
@@ -211,6 +229,12 @@ pub fn villain_specs(profile: &BotProfile, state: &TableSnapshot) -> Vec<crate::
 ///
 /// [`PlayerSpec`]: crate::analysis::equity::PlayerSpec
 /// [`PlayerSpec::Random`]: crate::analysis::equity::PlayerSpec::Random
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - one spec per active villain, in seat order
 ///
 /// # Examples
 ///

@@ -50,6 +50,12 @@ use std::collections::HashMap;
 /// actions (check, fold, call, one or more bet/raise sizes) varies per node and
 /// is not known at compile time.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - one entry per action at its node, never empty
+///
 /// # Examples
 ///
 /// ```
@@ -241,6 +247,10 @@ impl ActionFrequencies {
 ///
 /// Only action nodes appear in the outer map — chance and terminal nodes carry
 /// no strategy.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///

@@ -4,6 +4,11 @@ use crate::arrays::two::Two;
 use std::collections::HashMap;
 use std::fmt::Display;
 
+/// Hole-card hands grouped by the [`Combo`] they belong to.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ComboPairs(HashMap<Combo, Twos>);
 

@@ -9,6 +9,13 @@ use std::array::IntoIter;
 
 /// Represents a Standard52 deck as an immutable array of
 /// Cactus Kev Cards (`PokerCard`).
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - the 52 cards in canonical order
+///   - only instance is `POKER_DECK`
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Deck([Card; 52]);
 

@@ -23,6 +23,10 @@ use std::fmt;
 /// how they weight strategy sums and discount accumulated regrets between
 /// iterations.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Convergence comparison (same iteration count)
 ///
 /// | Variant | Strategy weight | Regret discount | Typical speedup vs Vanilla |
@@ -91,6 +95,12 @@ impl Default for CfrVariant {
 ///
 /// Use the named constructors for common sizes, or [`BetSize::new`] for
 /// custom fractions.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `new` refuses a zero denominator
 ///
 /// # Examples
 /// ```
@@ -293,6 +303,10 @@ impl fmt::Display for BetSize {
 /// The default configuration uses half-pot and pot-sized bets on every street —
 /// a common starting point for river-only solvers.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::solver_config::{BetSize, BetSizings};
@@ -368,6 +382,10 @@ impl Default for BetSizings {
 ///
 /// Build with [`SolverConfig::new`] or use the builder-style setters. See
 /// [`BetSizings`] for configuring the bet tree's branching factor.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 /// ```

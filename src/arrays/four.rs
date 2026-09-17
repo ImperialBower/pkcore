@@ -17,6 +17,12 @@ use std::str::FromStr;
 ///
 /// I mainly want this struct for the `From<Vec<Card>>` trait, which is there to make things
 /// easier for me with the analysis code.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - exactly four card slots
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Four(pub(crate) [Card; 4]);
 

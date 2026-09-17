@@ -200,6 +200,12 @@ use std::hash::{Hash, Hasher};
 /// wear safety goggles when using a power saw to cut wood, but anyone with half a brain who enjoys
 /// seeing knows that you'd be an idiot not to. Know your craft, and anytime you are going against
 /// the traditional rules you have learned, have a damn good reason.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - equal and ordered by `hand_rank` only; the cards are ignored
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct Eval {
     pub hand_rank: HandRank,
@@ -451,6 +457,13 @@ mod hand_rank__eval_tests {
     }
 }
 
+/// A seven-card hand with its best five cards and their `HandRank`.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - equal when `hand_rank` is equal
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
 pub struct SevenEval {

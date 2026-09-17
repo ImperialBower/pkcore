@@ -6,6 +6,10 @@ use wincounter::PlayerFlag;
 use wincounter::win::Win;
 
 /// This is old `Fudd` code.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug)]
 pub struct Outs(IndexMap<usize, Cards>);
 

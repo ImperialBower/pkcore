@@ -78,6 +78,10 @@ use wincounter::win::Win;
 /// Actually, it's not as hard as it looks. We already have `Outs.add_from_player_flag()`, which
 /// has all of the core logic we need. How about we add an `Outs.add_from_case_eval()` and
 /// call it a day?
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct CaseEval(Vec<Eval>, Cards);
 

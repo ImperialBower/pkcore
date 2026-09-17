@@ -13,6 +13,14 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+/// Two cards, such as a player's hole cards.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - exactly two card slots
+///   - `new` rejects blanks and duplicates
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Two(#[serde(deserialize_with = "deserialize_two_index")] [Card; 2]);
 

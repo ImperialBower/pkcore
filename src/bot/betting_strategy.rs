@@ -17,6 +17,12 @@ use serde::{Deserialize, Serialize, Serializer};
 /// `check_raise_frequency`, `postflop_cbet_frequency`). Serializes as a plain
 /// integer so YAML profile files remain unchanged.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - value is 0..=100 (`new` and `Deserialize` reject more)
+///
 /// # Examples
 ///
 /// ```
@@ -166,6 +172,12 @@ mod bet_size_fractions {
 /// Profiles without a `street_aggression` block serialize identically to before
 /// this field was added — the field is omitted from YAML when absent.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - each override is a `Percentage` in 0..=100
+///
 /// # Examples
 ///
 /// ```
@@ -205,6 +217,12 @@ pub struct StreetAggression {
 /// All frequency fields are whole-number percentages in `0..=100`. Use the
 /// named constructors for common archetypes or build a custom profile with
 /// [`BettingStrategy::new`].
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - frequency fields are `Percentage` in 0..=100
 ///
 /// # Examples
 ///

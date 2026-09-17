@@ -5,6 +5,13 @@ use crate::pokerbench::scenario::PokerBenchScenario;
 ///
 /// Produced by [`score_action`]. `ev_loss` is a hook for a future solver-equity
 /// metric and is currently always `None`.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `size_error` is `None` when the optimal action has no size
+///   - `ev_loss` is always `None` today
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ActionScore {
     /// The predicted and optimal action *kinds* match
@@ -26,6 +33,12 @@ pub struct ActionScore {
 /// prediction against a sized optimal is treated as size `0` (so e.g. folding
 /// when the solver bets registers the full bet as the error). The pot is
 /// floored at the big blind (then `1`) to avoid division by zero.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - size error divides by the pot, floored at the big blind, then 1
 ///
 /// # Examples
 /// ```

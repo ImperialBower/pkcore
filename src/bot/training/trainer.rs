@@ -24,6 +24,10 @@ use crate::bot::training::evaluator::{self, FieldEntry};
 
 /// Hyper-parameters for [`ExploitTrainer`].
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -77,6 +81,10 @@ impl Default for TrainingConfig {
 
 /// Per-generation statistics captured during training.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -98,6 +106,10 @@ pub struct GenerationRecord {
 }
 
 /// Output of a completed training run.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -129,6 +141,10 @@ pub struct TrainingResult {
 // ── ExploitTrainer ────────────────────────────────────────────────────────────
 
 /// Optimises [`ExploitConfig`] parameters using a (1+λ)-evolution strategy.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///

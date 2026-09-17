@@ -66,6 +66,10 @@ use std::collections::HashMap;
 /// negative (the player regrets having not taken a different action) and do
 /// not sum to any fixed value.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+///
 /// # Examples
 ///
 /// ```

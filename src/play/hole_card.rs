@@ -12,6 +12,10 @@ use std::fmt::{Display, Formatter};
 
 /// A single hole card held by a seat, tagged with its visibility.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```

@@ -24,6 +24,10 @@ pub use crate::games::betting_structure::BetTier;
 /// - Hold'em / Omaha: 0=preflop, 1=flop, 2=turn, 3=river.
 /// - Stud-family: 0=3rd, 1=4th, 2=5th, 3=6th, 4=7th.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -54,6 +58,10 @@ pub struct StreetIndex(pub u8);
 /// - `bet_tier` — [`BetTier::Small`] for early streets,
 ///   [`BetTier::Big`] for later streets. Used by Fixed-Limit variants;
 ///   no-limit / pot-limit games ignore it.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug)]
 pub struct StreetDescriptor {
     pub index: StreetIndex,

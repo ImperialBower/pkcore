@@ -22,6 +22,10 @@ use wincounter::wins::Wins;
 /// One thing that will be interesting to see is if this iteration of the work will flow easier
 /// than my first stab at things where I was just messing around, trying to get things to work,
 /// and not keeping things simple.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default)]
 pub struct CaseEvals(Vec<CaseEval>);
 

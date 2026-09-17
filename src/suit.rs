@@ -4,6 +4,13 @@ use std::fmt;
 use std::str::FromStr;
 use strum::{EnumIter, IntoEnumIterator}; // TODO Early
 
+/// One of the four suits.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `BLANK` is no suit
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Suit {
     SPADES = 4,

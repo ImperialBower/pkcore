@@ -9,6 +9,10 @@ use crate::play::board::Board;
 /// A request mixes any combination of these, e.g. one [`PlayerSpec::Exact`]
 /// hero against two [`PlayerSpec::Random`] opponents, or against a
 /// [`PlayerSpec::Range`].
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug)]
 pub enum PlayerSpec {
     /// Known hole cards (e.g. `A♠ K♦`).
@@ -48,6 +52,10 @@ impl PlayerSpec {
 /// decides *whether* to sample, `max_samples` decides *how hard* to sample once
 /// that decision is made. They happen to have had the same value historically;
 /// they no longer do.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug)]
 pub struct EquityOptions {
     /// Maximum number of board runouts to enumerate before switching to Monte
@@ -101,6 +109,10 @@ impl Default for EquityOptions {
 
 /// A complete equity calculation request: the seats, the (possibly partial)
 /// board, and the options.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///

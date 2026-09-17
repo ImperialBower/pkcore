@@ -20,6 +20,12 @@ fn default_samples() -> u32 {
 /// the historical decider behavior, so an absent `decision:` section and a
 /// fully-defaulted one both deserialize to a bot that plays exactly as it did
 /// before EPIC-36.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `Default` is the historical decider behaviour
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct DecisionConfig {
@@ -54,6 +60,10 @@ impl DecisionConfig {
 /// `Off` keeps the historical hand-rank proxy (`1 - hand_rank_value / 7462`).
 /// `Fast` and `Exact` route through the real multi-way [`crate::analysis::equity`]
 /// engine — seeded Monte Carlo and exact enumeration respectively.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize, Default)]
 #[serde(tag = "mode", rename_all = "lowercase")]
 pub enum EquityMode {
@@ -71,6 +81,10 @@ pub enum EquityMode {
 }
 
 /// Preflop range source.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum RangeMode {
@@ -86,6 +100,12 @@ pub enum RangeMode {
 /// `discipline` scales how strictly equity must beat pot odds before the
 /// decider calls: `1.0` is the strict break-even threshold (historical
 /// behavior), `0.0` ignores pot odds entirely (looser, weaker).
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `Default` discipline is `1.0`
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PotOddsConfig {
@@ -100,6 +120,10 @@ impl Default for PotOddsConfig {
 }
 
 /// A simple off/on capability toggle, defaulting to `Off`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Toggle {
@@ -115,6 +139,10 @@ pub enum Toggle {
 /// Acts only when the table snapshot carries `opponent_stats`; a no-op
 /// otherwise, so the knob is safe on any run path and never depends on
 /// opponent identity.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(tag = "mode", rename_all = "lowercase")]
 pub enum ExploitMode {
@@ -128,6 +156,10 @@ pub enum ExploitMode {
 }
 
 /// Preflop decision chart source.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum PreflopCharts {

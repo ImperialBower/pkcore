@@ -3,6 +3,11 @@ use log::trace;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combos::Combos;
 
+/// The shape of a [`ComboRange`], such as pocket pairs or suited connectors.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ComboRangeForm {
     PocketPairs,
@@ -16,6 +21,13 @@ pub enum ComboRangeForm {
     Unsupported,
 }
 
+/// A span of combos from `lower` up to `higher`.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `new` orders the ends so `higher >= lower`
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct ComboRange {
     pub higher: Combo,
