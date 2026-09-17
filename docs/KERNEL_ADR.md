@@ -121,11 +121,12 @@ Being private limits the blast radius but does not fix it: `run_hand` and
 `step` reach `advance_street` on every ordinary hand, so an exhausted deck
 strands a real table, not just a misusing caller.
 
-The remedy is not to split anything, because nothing crosses a kernel boundary —
-there is only one kernel. It is to validate before sweeping, the same
-pre-validation `act_bet` and `act_raise` already carry:
-`Table::advance_street(&mut self) -> Result<(), PKError>`.
-Tracked as fix 5 in the purity audit.
+**Closed in 0.16.0.** The remedy was not to split anything, because nothing
+crosses a kernel boundary — there is only one kernel. It was to validate before
+sweeping, the same pre-validation `act_bet` and `act_raise` already carry:
+`Table::advance_street(&mut self) -> Result<(), PKError>`
+(`src/casino/table/transition.rs`). `PokerSession::advance_street` delegates to
+it, so every caller of `next_step` and `run_hand` gets the guard.
 
 ## 6. Who may write this state — and who currently does
 
@@ -174,8 +175,9 @@ contract is the Rust public API, and breaking it costs a major version.
 
 - The boundary is **described, not enforced**. 22 public mutable fields on
   `Table` mean any consumer can write state this record says it may only read.
-- Invariant 7's answer (§5) is now written down but has **no test**. Nothing
-  fails if a future change makes `apply_action` move the pot.
+- Invariant 7's answer (§5) is written down, and its street-boundary half is
+  now tested (`advance_street__*`, five tests). The *intra-kernel* half is still
+  untested: nothing fails if a future change makes `apply_action` move the pot.
 - `TableAction` is still both the kernel's internal event type and a declared
   wire enum (purity audit fix 10), so the kernel's vocabulary and the transport's
   vocabulary cannot drift apart without a break.

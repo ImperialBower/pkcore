@@ -3,6 +3,7 @@
 
 use super::Table;
 use crate::PKError;
+use crate::games::{GameFamily, GamePhase};
 
 impl Table {
     /// Returns the [`PlayerAction`](crate::casino::action::PlayerAction)s that are
@@ -179,6 +180,110 @@ impl Table {
 //
 // P8: the audit's payoff — betting-rule correctness expressed as table-driven
 // assertions instead of probe archaeology. Feature-free, like the surface itself.
+impl Table {
+    /// How many cards the stub must hold to serve the next street.
+    ///
+    /// Community-board games burn one card before each deal, so the flop costs
+    /// four and the turn and river two apiece. Stud deals one card per seat
+    /// still in the hand and burns nothing — except on 7th street with a field
+    /// too large for the stub, where a single shared community card is turned
+    /// instead (`DEFECT_018`).
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::InvalidAction`] if no street remains.
+    fn cards_needed_for_next_street(&self) -> Result<usize, PKError> {
+        if matches!(self.game.family(), GameFamily::StudHi | GameFamily::Razz) {
+            let next = self.phase.next_stud_street().ok_or(PKError::InvalidAction)?;
+            let seat_count = self.seats.size() as usize;
+            let in_hand = (0..seat_count)
+                .filter(|&i| u8::try_from(i).is_ok_and(|idx| self.seats.is_seat_in_hand(idx)))
+                .count();
+            if next == GamePhase::Stud7th && in_hand > self.deck.len() {
+                return Ok(1);
+            }
+            return Ok(in_hand);
+        }
+        match self.board.len() {
+            0 => Ok(4),
+            3 | 4 => Ok(2),
+            _ => Err(PKError::InvalidAction),
+        }
+    }
+
+    /// End the betting street and deal the next card, as one step that either
+    /// fully happens or does not happen at all.
+    ///
+    /// [`Self::bring_it_in`] sweeps every bet into the pot, and the deal
+    /// methods move `phase` and the board in place, so composing the two with
+    /// `?` is **not** a transaction: a deal that fails after the sweep leaves
+    /// the chips in the pot and the board a card short, with no
+    /// [`GamePhase`] naming that state and no way back. This checks the stub
+    /// can serve the street *before* anything moves — the same pre-validation
+    /// [`Self::act_raise`](Self::act_raise) already carries, applied at the
+    /// street boundary.
+    ///
+    /// Recorded as the kernel's street-boundary step in `docs/KERNEL_ADR.md`
+    /// §5; closes fix 5 of `docs/KERNEL_PURITY_AUDIT.md`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+    ///     Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    /// let sb = table.next_to_act();
+    /// table.act_call(sb).unwrap();
+    /// let bb = table.next_to_act();
+    /// table.act_check(bb).unwrap();
+    ///
+    /// table.advance_street().unwrap();
+    /// assert_eq!(3, table.board.len());
+    /// assert_eq!(200, table.pot);
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::NotEnoughCards`] if the stub cannot serve the next street —
+    /// returned before anything is mutated. [`PKError::InvalidAction`] if no
+    /// street remains. Otherwise whatever [`Self::bring_it_in`] returns.
+    pub fn advance_street(&mut self) -> Result<(), PKError> {
+        let needed = self.cards_needed_for_next_street()?;
+        if self.deck.len() < needed {
+            return Err(PKError::NotEnoughCards);
+        }
+
+        if matches!(self.game.family(), GameFamily::StudHi | GameFamily::Razz) {
+            let next = self.phase.next_stud_street().ok_or(PKError::InvalidAction)?;
+            self.bring_it_in()?;
+            return self.deal_stud_street(next);
+        }
+
+        match self.board.len() {
+            0 => {
+                self.bring_it_in()?;
+                self.deal_flop()
+            }
+            3 => {
+                self.bring_it_in()?;
+                self.deal_turn()
+            }
+            4 => {
+                self.bring_it_in()?;
+                self.deal_river()
+            }
+            _ => Err(PKError::InvalidAction),
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod transition_surface_tests {
@@ -200,6 +305,131 @@ mod transition_surface_tests {
         t.act_forced_bets().expect("forced bets");
         t.deal_cards_to_seats().expect("deal");
         t
+    }
+
+    /// `nlh_at_utg` with the preflop round played out — both blinds' opponents
+    /// call and the big blind checks — so `bring_it_in` is legal.
+    fn nlh_preflop_complete() -> Table {
+        let mut t = nlh_at_utg();
+        let utg = t.next_to_act();
+        t.act_call(utg).expect("utg calls");
+        let sb = t.next_to_act();
+        t.act_call(sb).expect("sb completes");
+        let bb = t.next_to_act();
+        t.act_check(bb).expect("bb checks");
+        t
+    }
+
+    /// `docs/KERNEL_PURITY_AUDIT.md` fix 5 / `docs/KERNEL_ADR.md` §5.
+    ///
+    /// "End the street and deal the next card" must never half-happen. With a
+    /// deck too short to burn and deal, the bets must stay in front of the
+    /// players and the phase must not move.
+    #[test]
+    fn advance_street__does_not_sweep_the_pot_when_the_deal_cannot_complete() {
+        let mut t = nlh_preflop_complete();
+        // The flop needs a burn plus three cards. Leave three.
+        let short = t.deck.draw(3).expect("three cards");
+        t.deck = short;
+
+        let pot = t.pot;
+        let bet = t.bet;
+        let phase = t.phase;
+        let board = t.board.len();
+        let bets: Vec<usize> = t.seats.iter().map(|s| s.player.bet).collect();
+
+        let err = t
+            .advance_street()
+            .expect_err("a short deck must not advance the street");
+
+        assert_eq!(PKError::NotEnoughCards, err);
+        assert_eq!(pot, t.pot, "bets were swept into the pot despite the deal failing");
+        assert_eq!(bet, t.bet, "the bet level was cleared despite the deal failing");
+        assert_eq!(phase, t.phase, "phase moved despite the deal failing");
+        assert_eq!(board, t.board.len(), "the board changed despite the deal failing");
+        assert_eq!(
+            bets,
+            t.seats.iter().map(|s| s.player.bet).collect::<Vec<_>>(),
+            "seat bets were collected despite the deal failing"
+        );
+    }
+
+    /// The happy path: a full stub sweeps the bets and puts three cards out.
+    #[test]
+    fn advance_street__sweeps_the_bets_and_deals_the_flop() {
+        let mut t = nlh_preflop_complete();
+        let staked: usize = t.seats.iter().map(|s| s.player.bet).sum();
+        let pot_before = t.pot;
+
+        t.advance_street().expect("a full stub deals the flop");
+
+        assert_eq!(3, t.board.len(), "the flop is three cards");
+        assert_eq!(pot_before + staked, t.pot, "every bet reached the pot");
+        assert_eq!(0, t.bet, "the bet level resets at the street boundary");
+        assert!(
+            t.seats.iter().all(|s| s.player.bet == 0),
+            "no bet is left in front of a player"
+        );
+    }
+
+    /// The same guard one street later: the turn needs a burn plus one card.
+    #[test]
+    fn advance_street__does_not_sweep_the_pot_when_the_turn_cannot_be_dealt() {
+        let mut t = nlh_preflop_complete();
+        t.advance_street().expect("flop");
+        for _ in 0..3 {
+            let seat = t.next_to_act();
+            t.act_check(seat).expect("check the flop");
+        }
+        // The turn needs a burn plus one card. Leave one.
+        let short = t.deck.draw(1).expect("one card");
+        t.deck = short;
+
+        let pot = t.pot;
+        let phase = t.phase;
+        let bets: Vec<usize> = t.seats.iter().map(|s| s.player.bet).collect();
+
+        let err = t
+            .advance_street()
+            .expect_err("a short deck must not advance the street");
+
+        assert_eq!(PKError::NotEnoughCards, err);
+        assert_eq!(pot, t.pot, "bets were swept into the pot despite the deal failing");
+        assert_eq!(phase, t.phase, "phase moved despite the deal failing");
+        assert_eq!(3, t.board.len(), "the board grew despite the deal failing");
+        assert_eq!(bets, t.seats.iter().map(|s| s.player.bet).collect::<Vec<_>>());
+    }
+
+    /// The stud family takes the same guard. 4th street deals one card per seat
+    /// still in the hand, with no burn.
+    #[test]
+    fn advance_street__does_not_sweep_the_pot_when_the_stud_street_cannot_be_dealt() {
+        let mut t = stud_at_completer();
+        for _ in 0..6 {
+            if t.seats.is_betting_complete() {
+                break;
+            }
+            let seat = t.next_to_act();
+            t.act_call(seat).expect("call the bring-in");
+        }
+        assert!(t.seats.is_betting_complete(), "3rd-street betting must be closed");
+
+        // Three seats need three cards on 4th street. Leave two.
+        let short = t.deck.draw(2).expect("two cards");
+        t.deck = short;
+
+        let pot = t.pot;
+        let phase = t.phase;
+        let bets: Vec<usize> = t.seats.iter().map(|s| s.player.bet).collect();
+
+        let err = t
+            .advance_street()
+            .expect_err("a short deck must not advance the street");
+
+        assert_eq!(PKError::NotEnoughCards, err);
+        assert_eq!(pot, t.pot, "bets were swept into the pot despite the deal failing");
+        assert_eq!(phase, t.phase, "phase moved despite the deal failing");
+        assert_eq!(bets, t.seats.iter().map(|s| s.player.bet).collect::<Vec<_>>());
     }
 
     #[test]

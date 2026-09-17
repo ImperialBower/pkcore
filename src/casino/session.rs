@@ -816,31 +816,7 @@ impl PokerSession {
     /// stud-family games step through `Stud3rd → Stud4th → ... → Stud7th`
     /// dealing one card per active seat at each transition.
     fn advance_street(&mut self) -> Result<(), PKError> {
-        if matches!(
-            self.table.game.family(),
-            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz
-        ) {
-            let next = self.table.phase.next_stud_street().ok_or(PKError::InvalidAction)?;
-            self.table.bring_it_in()?;
-            self.table.deal_stud_street(next)?;
-            return Ok(());
-        }
-        match self.table.board.len() {
-            0 => {
-                self.table.bring_it_in()?;
-                self.table.deal_flop()?;
-            }
-            3 => {
-                self.table.bring_it_in()?;
-                self.table.deal_turn()?;
-            }
-            4 => {
-                self.table.bring_it_in()?;
-                self.table.deal_river()?;
-            }
-            _ => return Err(PKError::InvalidAction),
-        }
-        Ok(())
+        self.table.advance_street()
     }
 
     /// Renders the table as an owned, serializable [`SessionView`] from the
@@ -1064,6 +1040,56 @@ mod tests {
             ForcedBets::new(50, 100),
             uuid::Uuid::from_u128(42),
         ))
+    }
+
+    /// `docs/KERNEL_PURITY_AUDIT.md` fix 5 / `docs/KERNEL_ADR.md` §5.
+    ///
+    /// `DEFECT_019` made a dry deck *reportable*. This makes it *survivable*:
+    /// the hand stops with the bets still in front of the players, not with
+    /// the pot swept and the board a card short.
+    #[test]
+    fn next_step__a_dry_deck_leaves_the_pot_and_the_board_untouched() {
+        use rand::SeedableRng;
+        let mut session = seeded_two_player_session();
+        session
+            .start_hand_with(&mut rand::rngs::SmallRng::seed_from_u64(7))
+            .expect("start hand");
+
+        // Play the preflop round out: heads-up, the small blind acts first.
+        let sb = session.table.next_to_act();
+        session.apply_action(sb, PlayerAction::Call).expect("sb calls");
+        let bb = session.table.next_to_act();
+        session.apply_action(bb, PlayerAction::Check).expect("bb checks");
+        assert!(session.table.seats.is_betting_complete(), "preflop must be closed");
+
+        // The flop needs a burn plus three cards. Leave three.
+        let short = session.table.deck.draw(3).expect("three cards");
+        session.table.deck = short;
+
+        let pot = session.table.pot;
+        let board = session.table.board.len();
+        let bets: Vec<usize> = session.table.seats.iter().map(|s| s.player.bet).collect();
+
+        let step = session.next_step();
+
+        assert!(
+            matches!(step, SessionStep::Failed(PKError::NotEnoughCards)),
+            "a dry deck is a reported fault, not a completion: {step:?}"
+        );
+        assert_eq!(
+            pot, session.table.pot,
+            "bets were swept into the pot despite the deal failing"
+        );
+        assert_eq!(
+            board,
+            session.table.board.len(),
+            "the board grew despite the deal failing"
+        );
+        assert_eq!(
+            bets,
+            session.table.seats.iter().map(|s| s.player.bet).collect::<Vec<_>>(),
+            "seat bets were collected despite the deal failing"
+        );
     }
 
     #[test]
@@ -1398,7 +1424,15 @@ mod tests {
             }
         }
         assert!(matches!(session.next_step(), SessionStep::Failed(_)));
-        assert!(session.table.pot > 0, "chips should be committed before the abort");
+        // Fix 5 (`docs/KERNEL_PURITY_AUDIT.md`): the dry deck is caught *before*
+        // `bring_it_in`, so the called chips are still committed in front of the
+        // players rather than swept into the pot. Either way `abort_hand` owes
+        // them back — which is what this test is about.
+        assert_eq!(0, session.table.pot, "the failed deal must not have swept the pot");
+        assert!(
+            session.table.seats.iter().any(|s| s.player.chips_in_play > 0),
+            "chips should be committed before the abort"
+        );
 
         let refunded = session.abort_hand().unwrap();
 

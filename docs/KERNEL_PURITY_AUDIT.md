@@ -65,7 +65,7 @@ mechanical in this report is about **a day and a half**.
 | 4 | Delivery-agnostic | ~~**Fail** (narrow)~~ **Partial, 0.15.0** | Was: `util::terminal` (stdin/stdout, termion) and `Util::commentary_action_to` (`println!`) ungated. Now the console functions need `terminal` and `commentary_action_to` is deleted. Still open: `TableAction` is the kernel's event type *and* a declared wire enum (fix 10). No gRPC/HTTP/CLI in the lib |
 | 5 | Hidden-information projection | **Pass in the kernel** | `PokerSession::view(Option<Principal>)` and `TableSnapshot::from_table` both redact by construction. The consumer ignores them — see §8 |
 | 6 | Narrow, stable boundary | **Partial** | The `legal_actions`/`apply_action` pair exists and is feature-free (up from **Fail** in v0.1.8). But `Table` has **22** public mutable fields (21 at 0.14.0) and `apply_action` still returns `Result<(), PKError>`, not events |
-| 7 | Things that change together live in one kernel | ~~**Pass, unanswered**~~ **Pass, answered 2026-09-16** | Everything is in one `Table`, so nothing all-or-nothing crosses a kernel line. The intra-kernel answer — *one `apply_action` changes the betting group only* — is now recorded in [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) §5. Still open: `PokerSession::advance_street` composes two mutating calls with no in-between state (fix 5) |
+| 7 | Things that change together live in one kernel | ~~**Pass, unanswered**~~ **Pass, answered 2026-09-16** | Everything is in one `Table`, so nothing all-or-nothing crosses a kernel line. The intra-kernel answer — *one `apply_action` changes the betting group only* — is now recorded in [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) §5. The street boundary is all-or-nothing as of 0.16.0: `Table::advance_street` checks the stub before `bring_it_in` sweeps (fix 5) |
 | 8 | State belongs to the kernel that changes it | **Fail** (ownership now *recorded* — [`KERNEL_ADR.md`](KERNEL_ADR.md) §6 — but not enforced) | `pkdealer_service` writes `seat.player.chips` directly and re-implements card visibility; 22 public mutable fields make every consumer a potential writer |
 
 ---
@@ -556,9 +556,11 @@ The street boundary is the same bug one level up, not yet found.
 
 **Recommendation.** Do not split anything. Instead:
 
-1. Add `Table::advance_street(&mut self) -> Result<(), PKError>` that validates
+1. ~~Add `Table::advance_street(&mut self) -> Result<(), PKError>` that validates
    the deal is possible *before* sweeping — the `act_raise` pattern, applied at
-   the street boundary. ~half a day, no API break.
+   the street boundary.~~ **Done, 0.16.0.** `PokerSession::advance_street` now
+   delegates to it, so the guard reaches every caller of `next_step` and
+   `run_hand`.
 2. Record in `docs/KERNEL_ADR.md`: *pkcore's cluster of data that changes
    together (DDD: aggregate) is one hand at one table. One `apply_action` changes
    the betting group only; the pot, board and phase advance at a street boundary.
@@ -674,7 +676,7 @@ Highest leverage first. Effort is engineering time, excluding review.
 | 2 | ~~**Gate the six adapter wrappers**: `HandCollection::save`, `SolverResult::save_*`/`load_*`, `BotProfile::to_file`/`from_file` behind a `persistence` feature; `util::terminal` behind `terminal`; `hup_cache` behind `hup-charts`; delete `Util::read_lines` and `Util::commentary_action_to`~~ **Done, 0.15.0** — plus `Pluribus::read_in_log` (new pure twin `parse_log`); `terminal` gates functions, not the module (§4) | 1, 4 | 1 day | Low |
 | 3 | **Adopt `PokerSession::view` in pkdealer** and delete `card_visibility_from_metadata` / `hole_cards_string` | 5, 8 | **1 day** | Medium — crosses repos, needs a pkdealer bump to 0.15 |
 | 4 | ~~**Write `docs/KERNEL_ADR.md`**: name the cluster of data that changes together, record the intra-kernel answer from §7, record delegate-ownership from §8, name the rejected wider (multi-table) and narrower (seat) boundaries~~ **Done, 2026-09-16** — [`docs/KERNEL_ADR.md`](KERNEL_ADR.md) | 7, 8 | half a day | None |
-| 5 | **Make the street boundary all-or-nothing**: `Table::advance_street` that validates the deal before sweeping bets | 7 | **half a day** | Low — same pattern as `act_raise`'s pre-validation |
+| 5 | ~~**Make the street boundary all-or-nothing**: `Table::advance_street` that validates the deal before sweeping bets~~ **Done, 0.16.0** — `PokerSession::advance_street` delegates to it; covers the stud family too | 7 | half a day | Low — same pattern as `act_raise`'s pre-validation |
 | 6 | **Move the cap into the kernel**: `Table::cap_stacks`, logging a `TableAction` and staying inside the chip audit | 8 | **half a day** | Low |
 | 7 | **Fix `src/util/csv.rs` and `sorted_heads_up.rs`**: take rows as parameters instead of reading CWD-relative files. *No longer a prerequisite for #1:* 0.15.0 gated both behind the `csv` feature instead, so they are out of the pure build but still read CWD-relative paths when on | 1 | **1 day** | Low |
 | 8 | ~~**Invert the randomness defaults**: seeded form becomes the method, ambient becomes a shim behind `entropy`; inject the two `SystemTime::now` sites~~ **Done, 0.15.0** — `entropy` on by default; `getrandom` now HARD for the kernel build; replays and fixtures got derived or fixed ids; `HandCollection::save`'s clock left to `persistence` | 1 | 1–2 days | Medium — `BotDecider` trait inverted |

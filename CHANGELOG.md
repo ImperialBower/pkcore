@@ -5,6 +5,43 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-09-16
+
+Fixes 5 of [docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md) and
+records the kernel's street-boundary step in
+[docs/KERNEL_ADR.md](docs/KERNEL_ADR.md) §5. Ending a betting street and
+dealing the next card is now one step that either fully happens or does not
+happen at all.
+
+### Added
+
+- **`Table::advance_street`** — ends the betting street and deals the next
+  card, checking the stub can serve the street **before** anything moves. It
+  covers both families: community-board games burn one card before each deal
+  (four for the flop, two each for the turn and river), and stud deals one
+  card per seat still in the hand, or the single shared community card on 7th
+  street when the field is too large for the stub (`DEFECT_018`).
+
+### Fixed
+
+- **A failed deal no longer sweeps the pot.** `Table::bring_it_in` moves every
+  bet into the pot and the deal methods move `phase` and the board in place, so
+  composing them with `?` was never a transaction: a deal that failed after the
+  sweep left the chips in the pot and the board a card short, with no
+  `GamePhase` naming that state and no way back. `DEFECT_019` made that
+  reportable; it is now survivable — the hand stops with the bets still in
+  front of the players, and `PokerSession::abort_hand` refunds them.
+
+  Reachable in 8-handed stud, where 7 cards per seat exceed a 52-card deck,
+  and anywhere a caller starts a street with a short stub.
+
+### Changed
+
+- `PokerSession::advance_street` (private) now delegates to
+  `Table::advance_street` instead of composing `bring_it_in` and the deal
+  itself. 27 lines of duplicated street dispatch removed; the guard applies to
+  every caller of `next_step` and `run_hand`.
+
 ## [0.15.0] - 2026-09-15
 
 Fixes 1, 1a–1c, 2 and 8 of
