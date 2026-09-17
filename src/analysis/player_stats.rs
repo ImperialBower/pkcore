@@ -42,6 +42,12 @@ pub const POSITION_COUNT: usize = 11;
 /// All ratio methods return `Option<f64>` so callers can distinguish "0%"
 /// (zero successes out of N opportunities) from "no data" (zero opportunities).
 ///
+/// # Domain
+///
+/// - **Role:** read model
+/// - **Invariants:**
+///   - ratios return `None` when there were no opportunities
+///
 /// # Examples
 ///
 /// ```
@@ -206,6 +212,12 @@ impl PlayerStats {
 /// Sample-size confidence band for a [`PlayerStats`] read.
 ///
 /// Thresholds: `Low` for `<50` hands, `Medium` for `<200`, `High` otherwise.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `Low` below 50 hands, `Medium` below 200, `High` otherwise
 ///
 /// # Examples
 ///

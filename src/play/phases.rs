@@ -4,6 +4,11 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use strum_macros::{EnumCount, EnumIter};
 
+/// A stage of a Hold'em hand.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq, strum_macros::Display)]
 pub enum PhaseHoldem {
     #[default]

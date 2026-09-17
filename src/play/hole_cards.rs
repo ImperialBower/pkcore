@@ -25,6 +25,10 @@ use std::vec::IntoIter;
 ///
 /// `let mut v = Vec::with_capacity(10);`
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # REFACTOR
 ///
 /// Decided to rename this struct as `HoleCards`. Hands is too generic a name for it.

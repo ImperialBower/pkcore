@@ -37,6 +37,12 @@ use crate::PKError;
 
 /// The three cards in Kuhn poker's deck, ordered Jack < Queen < King.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - ordered Jack < Queen < King
+///
 /// # Examples
 ///
 /// ```
@@ -68,6 +74,10 @@ impl std::fmt::Display for KuhnCard {
 /// The actions available to a player in Kuhn poker.
 ///
 /// Not all actions are legal in every position; see [`KuhnState::legal_actions`].
+///
+/// # Domain
+///
+/// - **Role:** action (DDD: command)
 ///
 /// # Examples
 ///
@@ -104,6 +114,12 @@ impl std::fmt::Display for KuhnAction {
 ///
 /// `KuhnHistory` is immutable: [`KuhnHistory::push`] returns a new history
 /// with the action appended, leaving the original unchanged.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `push` returns a new history; the original is unchanged
 ///
 /// # Examples
 ///
@@ -232,6 +248,10 @@ impl std::fmt::Display for KuhnHistory {
 /// different cards. Info sets are the keys in strategy tables — a strategy maps
 /// each info set to a probability distribution over legal actions.
 ///
+/// # Domain
+///
+/// - **Role:** read model
+///
 /// # Examples
 ///
 /// ```
@@ -282,6 +302,14 @@ impl std::fmt::Display for KuhnInfoSet {
 /// tree traversal (as used in CFR) natural and free of rollback logic.
 ///
 /// Player 0 is first to act; Player 1 responds.
+///
+/// # Domain
+///
+/// - **Role:** consistency boundary (DDD: aggregate)
+/// - **Invariants:**
+///   - the two players hold different cards
+///   - `apply` accepts only an action in `legal_actions`
+///   - `apply` returns a new state; the original is unchanged
 ///
 /// # Examples
 ///
@@ -573,6 +601,12 @@ impl std::fmt::Display for KuhnState {
 /// Player 0's bluffing frequency; the game value for Player 0 is `−1/18` at
 /// any `alpha` in that range.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `gto` refuses `alpha` outside `[0, 1/3]`
+///
 /// # Examples
 ///
 /// ```
@@ -774,6 +808,10 @@ const DEALS: [(KuhnCard, KuhnCard); 6] = [
 ///
 /// After enough iterations, [`KuhnCfr::average_strategy`] converges to the
 /// analytical Nash equilibrium and [`KuhnCfr::exploitability`] approaches zero.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///

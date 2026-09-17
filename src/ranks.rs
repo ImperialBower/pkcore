@@ -2,6 +2,11 @@ use crate::PKError;
 use crate::rank::Rank;
 use std::str::FromStr;
 
+/// The ranks of a set of cards.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Ranks(Vec<Rank>);
 

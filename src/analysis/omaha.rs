@@ -2,6 +2,11 @@ use crate::Pile;
 use crate::arrays::five::Five;
 use crate::cards::Cards;
 
+/// An eight-or-better low hand for hi/lo games.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Debug, Eq, PartialEq)]
 pub enum EightOrBetter {
     Wheel = 0b11111,         // 5♠ 4♠ 3♠ 2♠ A♠

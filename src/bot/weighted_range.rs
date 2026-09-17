@@ -29,6 +29,10 @@ use std::fmt;
 ///
 /// Serializes as a compact string `"AKs:0.8"` — no spaces.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -126,6 +130,10 @@ impl ComboWeight {
 /// [`RangeStrategy`](crate::bot::range_strategy::RangeStrategy). Use
 /// [`WeightedRange::from_flat`] to convert a flat range string (all entries
 /// at frequency 1.0), or build a mixed strategy with [`WeightedRange::push`].
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///

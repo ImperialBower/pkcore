@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2026-09-16
+
+### Added
+
+- **`# Domain` sections in rustdoc** on 219 public types and free functions.
+  Each one names the item's role in the poker domain (value object,
+  `consistency boundary (DDD: aggregate)` for `Table` and `PokerSession`,
+  action, domain event, read model, cohesive mechanism, …) and the invariants
+  the code keeps. They
+  follow the `/dddocs` style and are checked by `check_dddocs.py`. Storage,
+  I/O and terminal items have no role on purpose, because they are shell code.
+  See [docs/KERNEL_ADR.md](docs/KERNEL_ADR.md).
+
 ## [0.15.0] - 2026-09-15
 
 Fixes 1, 1a–1c, 2 and 8 of

@@ -11,6 +11,11 @@ pub mod seat_hand;
 pub mod stages;
 pub mod visibility;
 
+/// A six-max table position.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Position6Max {
     #[default]

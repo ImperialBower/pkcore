@@ -3,6 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
 
+/// Chips in play, grouped by the seats that can win them.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - entries with equal chips are merged
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TableEquity(Vec<SeatEquity>);
 

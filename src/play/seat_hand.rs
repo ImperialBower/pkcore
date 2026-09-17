@@ -28,6 +28,10 @@ const HOLE_CAPACITY_HINT: usize = 7;
 
 /// A seat's hand of hole cards, with per-card visibility.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```

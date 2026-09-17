@@ -18,6 +18,10 @@ pub mod stud;
 /// `(Holdem, FixedLimit)`; EPIC-31 ties `Omaha` to `PotLimit`; EPIC-32 /
 /// EPIC-33 add the stud-family variants.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -109,6 +113,11 @@ impl std::fmt::Display for GameFamily {
     }
 }
 
+/// A poker variant: a [`GameFamily`] played with a [`BettingStructure`].
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive] // 0.2.0: new poker variants can be added without breaking downstream matches.
 pub enum GameType {
@@ -248,6 +257,11 @@ impl std::fmt::Display for GameType {
     }
 }
 
+/// Where a hand stands in its dealing and betting sequence.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum GamePhase {
     #[default]

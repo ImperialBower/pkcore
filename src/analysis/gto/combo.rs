@@ -8,6 +8,10 @@ use std::str::FromStr;
 /// The `ranges` module is an attempt to create a progromatic representation of poker ranges.
 ///
 /// - [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Qualifier {
     OFFSUIT,
@@ -31,6 +35,10 @@ impl Display for Qualifier {
 /// control of something in my life in an otherwise chaotic mess.
 ///
 /// The truth is that I hate the idea of a computational state being governed by a raw string.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Combo {
     pub first: Rank,

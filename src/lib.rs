@@ -781,6 +781,10 @@ impl From<std::io::Error> for PKError {
 ///
 /// This trait is used to establish the contract for when an entity in a game can act, given the
 /// `PlayerState` abd the state of the action in the game.
+///
+/// # Domain
+///
+/// - **Role:** specification
 pub trait Agency {
     /// The perspective on this call is that given this `PlayerState` is any other action possible,
     /// regardless of any other player's state.
@@ -858,6 +862,11 @@ pub trait Forgiving: FromStr + Default {
     }
 }
 
+/// Expands a range into its hole-card combinations.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 pub trait GTO {
     fn combo_pairs(&self) -> ComboPairs {
         let twos = self.explode();
@@ -873,6 +882,11 @@ pub trait GTO {
     fn explode(&self) -> Twos;
 }
 
+/// A collection of cards.
+///
+/// # Domain
+///
+/// - **Role:** value object
 pub trait Pile {
     #[must_use]
     fn add<P: Pile>(&self, other: P) -> Self
@@ -1059,6 +1073,10 @@ pub trait Pile {
 }
 
 /// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
+///
+/// # Domain
+///
+/// - **Role:** translator (DDD: anticorruption layer)
 pub trait Plurable {
     /// Converts a part of the Pluribus log format
     ///
@@ -1077,6 +1095,10 @@ pub trait Plurable {
 /// Kept as a sibling trait rather than a second method on [`Plurable`] so that
 /// "can be read" and "can be written" stay separately provable, and so no
 /// existing implementor is broken by a new required method.
+///
+/// # Domain
+///
+/// - **Role:** translator (DDD: anticorruption layer)
 pub trait Unumable {
     /// Renders `self` as its fragment of a Pluribus log line.
     ///
@@ -1092,11 +1114,19 @@ pub trait Unumable {
 /// The more I think about this, the more I feel like this is me avoiding the best practice
 /// of returning `Result` and `Option`. I'm worried about speed, but that's probably Knuth's
 /// dreaded [premature optimization](http://wiki.c2.com/?PrematureOptimization).
+///
+/// # Domain
+///
+/// - **Role:** specification
 pub trait SOK {
     fn salright(&self) -> bool;
 }
 
 /// Spades to Hearts to Diamonds to Clubs.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 pub trait SuitShift {
     #[must_use]
     fn shift_suit_down(&self) -> Self;
@@ -1110,6 +1140,11 @@ pub trait SuitShift {
     fn opposite(&self) -> Self;
 }
 
+/// Finds the suit-shifted equivalents of a value.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 pub trait Shifty {
     #[must_use]
     fn is_shift(&self, other: Box<Self>) -> bool

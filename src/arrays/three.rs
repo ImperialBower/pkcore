@@ -9,6 +9,13 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+/// Three cards, such as a flop.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - exactly three card slots
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Three([Card; 3]);
 

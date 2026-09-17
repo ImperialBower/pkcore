@@ -37,6 +37,12 @@ use std::str::FromStr;
 /// [`weighted_win_probability`](WeightedCombos::weighted_win_probability) to combine
 /// per-hand equity results into a single frequency-weighted win probability.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - each weight is a whole percentage in `0..=100`
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::combo::Combo;

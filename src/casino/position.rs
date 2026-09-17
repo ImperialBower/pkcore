@@ -2,6 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use strum_macros::{EnumCount, EnumIter};
 
+/// A named table position.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(
     Clone, Copy, Debug, Default, Ord, PartialOrd, EnumCount, EnumIter, Eq, Hash, PartialEq, Serialize, Deserialize,
 )]
@@ -87,6 +92,11 @@ impl std::fmt::Display for Position {
     }
 }
 
+/// The positions in play at one table size.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Positions(Vec<Position>);
 

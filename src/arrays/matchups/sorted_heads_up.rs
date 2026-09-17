@@ -71,6 +71,13 @@ pub static SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<Sorted
 pub static SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
     std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_eight));
 
+/// Two hole-card hands in a fixed order.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `new` puts the higher `Two` first
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {

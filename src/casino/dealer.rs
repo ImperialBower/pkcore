@@ -45,6 +45,10 @@ use uuid::Uuid;
 
 /// Every action a player at the table can request, plus the dealer-triggered
 /// events that advance a hand automatically.
+///
+/// # Domain
+///
+/// - **Role:** action (DDD: command)
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DealerAction {
     /// Player action: bet `amount` chips.
@@ -85,6 +89,10 @@ impl DealerAction {
 // ── DealerError ──────────────────────────────────────────────────────────────
 
 /// Errors the [`Dealer`] can return.
+///
+/// # Domain
+///
+/// - **Role:** domain error
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DealerError {
     /// The underlying [`Table`] returned a [`PKError`].

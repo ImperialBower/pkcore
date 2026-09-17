@@ -29,6 +29,10 @@ use crate::analysis::player_stats::StatsRegistry;
 ///
 /// Every occupied seat appears in [`TableSnapshot::stacks`].
 ///
+/// # Domain
+///
+/// - **Role:** read model
+///
 /// # Examples
 ///
 /// ```
@@ -72,6 +76,13 @@ pub struct SeatInfo {
 /// solely to carry the optional [`Self::opponent_stats`] borrow added in
 /// EPIC-26 Phase 3.  Snapshots constructed without stats can use any
 /// lifetime (e.g. `TableSnapshot<'static>`).
+///
+/// # Domain
+///
+/// - **Role:** read model
+/// - **Invariants:**
+///   - `from_table` shows only this seat's hole cards
+///   - `from_table` leaves `opponent_stats` as `None`
 ///
 /// # Visibility rules
 ///

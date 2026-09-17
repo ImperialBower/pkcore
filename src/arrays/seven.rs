@@ -12,6 +12,14 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
 
+/// Seven cards, such as hole cards plus a full board.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - exactly seven card slots
+///   - ranked only when dealt
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Seven([Card; 7]);
 

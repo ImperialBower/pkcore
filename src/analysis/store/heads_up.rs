@@ -93,6 +93,9 @@ use std::collections::HashMap;
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
 ///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct PreflopRow {

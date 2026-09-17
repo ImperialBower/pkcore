@@ -2,6 +2,12 @@ use crate::Agency;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
+/// What a player last did in the hand.
+///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// ## DIARY RF:
 ///
 /// I originally had `Check` carry a value to represent the amount of chips the player had, figuring

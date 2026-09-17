@@ -27,6 +27,13 @@ use std::str::FromStr;
 /// Hands sharing a card with the hero are skipped, and the surviving matchups
 /// are averaged with equal weight. Returns `None` when nothing survives.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - equity is from the hero's perspective
+///   - villain hands sharing a hero card are skipped
+///
 /// # The perspective trap
 ///
 /// [`HUPResult::lookup`] sorts its two arguments into a `SortedHeadsUp` and
@@ -98,6 +105,12 @@ fn shares_a_card(hero: Two, villain: Two) -> bool {
 /// not holding exactly two cards, the hand is not preflop, no villain range
 /// resolves, or — for [`PreflopCharts::Hup`] — the pot is not heads-up, since
 /// the embedded table is strictly two-handed.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `None` unless preflop with exactly two hole cards
 ///
 /// # Examples
 ///

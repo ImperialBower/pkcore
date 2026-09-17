@@ -60,6 +60,10 @@ use std::fmt;
 /// Using a newtype prevents accidentally indexing the arena with an unrelated
 /// `usize`.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::NodeId;
@@ -123,6 +127,10 @@ impl<'de> Deserialize<'de> for NodeId {
 /// [`Player::Oop`] (out-of-position) acts first on each post-flop street.
 /// [`Player::Ip`] (in-position) acts last and has the informational advantage.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::Player;
@@ -170,6 +178,10 @@ impl fmt::Display for Player {
 /// [`Action::Bet`] and [`Action::Raise`] carry a [`BetSize`] expressing the
 /// sizing as an exact rational fraction of the pot.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::Action;
@@ -208,6 +220,10 @@ impl fmt::Display for Action {
 
 /// The result at a terminal node.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::{Player, TerminalOutcome};
@@ -230,6 +246,12 @@ pub enum TerminalOutcome {
 /// A decision node: a player chooses from `actions`, each leading to a child.
 ///
 /// `actions[i]` leads to `children[i]`; the two vecs are always the same length.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `actions[i]` leads to `children[i]`
 ///
 /// # Examples
 /// ```
@@ -261,6 +283,10 @@ pub struct ActionNode {
 /// One child per distinct card that can legally appear given the board and
 /// ranges already in play.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::{ChanceNode, NodeId};
@@ -283,6 +309,10 @@ pub struct ChanceNode {
 /// card dealt at the chance node that led to this terminal. The showdown map is
 /// keyed by `(oop_hand, ip_hand, runout_river)` so the right pre-computed rank
 /// comparison is used. River-only trees always have `runout_river: None`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 /// ```
@@ -308,6 +338,10 @@ pub struct TerminalNode {
 // ── Node ─────────────────────────────────────────────────────────────────────
 
 /// A single node in the game tree.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 /// ```
@@ -388,6 +422,12 @@ impl Node {
 /// The root is always at index 0 after construction.
 ///
 /// Build with [`GameTree::build_river`] for a river-only solve.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - the root is at index 0
 ///
 /// # Examples
 /// ```

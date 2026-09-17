@@ -176,6 +176,10 @@ impl From<postcard::Error> for SolverError {
 /// Exploitability is computed via a best-response pass after the CFR iterations
 /// complete: see [`Solver::compute_exploitability`] for the full definition.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -543,6 +547,12 @@ impl SolverResult {
 // ── Solver ────────────────────────────────────────────────────────────────────
 
 /// Drives CFR over a river game tree until convergence or iteration limit.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - no hand pair shares a card with the other hand or the board
 ///
 /// # Examples
 ///

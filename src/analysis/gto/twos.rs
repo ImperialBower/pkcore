@@ -19,6 +19,10 @@ pub static DISTINCT_POCKET_PAIRS: std::sync::LazyLock<Twos> =
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
 /// functionality that is really about combinations of `Two` structs.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Links
 ///
 /// * [Texas hold 'em starting hands](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands)

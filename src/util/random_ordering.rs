@@ -4,6 +4,10 @@ use std::cmp::Ordering;
 
 /// From: <https://github.com/bluss/indexmap/issues/171#issuecomment-786429977>
 /// TODO: Craft better randomizer
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 pub struct RandomOrdering(Ordering);
 
 #[allow(clippy::from_over_into)]

@@ -4,6 +4,11 @@ use crate::suit::Suit;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
+/// The suit pattern class of a heads-up matchup.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub enum SuitTexture {

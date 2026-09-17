@@ -26,6 +26,13 @@ use std::str::FromStr;
 /// b = bit turned on depending on rank of card
 /// m = Flags reserved for multiples of the same rank. Stripped for evals.
 /// ```
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - a valid CKC number or blank
+///   - blank is `0`
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Card(#[serde(deserialize_with = "deserialize_card_index")] u32);
 // #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]

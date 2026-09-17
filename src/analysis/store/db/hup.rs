@@ -21,6 +21,10 @@ use wincounter::win::Win;
 use wincounter::wins::Wins;
 
 /// TODO TD: Why u64 not usize?
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]
 pub struct HUPResult {

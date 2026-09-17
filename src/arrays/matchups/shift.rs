@@ -4,6 +4,11 @@ use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::{PKError, Shifty};
 use std::fmt::{Display, Formatter};
 
+/// A masked matchup and its suit-shifted equivalents.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Shifter {
     pub masked: Masked,

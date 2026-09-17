@@ -15,6 +15,12 @@ use serde::{Deserialize, Serialize};
 /// from a [`Playbook`](crate::bot::playbook::Playbook). Use
 /// [`TableSize::from_seats`] to convert a raw seat count at runtime.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - only 2, 3, 4, 5, 6 and 9 seats map to a size
+///
 /// # Examples
 ///
 /// ```

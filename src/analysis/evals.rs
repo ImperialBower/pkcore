@@ -17,6 +17,10 @@ use crate::arrays::five::Five;
 /// cars that a player might have, as well as the cards that might come down at the turn
 /// and river. This perspective has a lot more possibilities. I'm going to call this the
 /// *future* perspective.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Evals(Vec<Eval>);
 

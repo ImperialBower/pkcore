@@ -10,6 +10,13 @@ pub mod data;
 pub mod random_ordering;
 pub mod terminal;
 
+/// A count out of a total.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `calculate` returns 0 when `total` is 0
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Percentage {
     pub number: usize,

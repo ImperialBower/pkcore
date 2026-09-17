@@ -397,6 +397,12 @@ use std::fmt::Display;
 ///
 /// This could be the start of functionality that stores and analyses game textures. How much do
 /// the possible hands that the hero would have compare to the villains? etc...
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - holds at most one `Eval` per `HandRankClass`; later pushes of a seen class are dropped
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(Vec<Eval>, HashSet<HandRankClass>);
 

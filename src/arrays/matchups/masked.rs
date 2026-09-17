@@ -75,6 +75,12 @@ impl From<Masked> for RankMasked {
 /// tests `defect_type4_1123` / `defect_type4_1123_2` below, which pin the
 /// 24-shift count for `Type1123` and `Type1233` textures. Both pass; the
 /// marker was retired on 2026-08-21 (see `docs/TECHNICAL_DEBT.md`).
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - masks are derived from `shu`
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Masked {

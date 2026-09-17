@@ -10,6 +10,10 @@ use std::str::FromStr;
 /// A collection of Combos, used to represent a player's range.
 ///
 /// See [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Combos(HashSet<Combo>);
 

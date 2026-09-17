@@ -27,6 +27,10 @@ use std::path::Path;
 /// [`PlayStyle::Custom`]. YAML serialization uses `snake_case` strings
 /// (`"tight_passive"`, `"gto"`, etc.) so existing profile files need no changes.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -181,6 +185,10 @@ impl From<std::io::Error> for BotError {
 ///
 /// YAML I/O requires the **`bot-profiles`** crate feature. File I/O is
 /// additionally gated to non-WASM targets.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///

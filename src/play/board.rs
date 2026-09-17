@@ -14,6 +14,10 @@ use std::str::FromStr;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Board {
     pub flop: Three,

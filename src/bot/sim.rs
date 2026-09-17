@@ -67,6 +67,10 @@ const MAX_STREET_ACTIONS: usize = 10_000;
 
 /// Per-seat counts of each action type over one or more hands.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -124,6 +128,10 @@ impl ActionCounts {
 
 /// Result of a single hand.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -144,6 +152,10 @@ pub struct HandResult {
 // ── SimResult ─────────────────────────────────────────────────────────────────
 
 /// Cumulative results across a multi-hand simulation session.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///
@@ -176,6 +188,10 @@ pub struct SimResult {
 /// the default [`RuleBasedDecider`].  Use [`SimTable::new`] to mix decider
 /// types (e.g. a custom decider in seat 0 and rule-based bots in all other
 /// seats).
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///

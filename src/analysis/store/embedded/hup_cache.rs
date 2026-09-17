@@ -30,6 +30,12 @@ pub static HUP_CACHE: LazyLock<HashMap<(u64, u64), WinLoseDraw>> =
 /// Look up precomputed heads-up preflop odds from the embedded cache.
 ///
 /// Returns `None` if the matchup is not found in the cache.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - `None` when the matchup is absent or the embedded data failed to decode
 pub fn lookup_odds(higher: u64, lower: u64) -> Option<WinLoseDraw> {
     HUP_CACHE.get(&(higher, lower)).copied()
 }

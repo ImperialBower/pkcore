@@ -22,6 +22,10 @@ use std::fmt::{Display, Formatter};
 /// `Big`. In Stud variants, 3rd–4th streets use `Small`; 5th onward use
 /// `Big`. No-Limit and Pot-Limit games ignore this tier; pass `Small` as
 /// a default.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum BetTier {
     /// Small-bet increment (early streets).
@@ -33,6 +37,10 @@ pub enum BetTier {
 
 /// Betting structure: no-limit, pot-limit, or fixed-limit. Orthogonal to
 /// the game family ([`crate::games::GameFamily`]).
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Examples
 ///

@@ -2,6 +2,11 @@ use crate::play::stages::flop_eval::FlopEval;
 use crate::util::Percentage;
 use serde::{Deserialize, Serialize};
 
+/// Win, loss and draw counts from an equity run.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]
 pub struct WinLoseDraw {

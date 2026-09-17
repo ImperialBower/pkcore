@@ -20,6 +20,12 @@ use std::str::FromStr;
 ///
 /// assert_eq!(boxed_cards.to_string(), index);
 /// ```
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - a blank marks an undealt slot
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct BoxedCards(Box<[Card]>);
 
@@ -300,6 +306,11 @@ impl Pile for BoxedCards {
     }
 }
 
+/// A row of card boxes, one per player.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Boxes(pub Box<[BoxedCards]>);
 

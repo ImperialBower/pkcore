@@ -30,6 +30,14 @@ use strum::IntoEnumIterator;
 /// 1. Cards should be saved in order.
 /// 2. Cards should be unique.
 /// 3. Cards should be legitimate cards. (No blanks)
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - no blanks
+///   - no duplicates
+///   - insertion order kept
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Cards(pub IndexSet<Card>);
 

@@ -106,6 +106,11 @@ pub fn bc_rank_hashmap() -> Result<&'static HashMap<Bard, FiveBCM>, PKError> {
     BC_RANK_HASHMAP.as_ref().ok_or(PKError::BcmUnavailable)
 }
 
+/// A best five-card hand, as a `Bard`, and its rank value.
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FiveBCM {
     pub bc: Bard,
@@ -140,6 +145,10 @@ impl From<SevenFiveBCM> for FiveBCM {
 /// for the really creative destruction that QA engineers excel at. It's taken companies a very
 /// long time to realize that they just can't hire enough people to test every possible
 /// combination of things given how complex our systems are growing._
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// # Errors
 ///

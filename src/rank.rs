@@ -7,6 +7,12 @@ use strum::EnumIter;
 
 /// TODO THEME I am an artist, and I paint with code. The pallet I am using to paint is the domain
 /// of the area I am coding for, in this case the traditional 52 card French Deck.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `BLANK` is no rank
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq, Ord, PartialOrd,
 )]

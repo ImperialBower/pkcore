@@ -22,6 +22,10 @@ use wincounter::wins::Wins;
 /// as half a win). `win` and `tie` are kept separate so callers can show a
 /// breakdown.
 ///
+/// # Domain
+///
+/// - **Role:** value object
+///
 /// # Examples
 ///
 /// ```
@@ -55,6 +59,10 @@ fn street_equities_from_results(results: &WinResults, n: usize) -> Vec<StreetEqu
 }
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
+///
+/// # Domain
+///
+/// - **Role:** value object
 ///
 /// ## PHASE 2.2: Display winning percentages
 /// This is a big feature for me, and one that I've been struggling over for a while.

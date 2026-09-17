@@ -28,6 +28,10 @@ pub const HI: [f64; DIM] = [
 
 /// Converts an [`ExploitConfig`] into a fixed-length parameter vector.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+///
 /// # Examples
 ///
 /// ```
@@ -61,6 +65,13 @@ pub fn encode(c: &ExploitConfig) -> [f64; DIM] {
 
 /// Converts a raw parameter vector into an [`ExploitConfig`], clamping each
 /// element to its bounds and enforcing `min_hands_heavy >= min_hands_light`.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - each element is clamped to its bounds
+///   - `min_hands_heavy >= min_hands_light`
 ///
 /// # Examples
 ///
@@ -99,6 +110,10 @@ pub fn decode(p: &[f64; DIM]) -> ExploitConfig {
 }
 
 /// Returns the per-dimension range (`HI[i] - LO[i]`), used for sigma scaling.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
 ///
 /// # Examples
 ///

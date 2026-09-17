@@ -25,6 +25,10 @@ use uuid::Uuid;
 ///
 /// assert_eq!(principal.id(), id);
 /// ```
+///
+/// # Domain
+///
+/// - **Role:** value object
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub struct Principal(pub Uuid);
 

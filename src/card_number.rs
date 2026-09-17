@@ -61,6 +61,13 @@ const CKC_3C: CKCNumber = 0b00_0000_0000_0010_0001_0001_0000_0011;
 const CKC_2C: CKCNumber = 0b00_0000_0000_0001_0001_0000_0000_0010;
 //endregion
 
+/// The Cactus Kev number of each of the 52 cards.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - only the 52 valid CKC numbers
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u32)]
 pub enum CardNumber {

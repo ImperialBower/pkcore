@@ -41,6 +41,12 @@ use crate::games::betting_structure::{BetTier, BettingStructure};
 /// Implement this trait to define how a bot selects an action given its
 /// profile and the current table state.
 ///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - must be `Send + Sync`
+///
 /// # Object safety
 ///
 /// `BotDecider` is object-safe and requires `Send + Sync` so that
@@ -124,6 +130,12 @@ pub trait BotDecider: Send + Sync {
 ///
 /// This type is the library-level promotion of the `decide()` free function
 /// in `examples/bot_selfplay.rs`.
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - stateless; all randomness comes from the caller's RNG
 ///
 /// # Examples
 ///
@@ -366,6 +378,12 @@ impl RuleBasedDecider {
 /// let result = sim.run_n_hands(5).unwrap();
 /// assert!(result.hands_played > 0);
 /// ```
+///
+/// # Domain
+///
+/// - **Role:** cohesive mechanism
+/// - **Invariants:**
+///   - in-hand actions are delegated to `RuleBasedDecider`
 pub struct JokerDecider {
     active: Mutex<BotProfile>,
 }

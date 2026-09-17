@@ -9,6 +9,13 @@ use std::fmt::{Display, Formatter};
 /// `PokerHand`. This value is used to compare one hand against the other, the lower the value,
 /// the stronger the hand in a traditional, highest to lowest, ranking. A `HandRankValue` can have
 /// only one `HandRankName` and `HandRankClass`.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - lower is stronger
+///   - `NO_HAND_RANK_VALUE` (0) means no rank
 #[allow(clippy::module_name_repetitions)]
 pub type HandRankValue = u16;
 
@@ -17,6 +24,13 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 /// `HandRank` represents the value of a specific 5 card hand of poker. The lower the
 /// `HandRankValue` the better the hand. When a `HandRank` is instantiated it can only
 /// have a specific matching `HandRankName` and `HandRankValue`.
+///
+/// # Domain
+///
+/// - **Role:** value object
+/// - **Invariants:**
+///   - `From<HandRankValue>` yields the default when the value has no valid name or class
+///   - lower `value` orders higher; invalid ranks order below valid ones
 ///
 /// # REFACTORING
 ///
