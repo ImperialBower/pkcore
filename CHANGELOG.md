@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.2] - 2026-09-19
+
+### Added
+
+- **`DIARY_LINKED.md`**, a copy of `DIARY.md` where every line links to the
+  GitHub tree at the commit that wrote it, so each diary entry opens the repo as
+  it was at that point. Regenerate it with `make diary-links`
+  (`scripts/link_diary.py`). The script uses `git blame -C -C` to follow lines
+  back through the diary's move out of `README.md`; a plain blame would credit
+  most of the diary to that move.
+
 ## [0.15.1] - 2026-09-16
 
 ### Added

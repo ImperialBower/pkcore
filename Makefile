@@ -1,4 +1,4 @@
-.PHONY: test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -47,6 +47,7 @@ help:
 	@echo "  make audit           - Run advisory-only security audit"
 	@echo "  make validate-okf    - Check .okf/ knowledge bundle conformance (OKF v0.1, strict)"
 	@echo "  make release-notes   - Preview release notes for TAG=vX.Y.Z"
+	@echo "  make diary-links     - Regenerate DIARY_LINKED.md (each DIARY.md line linked to its commit)"
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
@@ -170,6 +171,10 @@ validate-okf:
 		python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet pyyaml; \
 		python3 scripts/okf_validate.py .okf --strict; \
 	fi
+
+# Regenerate DIARY_LINKED.md: every DIARY.md line linked to the commit that wrote it.
+diary-links:
+	@python3 scripts/link_diary.py DIARY.md DIARY_LINKED.md
 
 # Check for unused dependencies (requires nightly)
 unused-deps:
