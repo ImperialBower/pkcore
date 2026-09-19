@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.3] - 2026-09-19
+
+### Added
+
+- **Cross-links from `DIARY_LINKED.md` to [fudd](https://github.com/ImperialBower/fudd)**,
+  the predecessor pkcore was written to replace. An entry whose subject is a type
+  fudd also carried now ends with a `fudd` link to the file holding the same idea
+  over there, so a diary line can be read against both the pkcore commit that
+  wrote it and the older code it was reacting to. fudd took `Rank`, `Suit` and
+  `HandRank` from the `ckc-rs` crate rather than owning them, so those entries
+  point at the fudd file that stands in for them. Links are pinned to fudd commit
+  `9d20005` because that project is finished and its `main` should not be tracked
+  live. Regenerate with `make diary-links`.
+
 ## [0.15.2] - 2026-09-19
 
 ### Added
