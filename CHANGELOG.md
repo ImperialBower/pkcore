@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.4] - 2026-10-02
+
+### Added
+
+- **A Gherkin acceptance suite, `cargo test --test cucumber`.** Seven feature
+  files under `tests/features/` (cards, hand ranking, ranges, equity, betting,
+  showdowns and side pots, Omaha) describe pkcore's behaviour in table
+  language — 101 scenarios, 385 steps — and `tests/cucumber/` binds each
+  sentence to the public API with [cucumber-rs](https://github.com/cucumber-rs/cucumber).
+  It runs on default features (the pure kernel, no thread pool) in about 15 s
+  in a debug build, and fails on any unbound sentence. Scenarios tagged
+  `@finding` pin current behaviour that is surprising enough to decide on
+  deliberately rather than by accident: `Card::from_str` ignores everything
+  after the suit (`"Kh Qd"` reads as K♥); heads-up, an uncalled refund appears
+  in `Winnings` as a separate award credited to the losing hand, and is what
+  `Winnings::first()` returns; multiway, the same refund is merged into the
+  winner's pot award. `cucumber` and `futures` join the dev-dependencies only.
+
 ## [0.15.3] - 2026-09-19
 
 ### Added
