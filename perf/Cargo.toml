@@ -2,7 +2,7 @@
 name = "pkcore-perf"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.94.1"
+rust-version = "1.99.0"
 publish = false
 description = "Cross-target performance harness for the pkcore domain kernel. Not published."
 

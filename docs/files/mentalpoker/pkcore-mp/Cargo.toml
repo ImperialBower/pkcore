@@ -7,7 +7,7 @@ description = "Mental-poker (Barnett-Smart) crypto + coordination layer for pkco
 
 [features]
 default = []
-# To build against the real pkcore (Rust >= 1.94.1): place the pkcore repo as
+# To build against the real pkcore (Rust >= 1.99.0): place the pkcore repo as
 # a sibling directory, uncomment the dependency below, and change this line to
 #   pkcore = ["dep:pkcore"]
 pkcore = []

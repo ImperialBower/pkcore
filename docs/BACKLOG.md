@@ -31,30 +31,34 @@
 
 Ranked by unblocked-ness and by how cheap the fix is relative to its payoff.
 
-1. **EPIC-84 Phase 1 — `Ordinal` bridge + golden test**
+1. **EPIC-89 — Bare-Metal Kernel (LITE), Phase 0 spike**
+   ([`epics/EPIC-89_Bare_Metal_Kernel.md`](epics/EPIC-89_Bare_Metal_Kernel.md))
+   Nothing built yet. Phase 0 is `cfg_attr(no_std)` +
+   `cargo check --target thumbv7em-none-eabihf` and reading the error list.
+2. **EPIC-84 Phase 1 — `Ordinal` bridge + golden test**
    ([`epics/EPIC-84_Sealed_Table_Cardpack.md`](epics/EPIC-84_Sealed_Table_Cardpack.md))
    Phase 0 (the `cardpack` 0.11.1 bump) is done as of `0.14.0`. Phase 1
    (`src/seal/ordinal.rs`) is next and still **Not started**.
-2. **EPIC-86 — Browser Bindings (`pkwasm`)**
+3. **EPIC-86 — Browser Bindings (`pkwasm`)**
    ([`epics/EPIC-86_Browser_Bindings.md`](epics/EPIC-86_Browser_Bindings.md))
    Feasibility **Complete** (64.7 KB gzipped). Phases 1–5 **Planned**. Third
    binding after `pkcore.py` and `pkcore.js`/EPIC-85, so the shape is known.
    Implementation lands in `pkwasm`, not here.
-3. **EPIC-85 — close out the loose ends**
+4. **EPIC-85 — close out the loose ends**
    ([`epics/EPIC-85_Node_Bindings.md`](epics/EPIC-85_Node_Bindings.md)) —
    everything **Complete** except npm packaging (rehearsed, not yet tagged)
    and GTO-solver / Kuhn bindings (**Deferred**). Mostly a shipping task, not
    a design task.
-4. **EPIC-81 — pkcore on the `ckc-rs` kernel**
+5. **EPIC-81 — pkcore on the `ckc-rs` kernel**
    ([`epics/EPIC-81_Ckc_Rs_Dependency.md`](epics/EPIC-81_Ckc_Rs_Dependency.md))
    **Still blocked**: crates.io `ckc-rs` is `0.1.18`; the EPIC needs `0.2.0`.
-5. **One self-declared missing test left** — `src/play/game.rs:912` (moved
+6. **One self-declared missing test left** — `src/play/game.rs:912` (moved
    from `:903`), *"Add more coverage for negative boundary conditions."* Its
    two siblings (`heads_up.rs:150`, `game.rs:345`) were closed in `0.14.0`.
    A fourth, related item — `src/lib.rs:557`'s unverified combinatorial
    constant — is still open too. Detail in
    [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md#self-declared-missing-tests).
-6. **Downstream version bumps for `0.14.0`** — every audited consumer passes
+7. **Downstream version bumps for `0.14.0`** — every audited consumer passes
    at `0.14.0` (see **Release follow-through**), but none has bumped its
    pin yet. Pure mechanical follow-through, no design work.
 
