@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.4] - 2026-10-08
+
+### Added
+
+- **`examples/two_tables.rs`**, a companion to the essay *Two Probabilities at
+  One Table*. It replays The Hand (Negreanu's 6♠ 6♥ against Hansen's 5♦ 5♣)
+  through both schools of probability. The frequentist half counts the deck:
+  the exact heads-up chart beside Monte Carlo estimates with their standard
+  errors, exact runout enumeration on every street, and the long-run EV of a
+  river call. The Bayesian half tracks Daniel's belief about Gus's cards: a
+  position chart as the prior (and why the GTO chart's zero on 55 can never
+  move), blockers as conditioning, Bayes' rule applied to each of Gus's
+  actions with a hand-written likelihood, and the same update done by the
+  river CFR solver through `WeightedCombos::after_action`. The closing section
+  scores Daniel's full house against the weighted posterior and against the
+  equity engine's uniform sampling of the same range, then reruns the last
+  update under a bluff-heavy read to show that the likelihood, not the
+  frequencies, is what decided the call. Run with
+  `cargo run --release --features full --example two_tables`.
+
 ## [0.15.3] - 2026-09-19
 
 ### Added

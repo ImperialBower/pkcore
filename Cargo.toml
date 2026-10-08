@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.15.3"
+version = "0.15.4"
 rust-version = "1.99.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -257,6 +257,10 @@ required-features = ["terminal"]
 [[example]]
 name = "equity"
 required-features = ["equity"]
+
+[[example]]
+name = "two_tables"
+required-features = ["equity", "hup-charts"]
 
 [[example]]
 name = "bcrepl"
