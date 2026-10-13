@@ -23,6 +23,7 @@ the code — start here, then follow links only into what you need.
 | Why there used to be two table engines | [Table vs TableCelled](/architecture/table-vs-tablecelled.md) |
 | How work is planned and tracked | [EPIC workflow](/processes/epic-workflow.md) |
 | Testing and lint conventions | [testing conventions](/processes/testing-conventions.md) |
+| CI security and the Scorecard badge | [supply-chain security](/processes/supply-chain-security.md) |
 | What depends on pkcore downstream | [downstream repos](/ecosystem/downstream-repos.md) |
 | The datasets in data/ and generated/ | [data index](/data/index.md) |
 | Invariants broken before (don't re-break) | [pitfalls index](/pitfalls/index.md) |

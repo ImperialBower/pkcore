@@ -1,5 +1,8 @@
 # Update Log
 
+## 2026-10-12
+* **Creation**: Added the [supply-chain security](/processes/supply-chain-security.md) process concept — OpenSSF Scorecard baseline (4.5/10), the SHA-pin and least-privilege-token workflow rules, CodeQL, `SECURITY.md`, and the published-result requirement behind the README badge; registered it in the [processes index](/processes/index.md) and [getting started](/getting-started.md).
+
 ## 2026-08-24
 * **Update**: Rewrote the [Table vs TableCelled](/architecture/table-vs-tablecelled.md) decision record — EPIC-83 deleted `TableCelled`, `SeatsCell`, `SeatCell`, `TableLog`, `GameState`, `Showdown`, `HandResult`, `casino::player::Player`, and `PlayerStateCell`, leaving `casino::table::Table` as the only engine. Records the two behaviours that changed with it: dealing starts one seat left of the button, and `end_hand` clears `chips_in_play`.
 * **Update**: Trimmed the celled engine from [casino](/modules/casino.md), [getting started](/getting-started.md), [architecture index](/architecture/index.md), and [short blind call target](/pitfalls/short-blind-call-target.md).

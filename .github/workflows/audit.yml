@@ -23,13 +23,18 @@ on:
   # repo, so the push trigger above scans them directly.
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   security_audit:
     name: SecurityAudit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: taiki-e/install-action@cargo-deny
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+        with:
+          tool: cargo-deny
       - name: Scan for vulnerabilities
         run: cargo deny check advisories
 

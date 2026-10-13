@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/pkcore.svg)](https://crates.io/crates/pkcore)
 [![CI](https://github.com/ImperialBower/pkcore/actions/workflows/basic.yaml/badge.svg)](https://github.com/ImperialBower/pkcore/actions/workflows/basic.yaml)
 [![Security audit](https://github.com/ImperialBower/pkcore/actions/workflows/audit.yml/badge.svg)](https://github.com/ImperialBower/pkcore/actions/workflows/audit.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ImperialBower/pkcore/badge)](https://securityscorecards.dev/viewer/?uri=github.com/ImperialBower/pkcore)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE-MIT)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE-APACHE)
 [![AI BOM](https://img.shields.io/badge/AI--BOM-tracked-blueviolet)](./AI-BOM.md)

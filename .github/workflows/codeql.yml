@@ -1,0 +1,36 @@
+name: CodeQL
+
+# Static analysis (OpenSSF Scorecard "SAST" check). Rust and the workflow files
+# themselves are both scanned without a build (`build-mode: none`), so this job
+# never compiles the crate and stays independent of rust-toolchain.toml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule: # Every Monday at 2 AM — new queries land without a code change.
+    - cron: '0 2 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [rust, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}
