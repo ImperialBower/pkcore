@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   hash cannot. Dependabot still updates the pins. `audit.yml` and `ci.yml` now
   give the `GITHUB_TOKEN` read-only access. `release.yml` grants
   `contents: write` only to the release job, not to the whole workflow.
+- **OpenSSF Scorecard workflow** (`.github/workflows/scorecard.yml`) runs on
+  push to `main`, weekly, and on branch-protection changes. It publishes the
+  result to `api.securityscorecards.dev`, which serves the new **README
+  badge**, and uploads the SARIF report to the Security tab.
+- The new `.okf/processes/supply-chain-security.md` concept records the
+  workflow rules above, so future workflow edits keep the pins and permissions.
 - These changes come from an OpenSSF Scorecard run that scored the repo 4.5/10.
   They target the `Security-Policy`, `SAST`, `Pinned-Dependencies`, and
   `Token-Permissions` checks.
