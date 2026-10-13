@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.5] - 2026-10-12
+
+### Security
+
+- **`SECURITY.md`** says how to report a vulnerability privately, through
+  GitHub's advisory form, and which versions get fixes (0.15.x only).
+- **CodeQL scanning** (`.github/workflows/codeql.yml`) now runs on every push
+  to `main`, every PR, and weekly. It scans the Rust code and the workflow
+  files without a build.
+- **Workflow hardening.** Every third-party action is now pinned to a full
+  commit hash with the version in a comment. A tag can be moved to new code; a
+  hash cannot. Dependabot still updates the pins. `audit.yml` and `ci.yml` now
+  give the `GITHUB_TOKEN` read-only access. `release.yml` grants
+  `contents: write` only to the release job, not to the whole workflow.
+- These changes come from an OpenSSF Scorecard run that scored the repo 4.5/10.
+  They target the `Security-Policy`, `SAST`, `Pinned-Dependencies`, and
+  `Token-Permissions` checks.
+
 ## [0.15.4] - 2026-10-08
 
 ### Added
