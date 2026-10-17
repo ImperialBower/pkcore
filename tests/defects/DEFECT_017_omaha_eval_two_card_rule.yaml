@@ -1,0 +1,49 @@
+# DEFECT_017 — Omaha let a hand play the board without two hole cards.
+# docs/defects/DEFECT_017_omaha_eval_two_card_rule.md — src/games/omaha.rs
+#
+# PLO 100/200, heads-up. The board is a royal flush in spades. Neither player
+# holds a spade, and an Omaha hand must use exactly two hole cards, so nobody
+# has the royal. Seat 1's pair of nines beats seat 0's ace-high.
+#
+# Note: the bug was in `OmahaHigh::eval`. The table scores Omaha through
+# `OmahaHigh::permutations` and never called it, so this hand was right before
+# the fix too. It shows the rule at the table; the evaluator tests in
+# src/games/omaha.rs guard the fixed function.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_017
+  game: omaha
+  description: "An Omaha hand must use exactly two hole cards and three board cards"
+table:
+  seats: 2
+  button: 0
+  stakes: { small_blind: 100.0, big_blind: 200.0 }
+  betting_structure: { kind: pot_limit }
+players:
+  - { seat: 0, name: P0, stack: 10000.0, hole_cards: "2♣ 3♦ 4♥ 5♦" }
+  - { seat: 1, name: P1, stack: 10000.0, hole_cards: "9♥ 9♦ 8♣ 7♣" }
+board: "A♠ K♠ Q♠ J♠ T♠"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 200.0 }
+      - { seat: 1, action: check }
+  flop:
+    cards: "A♠ K♠ Q♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "T♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+
+final:
+  stacks: { 0: 9800, 1: 10200 }

@@ -1,0 +1,48 @@
+# DEFECT_007 — the bot sized raises below the table's minimum.
+# docs/defects/DEFECT_007_decider_subminimum_raise.md — src/bot/decider.rs
+#
+# The bug was in the bot's sizing, so this hand shows the table side the bot
+# must agree with. NL 400/800, heads-up. Seat 0 (button) raises to 1600, a
+# raise of 800. The big blind has 2400 in total, exactly the minimum re-raise
+# (1600 + 800). The only legal raise is all 2400.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_007_short_stack_raise_is_exactly_the_minimum
+  game: holdem
+  description: "Raise bounds for a short big blind facing a raise"
+table:
+  seats: 2
+  button: 0
+  stakes: { small_blind: 400.0, big_blind: 800.0 }
+players:
+  - { seat: 0, name: Deep, stack: 100000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: Short, stack: 2400.0, hole_cards: "K♠ K♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 1600.0 }
+      - { seat: 1, action: call, amount: 1600.0 }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+
+expect:
+  - after: { street: preflop, index: 0 }
+    raise_bounds: { seat: 1, range: [2400, 2400] }
+    min_raise_to: 2400
+final:
+  stacks: { 0: 101600, 1: 800 }

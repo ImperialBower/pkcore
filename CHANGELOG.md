@@ -19,8 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/defects/DEFECT_*.yaml` file. Each file is a normal hand history, named
   after the defect it reproduces, plus an `expect:` block (table state after a
   given action) and a `final:` block (consistency and final stacks) that only
-  the runner reads. The first three are `DEFECT_001`, `DEFECT_010` and
-  `DEFECT_027`. The folder is read on every run, so a new file needs no rebuild.
+  the runner reads. There are 18 files for 15 defects. The folder is read on
+  every run, so a new file needs no rebuild. `tests/defects/README.md` lists
+  which defects have a file, which do not and why, and which files were shown
+  to fail when their bug was put back.
 
 ### Fixed
 

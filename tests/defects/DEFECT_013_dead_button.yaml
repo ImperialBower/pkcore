@@ -1,0 +1,37 @@
+# DEFECT_013 — dead button: blinds and first action by occupancy, not position.
+# docs/defects/DEFECT_013_dead_button.md — tests/tda_conformance.rs (Rule 32)
+#
+# NL 100/200, six chairs. Chairs 1 and 2 are empty, and the button is on empty
+# chair 1. The small blind belongs to chair 2, which is empty, so it is dead
+# and nobody posts it. Seat 3 posts the big blind, and seat 4 acts first.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_013
+  game: holdem
+  description: "With a dead small blind, no small blind is posted and UTG follows the big blind"
+table:
+  seats: 6
+  button: 1
+  stakes: { small_blind: 100.0, big_blind: 200.0 }
+players:
+  - { seat: 0, name: P0, stack: 50000.0, hole_cards: "A♠ A♥" }
+  - { seat: 3, name: P3, stack: 50000.0, hole_cards: "K♠ K♥" }
+  - { seat: 4, name: P4, stack: 50000.0, hole_cards: "Q♠ Q♥" }
+  - { seat: 5, name: P5, stack: 50000.0, hole_cards: "J♠ J♥" }
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: post, amount: 0.0 }
+      - { seat: 3, action: post, amount: 200.0 }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: fold }
+      - { seat: 0, action: fold }
+
+expect:
+  - after: { street: preflop, index: 1 }
+    bet: 200
+    seat_bet: { 3: 200 }
+    next_to_act: 4
+final:
+  stacks: { 0: 50000, 3: 50000, 4: 50000, 5: 50000 }

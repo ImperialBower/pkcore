@@ -1,0 +1,57 @@
+# DEFECT_025 — when every live seat was all-in, the board never ran out.
+# docs/defects/DEFECT_025_all_in_run_out_never_completes.md
+#
+# Pluribus corpus hand STATE:75. NL 50/100, six seats, button on seat 5. Seats
+# 5 and 1 raise back and forth until seat 5 is all-in for 10,000 and seat 1
+# calls. No one has a decision left, so the board runs out with no actions.
+#
+# Note: the bug lived in Table::act and Dealer::advance_street. Replay deals
+# the streets itself and does not go through either, so this file shows the
+# hand but does not run the fixed code path.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_025
+  game: holdem
+  source: "Pluribus STATE:75"
+  description: "Every live seat all-in preflop: the board runs out and the pot is paid"
+table:
+  seats: 6
+  button: 5
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: P0, stack: 10000.0, hole_cards: "4♠ 6♦" }
+  - { seat: 1, name: P1, stack: 10000.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: P2, stack: 10000.0, hole_cards: "J♥ 5♥" }
+  - { seat: 3, name: P3, stack: 10000.0, hole_cards: "9♦ Q♣" }
+  - { seat: 4, name: P4, stack: 10000.0, hole_cards: "4♥ J♠" }
+  - { seat: 5, name: P5, stack: 10000.0, hole_cards: "Q♠ Q♥" }
+board: "5♦ K♦ T♥ A♣ 7♦"
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: fold }
+      - { seat: 3, action: fold }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: raise, amount: 225.0 }
+      - { seat: 0, action: fold }
+      - { seat: 1, action: raise, amount: 1100.0 }
+      - { seat: 5, action: raise, amount: 2558.0 }
+      - { seat: 1, action: raise, amount: 6655.0 }
+      - { seat: 5, action: raise, amount: 10000.0, all_in: true }
+      - { seat: 1, action: call, amount: 10000.0 }
+  flop:
+    cards: "5♦ K♦ T♥"
+    actions: []
+  turn:
+    card: "A♣"
+    actions: []
+  river:
+    card: "7♦"
+    actions: []
+
+expect:
+  - after: { street: preflop, index: 9 }
+    chips: { 1: 0, 5: 0 }
+final:
+  stacks: { 0: 9950, 1: 20050, 2: 10000, 3: 10000, 4: 10000, 5: 0 }

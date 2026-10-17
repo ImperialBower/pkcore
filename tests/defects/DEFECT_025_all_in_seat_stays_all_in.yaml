@@ -1,0 +1,52 @@
+# DEFECT_025 — an all-in seat was handed a turn on a later street.
+# docs/defects/DEFECT_025_all_in_run_out_never_completes.md
+#
+# NL 50/100. Carol (seat 0, 500 chips) shoves first. Alice and Bob call and
+# check the flop. On the turn Carol is still all-in with nothing behind, so the
+# action goes between Alice and Bob only.
+#
+# Note: the bug lived in Table::act. Replay does not go through it, so this
+# file shows the state but does not run the fixed code path.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_025_all_in_seat_stays_all_in
+  game: holdem
+  description: "An all-in seat stays all-in and gets no turn on later streets"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: Carol, stack: 500.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: Alice, stack: 10000.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: Bob, stack: 10000.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: all_in, all_in: true }
+      - { seat: 1, action: call, amount: 500.0 }
+      - { seat: 2, action: call, amount: 500.0 }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 2, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 2, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 2, action: check }
+
+expect:
+  - after: { street: turn, index: 0 }
+    next_to_act: 2
+    chips: { 0: 0 }
+final:
+  stacks: { 0: 1500, 1: 9500, 2: 9500 }

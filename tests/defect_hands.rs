@@ -22,6 +22,12 @@
 //!     next_to_act: 2               # table.next_to_act()
 //!     to_call: { seat: 2, amount: 300 }
 //!     legal: { seat: 2, has: [call], lacks: [check] }
+//!     pot: 150                     # table.pot (chips collected from past streets)
+//!     raises_this_street: 1        # table.raises_this_street
+//!     substantial_action: true     # table.substantial_action()
+//!     raise_bounds: { seat: 0, range: [700, 10000] }   # or range: null
+//!     chips: { 1: 0 }              # seat → chips behind
+//!     seat_bet: { 1: 300 }         # seat → chips in front this street
 //! final:
 //!   consistent: true               # ReplayResult::is_consistent
 //!   stacks: { 0: 10700, 1: 0 }     # seat → chips after the hand
@@ -52,6 +58,21 @@ struct Checkpoint {
     next_to_act: Option<u8>,
     to_call: Option<ToCall>,
     legal: Option<Legal>,
+    pot: Option<usize>,
+    raises_this_street: Option<u8>,
+    substantial_action: Option<bool>,
+    raise_bounds: Option<RaiseBounds>,
+    #[serde(default)]
+    chips: BTreeMap<u8, usize>,
+    #[serde(default)]
+    seat_bet: BTreeMap<u8, usize>,
+}
+
+/// `range: [min, max]`, or `range: null` when no raise is legal.
+#[derive(Debug, Deserialize)]
+struct RaiseBounds {
+    seat: u8,
+    range: Option<(usize, usize)>,
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
@@ -117,6 +138,27 @@ fn check(point: &Checkpoint, table: &Table, failures: &mut Vec<String>) {
     if let Some(to_call) = &point.to_call {
         let what = format!("to_call(seat {})", to_call.seat);
         compare(failures, &at, &what, &to_call.amount, &table.to_call(to_call.seat));
+    }
+    if let Some(want) = point.pot {
+        compare(failures, &at, "pot", &want, &table.pot);
+    }
+    if let Some(want) = point.raises_this_street {
+        compare(failures, &at, "raises_this_street", &want, &table.raises_this_street);
+    }
+    if let Some(want) = point.substantial_action {
+        compare(failures, &at, "substantial_action", &want, &table.substantial_action());
+    }
+    if let Some(bounds) = &point.raise_bounds {
+        let what = format!("raise_bounds(seat {})", bounds.seat);
+        compare(failures, &at, &what, &bounds.range, &table.raise_bounds(bounds.seat));
+    }
+    for (seat, want) in &point.chips {
+        let got = table.seats.get_seat(*seat).map(|s| s.player.chips);
+        compare(failures, &at, &format!("chips(seat {seat})"), &Some(*want), &got);
+    }
+    for (seat, want) in &point.seat_bet {
+        let got = table.seats.get_seat(*seat).map(|s| s.player.bet);
+        compare(failures, &at, &format!("seat_bet(seat {seat})"), &Some(*want), &got);
     }
     if let Some(legal) = &point.legal {
         let offered: Vec<&str> = table.legal_actions(legal.seat).iter().map(action_name).collect();
