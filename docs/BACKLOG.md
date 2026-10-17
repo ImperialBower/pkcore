@@ -200,8 +200,32 @@ The ones that read as more than cleanup:
 - **`src/play/game.rs:444`** — `TODONE TD: Resolve this.` Still there, still
   ambiguous.
 - **Standing audits going stale** — `TESTKIT_AUDIT.md` is headed `0.8.0`
-  (seven releases ago); the automated review in `TECHNICAL_DEBT.md` predates
-  the `0.15.0` purity refactor.
+  (seven releases ago).
+
+**🤖 2026-10-17 automated review — six defects that change game results**
+(all re-read in source; detail and ~60 further findings in
+[`TECHNICAL_DEBT.md` § 2026-10-17 pass](TECHNICAL_DEBT.md#-2026-10-17-pass--new-findings)):
+
+1. **Razz low ladder ordered from the wrong end** — a 7-low or K-low beats a
+   6-low at showdown. Known to `DECON-03`, never carried into defects.
+   (`src/games/razz/california.rs:78-1367`)
+2. **Solver fold terminals pay `(pot+bet)/2`, not `pot/2`** — CFR solves a
+   different game. (`src/analysis/gto/game_tree.rs:802-804`)
+3. **DCFR `β=0` halves the strategy sum every iteration** — the "average"
+   strategy is the last few iterates. (`src/analysis/gto/solver.rs:769-785`)
+4. **`compute_exploitability` is clairvoyant** — the best response sees the
+   opponent's hand; the number cannot reach 0 at a Nash.
+   (`src/analysis/gto/solver.rs:1367-1503`)
+5. **Short all-in sent as `Raise` lowers `table.bet`** and can wedge the hand.
+   (`src/casino/table/actions.rs:635-666`)
+6. **`outs` knob scores any made hand ahead of the median as ~100% equity.**
+   (`src/bot/draw_equity.rs:60-75`)
+
+Plus: MC seeds 0–7 identical (`src/analysis/equity/engine.rs:222`),
+`Five::is_straight` true for `9999 5` (`src/arrays/five.rs:95-99`),
+`Card::from_str("AsKd")` is `Ok(A♠)` (`src/card.rs:307-334`), `Eval` and
+`Cards` break the Hash/Eq contract, `SolverCache` does `std::fs` in the lean
+default build, and ~300 `test_`-prefixed test functions.
 
 ---
 
@@ -243,9 +267,15 @@ Not authored by the user. Keep, edit, or delete.
   output**, not a sidequest doc. Still present. Third pass open.
 - 🤖 **Re-check the `pkodds` `Method::Hup` `cargo check` failure** against
   `0.15.x`. Not re-run this pass. Blocks the `pkodds` pin ever moving.
-- 🤖 **Re-run the automated debt review in `TECHNICAL_DEBT.md`.** Last run
-  2026-08-18 — two months and the `0.15.0` purity refactor ago. The old
-  findings about `Deck`/`Board`/`hup.rs` doc tests were never re-verified.
+- ~~🤖 Re-run the automated debt review in `TECHNICAL_DEBT.md`~~ — **done
+  2026-10-17**, six reviewers. See **Tech debt** above and
+  [`TECHNICAL_DEBT.md` § 2026-10-17 pass](TECHNICAL_DEBT.md#-2026-10-17-pass--new-findings).
+- 🤖 **Open DEFECT docs for the six headline defects from the 2026-10-17
+  review** (Razz ladder, solver fold payoff, DCFR averaging, clairvoyant
+  exploitability, short-all-in raise lowering `table.bet`, `outs` knob). Each
+  is a behaviour bug with no record in `docs/defects/`. The Razz one is
+  already written up in `docs/deconstruct/DECON-03_Lowball_Ranking.md` and
+  only needs the pointer.
 - 🤖 **Re-run `TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`,
   2026-08-25; `0.15.0`'s seeded-by-default entropy change is exactly the
   kind of controllability move it measures.
