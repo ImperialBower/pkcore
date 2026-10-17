@@ -55,9 +55,8 @@ expect:
   - after: { street: preflop, index: 2 }
     next_to_act: 0
     to_call: { seat: 0, amount: 100 }
-    # Not checked yet: `all_in`. legal_actions still offers it, and in
-    # No-Limit act_all_in shoves the whole stack, a re-raise that Rule 47-A
-    # forbids. Found while writing this file; see TECHNICAL_DEBT.md.
+    # `all_in` stays offered on purpose (audit P9b: AllIn is always accepted),
+    # but here it is only a call. DEFECT_028 shows that hand.
     legal: { seat: 0, has: [call, fold], lacks: [raise, bet] }
 final:
   consistent: true

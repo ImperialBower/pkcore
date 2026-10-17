@@ -1,0 +1,59 @@
+# DEFECT_028 — a gated player could still shove over a short all-in.
+# docs/defects/DEFECT_028_gated_player_can_shove_over_a_short_all_in.md
+# TDA 2024 Rule 47-A.
+#
+# The same hand as DEFECT_010, but A answers with AllIn instead of Call. A
+# already acted and faces only 100 of a short all-in, so A may call or fold.
+# The DEFECT_010 fix removed the Raise, but AllIn still shoved all 50,000.
+# Now AllIn here is a call of the 100.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_028
+  game: holdem
+  description: "A gated player's AllIn is a call, not a re-raise"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: A, stack: 50000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: B, stack: 400.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: C, stack: 50000.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 300.0 }
+      - { seat: 1, action: all_in, all_in: true }
+      - { seat: 2, action: call, amount: 400.0 }
+      - { seat: 0, action: all_in }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+results:
+  - { seat: 0, outcome: win, net: 800.0 }
+  - { seat: 1, outcome: lose, net: -400.0 }
+  - { seat: 2, outcome: lose, net: -400.0 }
+
+expect:
+  # A's AllIn only calls: the bet stays 400 and A keeps 49,600 behind.
+  - after: { street: preflop, index: 3 }
+    bet: 400
+    chips: { 0: 49600 }
+    seat_bet: { 0: 400 }
+final:
+  consistent: true
+  stacks: { 0: 50800, 1: 0, 2: 49600 }

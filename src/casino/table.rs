@@ -5071,6 +5071,50 @@ mod casino__table_tests {
         assert_eq!(1500, table.min_raise_to());
     }
 
+    // DEFECT_028 — TDA 47-A: a player who already acted may only call or fold
+    // a short all-in. A raises to 300, B shoves 400 (short), C calls. A's
+    // AllIn must become a call of the 100, not a 50,000 re-raise.
+    fn gated_after_a_short_all_in(a_stack: usize) -> Table {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), a_stack)),
+            Seat::new(Player::new_with_chips("B".to_string(), 400)),
+            Seat::new(Player::new_with_chips("C".to_string(), 50_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(0, 300).unwrap();
+        table.act_all_in(1).unwrap();
+        table.act_call(2).unwrap();
+        table
+    }
+
+    #[test]
+    fn gated_all_in_becomes_a_call() {
+        let mut table = gated_after_a_short_all_in(50_000);
+        assert!(table.is_reopen_gated(0));
+
+        let committed = table.act_all_in(0).unwrap();
+
+        assert_eq!(400, committed);
+        assert_eq!(400, table.bet);
+        assert_eq!(49_600, table.seats.get_seat(0).unwrap().player.chips);
+        assert!(!table.seats.get_seat(0).unwrap().is_all_in());
+        assert!(table.seats.is_betting_complete());
+    }
+
+    // The gate must not stop a stack that cannot cover the call from going
+    // all-in for less.
+    #[test]
+    fn gated_short_stack_still_goes_all_in_for_less() {
+        let mut table = gated_after_a_short_all_in(350);
+
+        table.act_all_in(0).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert!(table.seats.get_seat(0).unwrap().is_all_in());
+    }
+
     // P9j.2 — min_raise_to and the fixed-limit max_raise both go through
     // BettingStructure::completion_raise_to, so in fixed-limit the sole legal
     // raise amount is simultaneously the min and the max. This guards the two

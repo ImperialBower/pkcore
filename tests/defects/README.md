@@ -37,6 +37,7 @@ failed at the expected step. The others are not yet checked that way.
 | 023 minimum raise never zero | `DEFECT_023_*` | no — the table never called the fixed function |
 | 025 all-in run-out | `DEFECT_025_*` (2 hands) | no — replay deals streets itself, not through `Table::act` |
 | 027 short all-in lowers the bet | `DEFECT_027_*` | yes, **checked** |
+| 028 gated player shoves over a short all-in | `DEFECT_028_*` | yes, **checked** |
 
 ## No file, and why
 

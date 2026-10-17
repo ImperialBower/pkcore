@@ -737,6 +737,18 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
+        // DEFECT_028: TDA 47-A. A player who already acted and now faces only a
+        // short all-in may call or fold, so a shove that would raise is a call.
+        // A stack that cannot cover the call still goes all-in for less below.
+        if self.is_reopen_gated(seat_number) {
+            let behind = self.seats.get_seat(seat_number).map_or(0, |s| s.player.chips);
+            if behind > self.to_call(seat_number) {
+                self.act_call(seat_number)?;
+                // Chips committed, as on every other path (audit P9e).
+                return Ok(self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet));
+            }
+        }
+
         // Capped structures (Fixed-Limit, Pot-Limit) have no true "all-in raise"
         // for a deep stack: the most it can commit voluntarily is one legal
         // raise. Degrade a deep-stack shove to the largest legal action so the

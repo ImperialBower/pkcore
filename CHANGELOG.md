@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/defects/DEFECT_*.yaml` file. Each file is a normal hand history, named
   after the defect it reproduces, plus an `expect:` block (table state after a
   given action) and a `final:` block (consistency and final stacks) that only
-  the runner reads. There are 18 files for 15 defects. The folder is read on
+  the runner reads. There are 19 files for 16 defects. The folder is read on
   every run, so a new file needs no rebuild. `tests/defects/README.md` lists
   which defects have a file, which do not and why, and which files were shown
   to fail when their bug was put back.
@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Both methods now use the same all-in rules as `act_all_in`: the bet never
   goes down, and only a full raise re-opens the action and counts toward the
   raise cap.
+- **A player who already acted can no longer shove over a short all-in**
+  ([DEFECT_028](docs/defects/DEFECT_028_gated_player_can_shove_over_a_short_all_in.md)).
+  TDA 2024 Rule 47-A lets that player only call or fold. The `DEFECT_010` fix
+  refused the `Raise`, but in No-Limit `act_all_in` still committed the whole
+  stack, a re-raise. A gated `AllIn` with more than the call behind is now a
+  call. A stack that cannot cover the call still goes all-in for less.
 
 ## [0.15.5] - 2026-10-12
 
