@@ -207,7 +207,7 @@ The ones that read as more than cleanup:
 [`TECHNICAL_DEBT.md` § 2026-10-17 pass](TECHNICAL_DEBT.md#-2026-10-17-pass--new-findings)):
 
 1. ~~**Razz low ladder ordered from the wrong end**~~ — **fixed 2026-10-17**
-   in `0.15.5`, [`DEFECT_026`](defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
+   in `0.15.6`, [`DEFECT_026`](defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
 2. **Solver fold terminals pay `(pot+bet)/2`, not `pot/2`** — CFR solves a
    different game. (`src/analysis/gto/game_tree.rs:802-804`)
 3. **DCFR `β=0` halves the strategy sum every iteration** — the "average"
@@ -215,8 +215,8 @@ The ones that read as more than cleanup:
 4. **`compute_exploitability` is clairvoyant** — the best response sees the
    opponent's hand; the number cannot reach 0 at a Nash.
    (`src/analysis/gto/solver.rs:1367-1503`)
-5. **Short all-in sent as `Raise` lowers `table.bet`** and can wedge the hand.
-   (`src/casino/table/actions.rs:635-666`)
+5. ~~**Short all-in sent as `Raise` lowers `table.bet`**~~ — **fixed 2026-10-17**
+   in `0.15.6`, [`DEFECT_027`](defects/DEFECT_027_short_all_in_lowers_the_table_bet.md).
 6. **`outs` knob scores any made hand ahead of the median as ~100% equity.**
    (`src/bot/draw_equity.rs:60-75`)
 
@@ -272,8 +272,8 @@ Not authored by the user. Keep, edit, or delete.
 - 🤖 **Open DEFECT docs for the six headline defects from the 2026-10-17
   review** (Razz ladder, solver fold payoff, DCFR averaging, clairvoyant
   exploitability, short-all-in raise lowering `table.bet`, `outs` knob). Each
-  is a behaviour bug with no record in `docs/defects/`. The Razz one is done
-  (`DEFECT_026`); five remain.
+  is a behaviour bug with no record in `docs/defects/`. The Razz and short-all-in
+  ones are done (`DEFECT_026`, `DEFECT_027`); four remain.
 - 🤖 **Re-run `TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`,
   2026-08-25; `0.15.0`'s seeded-by-default entropy change is exactly the
   kind of controllability move it measures.

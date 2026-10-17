@@ -4996,6 +4996,81 @@ mod casino__table_tests {
         );
     }
 
+    // DEFECT_027 — a short all-in spelled `Raise` must not lower the table bet.
+    // NL 50/100: A raises to 400, B (300 chips) sends Raise(300). The bet stays
+    // 400; before the fix it dropped to 300 and C was offered a Check that
+    // `act_check` then rejected.
+    #[test]
+    fn short_all_in_sent_as_raise_does_not_lower_the_table_bet() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 300)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 400).unwrap();
+        let b = table.next_to_act();
+        table.act_raise(b, 300).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert_eq!(300, table.raise_increment);
+        let c = table.next_to_act();
+        assert!(
+            !table
+                .legal_actions(c)
+                .contains(&crate::casino::action::PlayerAction::Check)
+        );
+        table.act_call(c).expect("C calls the standing 400");
+    }
+
+    // DEFECT_027 — the same short all-in spelled `Bet`.
+    #[test]
+    fn short_all_in_sent_as_bet_does_not_lower_the_table_bet() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 300)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 400).unwrap();
+        let b = table.next_to_act();
+        table.act_bet(b, 300).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert_eq!(300, table.raise_increment);
+    }
+
+    // DEFECT_027 — a raise that exactly covers the stack is still a full raise.
+    // A raises to 300 (increment 200); B (900 chips) sends Raise(900), a full
+    // 600 raise. It must re-open the action exactly like `act_all_in` does.
+    #[test]
+    fn full_raise_that_covers_the_stack_sets_the_raise_increment() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 900)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_raise(b, 900).unwrap();
+
+        assert_eq!(900, table.bet);
+        assert_eq!(1500, table.min_raise_to());
+    }
+
     // P9j.2 — min_raise_to and the fixed-limit max_raise both go through
     // BettingStructure::completion_raise_to, so in fixed-limit the sole legal
     // raise amount is simultaneously the min and the max. This guards the two

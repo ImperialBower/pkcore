@@ -3,13 +3,13 @@
 **File:** `docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md`  
 **Date:** 2026-10-17  
 **Severity:** High — it changes who wins a Razz pot  
-**Status:** Fixed in `0.15.5` — see [Resolution](#resolution)  
+**Status:** Fixed in `0.15.6` — see [Resolution](#resolution)  
 **Found by:** [DECON-03](../deconstruct/DECON-03_Lowball_Ranking.md), which
 measured it by exhaustive enumeration. The 2026-10-17 automated review in
 [`TECHNICAL_DEBT.md`](../TECHNICAL_DEBT.md) noticed that it had never been
 filed.  
 **Affects:** every pkcore version with Razz evaluation, from
-[EPIC-33](../epics/EPIC-33_Razz-CLOSED.md) up to and including `0.15.4`
+[EPIC-33](../epics/EPIC-33_Razz-CLOSED.md) up to and including `0.15.5`
 
 ---
 
@@ -91,7 +91,7 @@ so it never reached the backlog.
 
 ## Resolution
 
-**Fixed in `0.15.5`, 2026-10-17.** The 6,175 variants of `CaliforniaHandRank`
+**Fixed in `0.15.6`, 2026-10-17.** The 6,175 variants of `CaliforniaHandRank`
 were re-declared in canonical order. No variant was renamed and no match arm
 changed. 6,171 of the 6,175 variants moved.
 
@@ -127,7 +127,7 @@ Every new test except the two guards failed against the old enum and passes
 against the new one.
 
 **Compatibility.** No type or signature changed. The rank value of 6,171 of
-the 6,175 Razz hands changed, so any stored Razz value from before `0.15.5`
+the 6,175 Razz hands changed, so any stored Razz value from before `0.15.6`
 uses the old ladder. The ignored Razz bot-session replay test,
 `razz_bot_selfplay_replay_roundtrip`, still passes with `--include-ignored`.
 

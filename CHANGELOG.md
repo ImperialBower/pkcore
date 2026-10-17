@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.15.5] - 2026-10-12
+## [0.15.6] - 2026-10-17
 
 ### Fixed
 
@@ -24,6 +24,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of the rule. [DECON-03](docs/deconstruct/DECON-03_Lowball_Ranking.md) found
   the unpaired defect; its paired-band endpoints had copied the old code and are
   corrected too.
+- **A short all-in sent as `Bet` or `Raise` no longer lowers the table bet**
+  ([DEFECT_027](docs/defects/DEFECT_027_short_all_in_lowers_the_table_bet.md)).
+  `Table::act_bet` and `Table::act_raise` set `table.bet` to the shove's amount
+  even when it was below the bet already standing. After A raised to 400, a
+  300-chip player who sent `Raise(300)` dropped the bet to 300. The next player
+  then owed 300, but the betting round still measured 400, so
+  `legal_actions` offered a `Check` that `act_check` rejected, and the hand
+  could not go on. A shove that exactly covered the stack with a full raise
+  also skipped the raise increment, so the next minimum re-raise was too small.
+  Both methods now use the same all-in rules as `act_all_in`: the bet never
+  goes down, and only a full raise re-opens the action and counts toward the
+  raise cap.
+
+## [0.15.5] - 2026-10-12
 
 ### Security
 
