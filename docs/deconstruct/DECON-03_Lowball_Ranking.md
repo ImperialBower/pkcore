@@ -15,7 +15,7 @@ the weakest straight. This epic defines that inverted evaluation.
 It defines two separate things, which are easy to confuse:
 
 1. **The ace-to-five ladder.** A total order over every distinct five-card
-   *rank* combination, from the wheel down to four aces with a king. This is
+   *rank* combination, from the wheel down to four kings with a queen. This is
    the Razz showdown.
 2. **The eight-or-better qualifier.** A predicate and an ordering used in
    split-pot variants: a low hand *qualifies* only if it is five unpaired
@@ -148,8 +148,8 @@ deuce. It never plays high.
 **The ladder.** Every five-card **rank combination** — every multiset of five
 ranks in which no rank appears more than four times — receives a position.
 There are **6,175** such combinations. Position **1 is the wheel**, the best
-low; higher positions are worse; **6,175** is four aces with a king, the worst
-hand in lowball. Positions are assigned by applying the canonical comparison
+low; higher positions are worse; **6,175** is four kings with a queen, the
+worst hand in lowball. Positions are assigned by applying the canonical comparison
 rule, not by copying the original's numbering.
 
 **The unpaired band.** Positions **1 through 1,287** are the unpaired lows —
@@ -162,13 +162,19 @@ full in the vectors and are the primary target of a rebuild.
 at least one repeated rank. **A paired hand is worse than any unpaired
 qualifying low**, without exception — that is a domain requirement, not an
 artefact of any numbering: the worst pair-free low beats the best pair. Within
-the paired band the order is the reverse of the high ranking over the same
-rank shapes, running from the lowest pair with the lowest side cards (a pair
-of deuces with five-four-three, position 1,288) to four aces with a king
-(6,175). The band's two endpoints are settled; its interior order follows from
-the canonical rule applied to paired shapes and was **not** exhaustively
-enumerated during deconstruction, so a rebuild must derive it from the rule
-rather than from any recorded number.
+the paired band the canonical rule still holds: the lower high hand is the
+better low, with the ace counted low. One pair beats two pair, which beats
+trips, then a full house, then quads. Inside a class, compare the biggest rank
+group first, then the rest, highest first. The band runs from a pair of aces
+with four-three-two (position 1,288) to four kings with a queen (6,175).
+
+> **Corrected 2026-10-17.** Earlier drafts of this section gave the band's
+> endpoints as `2 2 5 4 3` and `A A A A K`. Those were the original's
+> endpoints, and they count the ace **high** inside the paired band, which
+> contradicts "aces are low" below. pkcore fixed this with the unpaired defect
+> in [DEFECT_026](../defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md);
+> `games__razz__california__ladder_tests` now checks all 6,175 positions
+> against this rule.
 
 **The sentinel.** Position **0** means *no qualifying low* — the evaluator was
 handed something it cannot rank, such as a hand containing a blank card. Zero
@@ -315,9 +321,9 @@ positions 2 … 1287    every other five-distinct-rank combination, ordered
                       next-highest, lower better — ending at
                       1287 = K Q J T 9
 positions 1288 … 6175 every combination containing a repeated rank, worse
-                      than every unpaired hand, ordered from the lowest
-                      pair with the lowest side cards (1288 = 2 2 5 4 3)
-                      to 6175 = A A A A K
+                      than every unpaired hand, ordered by the same rule
+                      with aces low (1288 = A A 4 3 2)
+                      to 6175 = K K K K Q
 ```
 
 The two counts are exact and worth checking during a rebuild. The unpaired
@@ -356,8 +362,10 @@ divergence is legible; the original's number is never the target.
 | `8♠ 6♥ 4♦ 3♣ 2♠` | 30 | 505 | An eight-six low |
 | `A♠ K♥ Q♦ J♣ T♠` | 1,279 | 495 | Broadway — a terrible low, but the original ranks it 495th |
 | `9♦ T♦ J♦ Q♦ K♦` | 1,287 | 1,287 | Worst unpaired low |
-| `2♠ 2♥ 5♦ 4♣ 3♠` | 1,288 | 1,288 | Best paired hand — still worse than 1,287 |
-| `A♠ A♥ A♦ A♣ K♠` | 6,175 | 6,175 | Worst hand in lowball |
+| `A♠ A♥ 4♦ 3♣ 2♠` | 1,288 | 3,928 | Best paired hand — still worse than 1,287 |
+| `2♠ 2♥ 5♦ 4♣ 3♠` | 1,511 | 1,288 | A pair of deuces — the original's "best pair" |
+| `A♠ A♥ A♦ A♣ K♠` | 6,031 | 6,175 | Four aces — the original's "worst hand" |
+| `K♠ K♥ K♦ K♣ Q♠` | 6,175 | 6,162 | Worst hand in lowball |
 
 Two readings to take from this table. The last three rows are the rule that
 surprises newcomers: a king-high *unpaired* hand beats a pair of deuces,
@@ -732,8 +740,8 @@ are compared, *then* the ace is 1, the king is 13, and the king is higher.
 > the epic's central property — that low evaluations share the high ladder's
 > comparison verbatim, with no lowball-specific comparison anywhere —
 > survives untouched. The band structure survives too: 1..1,287 unpaired,
-> 1,288..6,175 paired, wheel at 1, four aces with a king at 6,175. Only the
-> order *within* the unpaired band changes, and it changes to the correct one.
+> 1,288..6,175 paired, wheel at 1, four kings with a queen at 6,175. Only the
+> order *within* each band changes, and it changes to the correct one.
 
 ## Verification
 
@@ -820,7 +828,11 @@ a regression.
   highest card downward. Verified by exhaustive enumeration of all 1,287
   unpaired rank sets: 329 of 1,286 adjacent pairs are mis-ordered. Evidence is
   extracted to `vectors/lowball-ranking/ladder-divergence.json`. This spec
-  follows the *domain rule*, not the enumeration — see SD-02.
+  follows the *domain rule*, not the enumeration — see SD-02. **Fixed in
+  pkcore 0.15.5** by reordering the enum, recorded as
+  [DEFECT_026](../defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
+  The `original_ordinal` values in the vectors describe the code before that
+  fix.
 - **Why it was never caught.** The survey found no direct hand-versus-hand
   Razz rank tests in the source — only full-session replay round-trips, which
   score every hand with the same ladder and therefore pass whatever that
@@ -861,11 +873,11 @@ a regression.
   incomplete scaffolding, not a rule. The manifest already records
   eight-or-better as scaffolding-only in the source. The extracted vectors
   show the symptom: hands that qualify carry the no-low class name.
-- **Not exhaustively verified:** the interior ordering of the paired band
-  (positions 1,288..6,175). Its endpoints agree with the canonical rule and
-  were checked; the hands between them were not enumerated, and given
-  the defect in the unpaired band a rebuild should derive them from the rule
-  rather than assume the original is right.
+- **Paired band — now exhaustively verified (2026-10-17).** The original also
+  counted the ace high inside the paired band, so its endpoints were wrong too:
+  `2 2 5 4 3` at 1,288 and `A A A A K` at 6,175. The canonical endpoints are
+  `A A 4 3 2` and `K K K K Q`. Fixed in pkcore with the unpaired defect; see
+  [DEFECT_026](../defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
 - **Out of scope, per the manifest:** hi-lo split-pot settlement. The low
   evaluator specified here is in scope; dividing a pot between a high and a
   low winner is not.

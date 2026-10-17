@@ -542,6 +542,30 @@ mod razz_eval_tests {
         let result = Eval::from_razz_rank(CaliforniaHandRank::Unknown, Five::default());
         assert!(matches!(result, Err(PKError::NoLow)));
     }
+
+    // DEFECT_026: the ladder used to put 7-4-3-2-A at 3 and 6-5-4-3-2 at 496.
+    #[test]
+    fn six_low_beats_seven_low_at_showdown() {
+        let six_low = Seven::from_str("6♠ 5♥ 4♦ 3♣ 2♠ K♥ Q♦").unwrap();
+        let seven_low = Seven::from_str("7♠ 4♥ 3♦ 2♣ A♠ K♦ Q♣").unwrap();
+
+        let six_low = Eval::from_seven_razz(&six_low).unwrap();
+        let seven_low = Eval::from_seven_razz(&seven_low).unwrap();
+
+        assert!(six_low > seven_low, "6-low {six_low} should beat 7-low {seven_low}");
+    }
+
+    // DEFECT_026: aces are low, so a pair of aces is the best pair.
+    #[test]
+    fn pair_of_aces_beats_pair_of_kings_at_showdown() {
+        let aces = Seven::from_str("A♠ A♥ 4♦ 3♣ 2♠ A♦ A♣").unwrap();
+        let kings = Seven::from_str("K♠ K♥ 4♦ 3♣ 2♠ K♦ K♣").unwrap();
+
+        let aces = Eval::from_seven_razz(&aces).unwrap();
+        let kings = Eval::from_seven_razz(&kings).unwrap();
+
+        assert!(aces > kings, "pair of aces {aces} should beat pair of kings {kings}");
+    }
 }
 
 #[cfg(test)]

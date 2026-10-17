@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.15.5] - 2026-10-12
 
+### Fixed
+
+- **A six-low now beats a seven-low in Razz**
+  ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).
+  The rank value of a Razz hand is the position of its `CaliforniaHandRank`
+  variant, and the variants were declared lowest card first. Ace-to-five
+  lowball reads the highest card first. So `7 4 3 2 A` scored 3 and beat
+  `6 5 4 3 2` at 496, and 329 of 1,286 neighbouring unpaired lows were in the
+  wrong order. The paired hands also counted the ace high, which made a pair of
+  aces the worst pair instead of the best. The variants are now declared in
+  canonical order: wheel = 1, `K Q J T 9` = 1,287, `A A 4 3 2` = 1,288,
+  `K K K K Q` = 6,175. No names or signatures changed, but 6,171 of 6,175 Razz
+  rank values did, so a stored Razz value from an older version uses the old
+  ladder. A new test checks all 6,175 positions against an independent oracle
+  of the rule. [DECON-03](docs/deconstruct/DECON-03_Lowball_Ranking.md) found
+  the unpaired defect; its paired-band endpoints had copied the old code and are
+  corrected too.
+
 ### Security
 
 - **`SECURITY.md`** says how to report a vulnerability privately, through

@@ -206,9 +206,8 @@ The ones that read as more than cleanup:
 (all re-read in source; detail and ~60 further findings in
 [`TECHNICAL_DEBT.md` § 2026-10-17 pass](TECHNICAL_DEBT.md#-2026-10-17-pass--new-findings)):
 
-1. **Razz low ladder ordered from the wrong end** — a 7-low or K-low beats a
-   6-low at showdown. Known to `DECON-03`, never carried into defects.
-   (`src/games/razz/california.rs:78-1367`)
+1. ~~**Razz low ladder ordered from the wrong end**~~ — **fixed 2026-10-17**
+   in `0.15.5`, [`DEFECT_026`](defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
 2. **Solver fold terminals pay `(pot+bet)/2`, not `pot/2`** — CFR solves a
    different game. (`src/analysis/gto/game_tree.rs:802-804`)
 3. **DCFR `β=0` halves the strategy sum every iteration** — the "average"
@@ -273,9 +272,8 @@ Not authored by the user. Keep, edit, or delete.
 - 🤖 **Open DEFECT docs for the six headline defects from the 2026-10-17
   review** (Razz ladder, solver fold payoff, DCFR averaging, clairvoyant
   exploitability, short-all-in raise lowering `table.bet`, `outs` knob). Each
-  is a behaviour bug with no record in `docs/defects/`. The Razz one is
-  already written up in `docs/deconstruct/DECON-03_Lowball_Ranking.md` and
-  only needs the pointer.
+  is a behaviour bug with no record in `docs/defects/`. The Razz one is done
+  (`DEFECT_026`); five remain.
 - 🤖 **Re-run `TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`,
   2026-08-25; `0.15.0`'s seeded-by-default entropy change is exactly the
   kind of controllability move it measures.
