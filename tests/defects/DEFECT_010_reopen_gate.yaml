@@ -1,0 +1,64 @@
+# DEFECT_010 — a player who already acted could re-raise a short all-in.
+# docs/defects/DEFECT_010_reopen_gate.md — TDA 2024 Rule 47-A.
+#
+# NL 50/100. A raises to 300 (a 200 raise). B shoves 400, only 100 more —
+# short of a full raise. C calls. When the action returns to A, A faces 100
+# and may only call or fold. Before the fix, A was still offered a raise.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_010
+  game: holdem
+  description: "A short all-in does not re-open the betting to a player who already acted"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: A, stack: 50000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: B, stack: 400.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: C, stack: 50000.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 300.0 }
+      - { seat: 1, action: all_in, all_in: true }
+      - { seat: 2, action: call, amount: 400.0 }
+      - { seat: 0, action: call, amount: 400.0 }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+results:
+  - { seat: 0, outcome: win, net: 800.0 }
+  - { seat: 1, outcome: lose, net: -400.0 }
+  - { seat: 2, outcome: lose, net: -400.0 }
+
+expect:
+  # B's short shove leaves the increment at A's full 200 raise.
+  - after: { street: preflop, index: 1 }
+    bet: 400
+    raise_increment: 200
+  # Action is back on A, who already acted: call or fold only.
+  - after: { street: preflop, index: 2 }
+    next_to_act: 0
+    to_call: { seat: 0, amount: 100 }
+    # Not checked yet: `all_in`. legal_actions still offers it, and in
+    # No-Limit act_all_in shoves the whole stack, a re-raise that Rule 47-A
+    # forbids. Found while writing this file; see TECHNICAL_DEBT.md.
+    legal: { seat: 0, has: [call, fold], lacks: [raise, bet] }
+final:
+  consistent: true
+  stacks: { 0: 50800, 1: 0, 2: 49600 }

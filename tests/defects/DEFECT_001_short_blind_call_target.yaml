@@ -1,0 +1,54 @@
+# DEFECT_001 — a short big blind lowered what the others had to call.
+# docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md
+#
+# NL 50/100. The big blind (seat 2) has only 60 chips, so it posts 60 and is
+# all-in. The others must still call the full 100 blind, not 60. The extra
+# goes to a side pot that the big blind cannot win.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_001
+  game: holdem
+  description: "A short big blind still sets the call to the full blind"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: A, stack: 10000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: B, stack: 10000.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: C, stack: 60.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 100.0 }
+      - { seat: 1, action: call, amount: 100.0 }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+results:
+  - { seat: 0, outcome: win, net: 160.0 }
+  - { seat: 1, outcome: lose, net: -100.0 }
+  - { seat: 2, outcome: lose, net: -60.0 }
+
+expect:
+  # After A calls, the bet is the full blind, not the 60 the big blind posted.
+  - after: { street: preflop, index: 0 }
+    bet: 100
+    to_call: { seat: 1, amount: 50 }
+final:
+  consistent: true
+  stacks: { 0: 10160, 1: 9900, 2: 0 }

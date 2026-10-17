@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.15.6"
+version = "0.16.0"
 rust-version = "1.99.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -345,6 +345,10 @@ required-features = ["hand-histories", "bot-profiles"]
 # (D8-1..D8-4): `cargo test --test tda_conformance -- --include-ignored`.
 [[test]]
 name = "tda_conformance"
+
+[[test]]
+name = "defect_hands"
+required-features = ["hand-histories", "bot-profiles"]
 
 [[test]]
 name = "pkarena0_session"

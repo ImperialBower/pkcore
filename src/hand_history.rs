@@ -586,13 +586,60 @@ impl HandHistory {
     /// assert!(result.unwrap().is_consistent);
     /// ```
     #[cfg(feature = "bot-profiles")]
+    pub fn replay(&self) -> Result<ReplayResult, PKError> {
+        self.replay_with(|_, _| {})
+    }
+
+    /// Replays this hand like [`Self::replay`], and calls `observe` after each
+    /// recorded action with the [`ReplayStep`] and the table as it stands.
+    ///
+    /// Every entry in a street's `actions` list is observed, posts included, so
+    /// [`ReplayStep::index`] is the entry's position in that list. Use it to
+    /// check table state in the middle of a hand, which the final
+    /// [`ReplayResult`] cannot show.
+    ///
+    /// # Errors
+    ///
+    /// The same as [`Self::replay`]. Actions observed before the error were
+    /// applied; the failing action is not observed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::{HandHistory, ReplayStreet};
+    ///
+    /// let hand = HandHistory::from_yaml(r"
+    /// hand: { id: ex, game: holdem }
+    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0 }
+    ///   - { seat: 1, name: B, stack: 1000.0 }
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: raise, amount: 300.0 }
+    ///       - { seat: 1, action: fold }
+    /// ").unwrap();
+    ///
+    /// let mut bets = Vec::new();
+    /// hand.replay_with(|step, table| bets.push((step.street, step.index, table.bet)))
+    ///     .unwrap();
+    /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
+    /// # }
+    /// ```
+    #[cfg(feature = "bot-profiles")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation,
         clippy::too_many_lines
     )]
-    pub fn replay(&self) -> Result<ReplayResult, PKError> {
+    pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
+    where
+        F: FnMut(&ReplayStep<'_>, &Table),
+    {
         // ── Build table ──────────────────────────────────────────────────────
         let sb = self.table.stakes.small_blind as usize;
         let bb = self.table.stakes.big_blind as usize;
@@ -743,11 +790,12 @@ impl HandHistory {
         }
 
         // ── Street replay helper ─────────────────────────────────────────────
-        let replay_actions = |table: &mut Table, actions: &[Action]| -> Result<(), PKError> {
-            for action in actions {
+        let mut replay_actions = |table: &mut Table, street: ReplayStreet, actions: &[Action]| -> Result<(), PKError> {
+            for (index, action) in actions.iter().enumerate() {
                 if let Some(pa) = action_to_player_action(action) {
                     table.apply_action(action.seat, pa)?;
                 }
+                observe(&ReplayStep { street, index, action }, table);
             }
             Ok(())
         };
@@ -756,7 +804,7 @@ impl HandHistory {
         if let Some(ref streets) = self.streets
             && let Some(ref pre) = streets.preflop
         {
-            replay_actions(&mut table, &pre.actions)?;
+            replay_actions(&mut table, ReplayStreet::Preflop, &pre.actions)?;
         }
 
         if table.is_game_over() {
@@ -780,7 +828,7 @@ impl HandHistory {
             if !flop.actions.is_empty() {
                 table.seats.reset_non_allin_to_yet_to_act();
             }
-            replay_actions(&mut table, &flop.actions)?;
+            replay_actions(&mut table, ReplayStreet::Flop, &flop.actions)?;
 
             if table.is_game_over() {
                 return build_replay_result(table, &self.players, self.results.as_deref());
@@ -796,7 +844,7 @@ impl HandHistory {
                 if !turn.actions.is_empty() {
                     table.seats.reset_non_allin_to_yet_to_act();
                 }
-                replay_actions(&mut table, &turn.actions)?;
+                replay_actions(&mut table, ReplayStreet::Turn, &turn.actions)?;
 
                 if table.is_game_over() {
                     return build_replay_result(table, &self.players, self.results.as_deref());
@@ -812,7 +860,7 @@ impl HandHistory {
                     if !river.actions.is_empty() {
                         table.seats.reset_non_allin_to_yet_to_act();
                     }
-                    replay_actions(&mut table, &river.actions)?;
+                    replay_actions(&mut table, ReplayStreet::River, &river.actions)?;
                 }
             }
         }
@@ -2752,6 +2800,58 @@ fn replay_player_id(entry: &PlayerEntry) -> Uuid {
         .unwrap_or_else(|| Uuid::new_v5(&REPLAY_ID_NAMESPACE, entry.name.as_bytes()))
 }
 
+/// The betting round a [`ReplayStep`] belongs to.
+///
+/// ```
+/// use pkcore::hand_history::ReplayStreet;
+///
+/// assert_eq!("flop", ReplayStreet::Flop.to_string());
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplayStreet {
+    /// Before the flop.
+    Preflop,
+    /// After the first three community cards.
+    Flop,
+    /// After the fourth community card.
+    Turn,
+    /// After the fifth community card.
+    River,
+}
+
+impl std::fmt::Display for ReplayStreet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            ReplayStreet::Preflop => "preflop",
+            ReplayStreet::Flop => "flop",
+            ReplayStreet::Turn => "turn",
+            ReplayStreet::River => "river",
+        };
+        f.write_str(name)
+    }
+}
+
+/// One recorded action as [`HandHistory::replay_with`] applies it.
+///
+/// ```
+/// use pkcore::hand_history::{Action, ActionType, ReplayStep, ReplayStreet};
+///
+/// let action = Action { seat: 1, player_id: None, action: ActionType::Fold,
+///     amount: None, all_in: None, agent: None };
+/// let step = ReplayStep { street: ReplayStreet::Turn, index: 2, action: &action };
+/// assert_eq!(1, step.action.seat);
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ReplayStep<'a> {
+    /// The street the action was recorded on.
+    pub street: ReplayStreet,
+    /// The action's position in that street's `actions` list, from 0.
+    pub index: usize,
+    /// The recorded action.
+    pub action: &'a Action,
+}
+
 /// Result of replaying a [`HandHistory`] through the game engine.
 ///
 /// Returned by [`HandHistory::replay`].
@@ -4182,6 +4282,79 @@ hands:
 
     /// Same scenario as `replay_flop_check_then_bet_then_fold` but loaded via
     /// YAML round-trip to catch any serde deserialization difference.
+    #[test]
+    fn replay_street__displays_in_snake_case() {
+        let names: Vec<String> = [
+            ReplayStreet::Preflop,
+            ReplayStreet::Flop,
+            ReplayStreet::Turn,
+            ReplayStreet::River,
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+        assert_eq!(vec!["preflop", "flop", "turn", "river"], names);
+    }
+
+    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    fn check_bet_fold_hand() -> HandHistory {
+        HandHistory::from_yaml(
+            r"
+hand: { id: replay-with, game: holdem }
+table: { seats: 3, button: 1, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 2, name: A, stack: 3675.0 }
+  - { seat: 4, name: B, stack: 9200.0 }
+  - { seat: 6, name: C, stack: 61075.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: post, amount: 50.0 }
+      - { seat: 4, action: post, amount: 100.0 }
+      - { seat: 6, action: call, amount: 100.0 }
+      - { seat: 2, action: fold }
+      - { seat: 4, action: check }
+  flop:
+    cards: 7♠ Q♦ 8♣
+    actions:
+      - { seat: 4, action: check }
+      - { seat: 6, action: bet, amount: 250.0 }
+      - { seat: 4, action: fold }
+",
+        )
+        .expect("fixture parses")
+    }
+
+    #[test]
+    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    fn replay_with__observes_every_recorded_action_in_order() {
+        let mut seen = Vec::new();
+        check_bet_fold_hand()
+            .replay_with(|step, table| seen.push((step.street, step.index, step.action.seat, table.bet)))
+            .expect("replay succeeds");
+
+        assert_eq!(
+            vec![
+                (ReplayStreet::Preflop, 0, 2, 100),
+                (ReplayStreet::Preflop, 1, 4, 100),
+                (ReplayStreet::Preflop, 2, 6, 100),
+                (ReplayStreet::Preflop, 3, 2, 100),
+                (ReplayStreet::Preflop, 4, 4, 100),
+                (ReplayStreet::Flop, 0, 4, 0),
+                (ReplayStreet::Flop, 1, 6, 250),
+                (ReplayStreet::Flop, 2, 4, 250),
+            ],
+            seen
+        );
+    }
+
+    #[test]
+    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    fn replay_with__returns_the_same_result_as_replay() {
+        let hand = check_bet_fold_hand();
+        assert_eq!(hand.replay(), hand.replay_with(|_, _| {}));
+    }
+
     #[test]
     #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
     fn replay_flop_check_then_bet_then_fold_from_yaml() {

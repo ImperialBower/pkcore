@@ -5,7 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.15.6] - 2026-10-17
+## [0.16.0] - 2026-10-17
+
+### Added
+
+- **`HandHistory::replay_with`** replays a hand like `replay` and calls a
+  closure after each recorded action with a `ReplayStep` (street, position in
+  that street's `actions` list, the action) and the `Table` as it stands. It
+  lets a caller check table state in the middle of a hand, which the final
+  `ReplayResult` cannot show. `replay` now calls it, so there is one replay
+  engine. New public types: `ReplayStep` and `ReplayStreet`.
+- **Defect hands.** `tests/defect_hands.rs` replays every
+  `tests/defects/DEFECT_*.yaml` file. Each file is a normal hand history, named
+  after the defect it reproduces, plus an `expect:` block (table state after a
+  given action) and a `final:` block (consistency and final stacks) that only
+  the runner reads. The first three are `DEFECT_001`, `DEFECT_010` and
+  `DEFECT_027`. The folder is read on every run, so a new file needs no rebuild.
 
 ### Fixed
 

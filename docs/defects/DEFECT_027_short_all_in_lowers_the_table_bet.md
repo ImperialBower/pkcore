@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_027_short_all_in_lowers_the_table_bet.md`  
 **Date:** 2026-10-17  
 **Severity:** High — it can stop a hand  
-**Status:** Fixed in `0.15.6` — see [Resolution](#resolution)  
+**Status:** Fixed in `0.16.0` — see [Resolution](#resolution)  
 **Found by:** the 2026-10-17 automated review in
 [`TECHNICAL_DEBT.md`](../TECHNICAL_DEBT.md)  
 **Affects:** `Table::act_bet` and `Table::act_raise`, up to and including
@@ -70,7 +70,7 @@ assignment harmless, and its test checked only `raise_increment`, not
 
 ## Resolution
 
-**Fixed in `0.15.6`, 2026-10-17.** A new private helper,
+**Fixed in `0.16.0`, 2026-10-17.** A new private helper,
 `Table::record_all_in_wager` in `src/casino/table/actions.rs`, holds the
 all-in rules that `act_all_in` used before:
 

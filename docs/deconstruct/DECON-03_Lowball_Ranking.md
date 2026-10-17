@@ -829,7 +829,7 @@ a regression.
   unpaired rank sets: 329 of 1,286 adjacent pairs are mis-ordered. Evidence is
   extracted to `vectors/lowball-ranking/ladder-divergence.json`. This spec
   follows the *domain rule*, not the enumeration — see SD-02. **Fixed in
-  pkcore 0.15.6** by reordering the enum, recorded as
+  pkcore 0.16.0** by reordering the enum, recorded as
   [DEFECT_026](../defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md).
   The `original_ordinal` values in the vectors describe the code before that
   fix.
