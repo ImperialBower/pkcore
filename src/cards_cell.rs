@@ -296,9 +296,10 @@ impl CardsCell {
     ///
     /// let deck = CardsCell::deck();
     /// let shuffled_deck = deck.shuffle();
-    /// shuffled_deck.shuffle_in_place();
+    /// shuffled_deck.sort_in_place();
     ///
-    /// assert_eq!(shuffled_deck, deck);
+    /// // `==` ignores order, so compare the printed order.
+    /// assert_eq!(shuffled_deck.to_string(), deck.to_string());
     /// ```
     pub fn sort_in_place(&self) {
         let mut internal = self.0.borrow_mut();

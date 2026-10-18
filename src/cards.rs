@@ -42,26 +42,6 @@ use strum::IntoEnumIterator;
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
-    /// This is an example of my stupidity. I want to full the collection of `Cards` with blanks
-    /// so that I can tell what needs to be dealt, but it's a damned `IndexSet`. There will always
-    /// only be one.
-    /// ```
-    /// use pkcore::cards::Cards;
-    ///
-    /// let blanks = Cards::blanks(3);
-    ///
-    /// assert_eq!(blanks.len(), 1);
-    /// assert_eq!(blanks.to_string(), "__");
-    /// ```
-    #[must_use]
-    pub fn blanks(len: usize) -> Self {
-        let mut i: IndexSet<Card> = IndexSet::new();
-        for _ in 0..len {
-            i.insert(Card::BLANK);
-        }
-        Cards(i)
-    }
-
     /// ```
     /// use pkcore::cards::Cards;
     /// use pkcore::deck;
@@ -982,6 +962,12 @@ impl Pile for Cards {
         true
     }
 
+    /// Looks the card up in the `IndexSet` directly. The `Pile` default copies
+    /// every card into a `Vec` first (`DEFECT_039`).
+    fn contains(&self, card: &Card) -> bool {
+        self.0.contains(card)
+    }
+
     fn card_at(self, index: usize) -> Option<Card> {
         self.0.get_index(index).copied()
     }
@@ -994,10 +980,11 @@ impl Pile for Cards {
         Cards(self.0.iter().map(Card::clean).collect())
     }
 
-    /// `Cards` always filters out blank cards, and inherently enforces uniqueness, so this should
-    /// always be true.
+    /// The `IndexSet` keeps the cards unique, so this only checks for a blank.
+    /// `insert` refuses one, but the public field can still hold one
+    /// (`DEFECT_039`).
     fn is_dealt(&self) -> bool {
-        true
+        !self.contains_blank()
     }
 
     /// ```
@@ -1099,6 +1086,24 @@ mod cards_tests {
         let backward = Cards::from_str("Q♠ K♠ A♠").unwrap();
         assert_eq!(forward, backward);
         assert_eq!(hash_of(&forward), hash_of(&backward));
+    }
+
+    /// DEFECT_039: `is_dealt` was hard-coded `true`.
+    #[test]
+    fn is_dealt__false_when_holding_a_blank() {
+        let with_blank = Cards(IndexSet::from([Card::ACE_SPADES, Card::BLANK]));
+        assert!(!with_blank.is_dealt());
+        assert!(Cards::from_str("A♠ K♠").unwrap().is_dealt());
+    }
+
+    /// DEFECT_039: `contains` copied the set into a `Vec` on every call, so
+    /// `deck_minus` copied it 52 times.
+    #[test]
+    fn contains__does_not_allocate() {
+        let deck = Cards::deck();
+        let (found, allocations) = crate::alloc_probe::count_allocs(|| deck.contains(&Card::TREY_CLUBS));
+        assert!(found);
+        assert_eq!(0, allocations);
     }
 
     #[test]

@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking: `Cards::blanks` is removed**
+  ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
+  A `Cards` is a set, so `blanks(n)` always made one blank. Use
+  `BoxedCards::blanks(n)`, which holds `n`.
 - **Breaking: `SolverCache` needs the `persistence` feature**
   ([DEFECT_038](docs/defects/DEFECT_038_solver_cache_in_the_lean_build.md)).
   It reads and writes files, but it was in the lean default build and the
@@ -105,6 +109,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `==` ignores order, but the hash followed it, so `A♠ K♠` and `K♠ A♠` were
   equal with different hashes. The hash now uses the `Bard` mask, one bit per
   card, which is the same in any order.
+- **`Cards::is_dealt` checks for a blank, and `Cards::contains` no longer
+  copies the set**
+  ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
+  `is_dealt` always returned `true`. `contains` used the `Pile` default, which
+  copies every card into a `Vec`, so `Cards::deck_minus` copied the set 52
+  times. `contains` is now a direct set lookup with no allocation.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).
