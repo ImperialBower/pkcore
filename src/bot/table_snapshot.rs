@@ -201,6 +201,7 @@ pub struct TableSnapshot<'a> {
     _stats_lifetime: std::marker::PhantomData<&'a ()>,
 }
 
+#[cfg_attr(not(feature = "player-stats"), allow(clippy::elidable_lifetime_names))]
 impl<'a> TableSnapshot<'a> {
     /// Constructs a `TableSnapshot` from a live `Table` from `seat`'s
     /// perspective.
