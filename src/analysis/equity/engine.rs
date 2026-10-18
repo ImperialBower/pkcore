@@ -219,7 +219,7 @@ fn monte_carlo(
     max_samples: u64,
     seed: u64,
 ) -> Tally {
-    let draw = |i: u64| sample_once(resolved, board_vec, remaining, b, n, seed ^ i);
+    let draw = |i: u64| sample_once(resolved, board_vec, remaining, b, n, sample_seed(seed, i));
 
     #[cfg(feature = "parallel")]
     {
@@ -232,6 +232,13 @@ fn monte_carlo(
     {
         (0..max_samples).filter_map(draw).fold(Tally::zeroed(n), Tally::combine)
     }
+}
+
+/// The RNG seed for sample `i`. `DEFECT_033`: the old `seed ^ i` only
+/// reordered the same seeds for every `seed < 8`. Steps of the 64-bit golden
+/// ratio, an odd constant, keep two request seeds' sample seeds apart.
+fn sample_seed(seed: u64, i: u64) -> u64 {
+    seed.wrapping_add(i.wrapping_mul(0x9E37_79B9_7F4A_7C15))
 }
 
 /// Draws one Monte Carlo sample. Returns `None` if a collision-free assignment
@@ -516,6 +523,31 @@ mod analysis__equity__engine_tests {
         let report = compute(&req).unwrap();
         assert_eq!(report.method, Method::MonteCarlo);
         assert!((report.players[0].equity - 0.82).abs() < 0.02);
+    }
+
+    fn wins_with_seed(seed: u64) -> (u64, u64) {
+        let req = EquityRequest {
+            players: vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)],
+            board: Board::default(),
+            opts: EquityOptions {
+                exact_threshold: 0, // force Monte Carlo
+                max_samples: 2_000,
+                seed: Some(seed),
+            },
+        };
+        let report = compute(&req).unwrap();
+        (report.players[0].wins, report.players[1].wins)
+    }
+
+    /// `DEFECT_033`: `seed ^ i` made seeds 0 to 7 draw the same sample set.
+    #[test]
+    fn compute__small_seeds_draw_different_samples() {
+        let results: Vec<(u64, u64)> = (0..8).map(wins_with_seed).collect();
+        for (a, first) in results.iter().enumerate() {
+            for (b, second) in results.iter().enumerate().skip(a + 1) {
+                assert_ne!(first, second, "seeds {a} and {b} gave the same result");
+            }
+        }
     }
 
     #[test]

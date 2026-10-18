@@ -219,7 +219,7 @@ The ones that read as more than cleanup:
 6. ~~**`outs` knob scores any made hand ahead of the median as ~100% equity.**~~
    — **fixed 2026-10-18** in `0.16.0`, [`DEFECT_032`](defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md).
 
-Plus: MC seeds 0–7 identical (`src/analysis/equity/engine.rs:222`),
+Plus: ~~MC seeds 0–7 identical~~ (fixed 2026-10-18, [`DEFECT_033`](defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)),
 `Five::is_straight` true for `9999 5` (`src/arrays/five.rs:95-99`),
 `Card::from_str("AsKd")` is `Ok(A♠)` (`src/card.rs:307-334`), `Eval` and
 `Cards` break the Hash/Eq contract, `SolverCache` does `std::fs` in the lean

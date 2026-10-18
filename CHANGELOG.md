@@ -67,6 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which the rule of four turned into 100% equity, so a bot with `outs: on`
   played any hand ahead of the median as the nuts. A hand already ahead now has
   0 outs and keeps its made-strength score.
+- **Monte Carlo seeds 0 to 7 no longer give the same equity**
+  ([DEFECT_033](docs/defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)).
+  Sample `i` was seeded with `seed ^ i`, which for a seed below 8 only
+  reorders the same sample seeds. So seeds 0 to 7, including the default 0,
+  drew the same samples. Sample seeds now step by the 64-bit golden ratio.
+  Every seeded Monte Carlo result changes; exact enumeration does not.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).
