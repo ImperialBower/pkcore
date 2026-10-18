@@ -188,7 +188,7 @@ impl RuleBasedDecider {
         // A no-op when the knob is Off or no registry is present, so opponent
         // identity never leaks into the decision.
         #[cfg(feature = "player-stats")]
-        let exploit_adjusted = exploit_profile(profile, state);
+        let exploit_adjusted = Self::exploit_profile(profile, state);
         #[cfg(feature = "player-stats")]
         let profile: &BotProfile = exploit_adjusted.as_deref().unwrap_or(profile);
 
@@ -209,7 +209,7 @@ impl RuleBasedDecider {
                 // raise. Fall through to the equity logic below rather than
                 // shoving — a check-raise the player cannot afford is not an
                 // all-in commitment decision.
-                if let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                if let Some(raise_to) = Self::sized_raise_to(state, strategy, rng)
                     && raise_to > state.current_bet
                 {
                     return PlayerAction::Raise(raise_to);
@@ -218,7 +218,7 @@ impl RuleBasedDecider {
         }
 
         // When hole cards are available, use equity-based decisions.
-        if let Some(equity) = hand_equity(profile, state, rng) {
+        if let Some(equity) = Self::hand_equity(profile, state, rng) {
             if state.to_call > 0 {
                 if state.to_call >= chips {
                     return if equity > 0.5 {
@@ -244,7 +244,7 @@ impl RuleBasedDecider {
                         // DEFECT_007: with a strong hand and a stack too short
                         // for a legal raise, all-in *is* the raise — the whole
                         // stack is less than one minimum increment anyway.
-                        match sized_raise_to(state, strategy, rng) {
+                        match Self::sized_raise_to(state, strategy, rng) {
                             Some(raise_to) if raise_to > state.current_bet => {
                                 return PlayerAction::Raise(raise_to);
                             }
@@ -263,7 +263,7 @@ impl RuleBasedDecider {
                     // bot behaviour and re-open the chip-concentration dynamics
                     // recorded in DEFECT_002.
                     if bluff_roll < strategy.bluff_frequency.as_f64()
-                        && let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                        && let Some(raise_to) = Self::sized_raise_to(state, strategy, rng)
                         && raise_to > state.current_bet
                     {
                         return PlayerAction::Raise(raise_to);
@@ -279,11 +279,13 @@ impl RuleBasedDecider {
                 // for the same DEFECT_002 reason a bluff-raise does not shove.
                 let value_threshold = strategy.effective_value_threshold();
                 if equity > value_threshold {
-                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::AllIn, |n| voluntary_open(state, n))
+                    Self::sized_bet_amount(state, strategy, rng)
+                        .map_or(PlayerAction::AllIn, |n| Self::voluntary_open(state, n))
                 } else if !state.phase.is_preflop() {
                     let bluff_roll: f64 = rng.random();
                     if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
+                        Self::sized_bet_amount(state, strategy, rng)
+                            .map_or(PlayerAction::Check, |n| Self::voluntary_open(state, n))
                     } else {
                         PlayerAction::Check
                     }
@@ -306,7 +308,7 @@ impl RuleBasedDecider {
                 // decision below. Hole cards are unknown on this path, so there
                 // is no read strong enough to justify shoving instead.
                 if roll < aggr * 0.25
-                    && let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                    && let Some(raise_to) = Self::sized_raise_to(state, strategy, rng)
                     && raise_to > state.current_bet
                 {
                     return PlayerAction::Raise(raise_to);
@@ -328,12 +330,14 @@ impl RuleBasedDecider {
                 // DEFECT_007: hole cards are unknown here, so an unsizeable bet
                 // checks rather than shoving on no information.
                 if roll < bet_threshold {
-                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
+                    Self::sized_bet_amount(state, strategy, rng)
+                        .map_or(PlayerAction::Check, |n| Self::voluntary_open(state, n))
                 } else if !state.phase.is_preflop() {
                     let bluff_rate = strategy.bluff_frequency.as_f64();
                     let roll_bluff: f64 = rng.random();
                     if roll_bluff < bluff_rate {
-                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
+                        Self::sized_bet_amount(state, strategy, rng)
+                            .map_or(PlayerAction::Check, |n| Self::voluntary_open(state, n))
                     } else {
                         PlayerAction::Check
                     }
@@ -477,97 +481,368 @@ impl BotDecider for JokerDecider {
         RuleBasedDecider.decide_seeded(&active, state, rng)
     }
 }
+impl RuleBasedDecider {
+    /// Computes a normalized equity proxy for the bot's hand.
+    ///
+    /// Returns `None` when hole cards have not been dealt yet, which triggers the
+    /// aggression-factor fallback path in `decide_with_rng`.
+    ///
+    /// **Preflop:** rolls against the combo's `:f` frequency weight from the
+    /// `open_raise` range. A hand at weight `0.7` plays as `1.0` equity 70% of
+    /// the time and `0.0` the other 30%, producing a mixed strategy.
+    ///
+    /// **Postflop:** evaluates the best 5-of-N hand from the combined hole cards
+    /// and board, then normalises the `hand_rank_value` to `[0.0, 1.0]` where
+    /// `1.0` is a royal flush and `0.0` is 7-high nothing.
+    fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapshot, rng: &mut R) -> Option<f64> {
+        if state.hole_cards.is_empty() {
+            return None;
+        }
+        if state.phase.is_preflop() {
+            // preflop_charts knob: a real equity from the exact heads-up chart or
+            // the sampled engine. `None` means "no chart answer" — fall through.
+            if let Some(equity) = crate::bot::preflop_equity::preflop_equity(profile, state, rng) {
+                return Some(equity);
+            }
+            // Ranges knob: position-aware playbook lookup or the flat range.
+            let freq = Self::preflop_open_frequency(profile, state);
+            return Some(if rng.random::<f64>() < freq { 1.0 } else { 0.0 });
+        }
+        let total = state.hole_cards.len() + state.board.len();
+        // EPIC-32 Phase 8: partial-hand heuristic for Stud-family mid-hand
+        // (3rd / 4th street) where total is 3 or 4. Returns a coarse strength
+        // bucket so the bot doesn't fall through to aggression-only logic.
+        // Gated on `stud_street_index().is_some()` so NLHE/FLHE/PLO are
+        // unaffected.
+        if state.phase.stud_street_index().is_some() && matches!(total, 3 | 4) {
+            return Some(Self::stud_partial_equity(state));
+        }
+        // Equity knob: real multi-way engine (fast / exact) or the hand-rank proxy.
+        // Fast/Exact fall back to the proxy when the real engine can't answer (no
+        // active villain, non-NLHE hole size, or the `equity` feature is disabled).
+        match profile.decision.equity {
+            // outs knob: the proxy is blind to draws, so give it an out count.
+            // The engine paths already enumerate runouts and price draws, so a
+            // bonus there would double-count.
+            EquityMode::Off => Self::proxy_equity(state).map(|proxy| Self::apply_outs(profile, state, proxy)),
+            EquityMode::Fast { samples } => {
+                Self::real_equity(profile, state, u64::from(samples), rng).or_else(|| Self::proxy_equity(state))
+            }
+            EquityMode::Exact => {
+                Self::real_equity(profile, state, EXACT_EQUITY_SAMPLES, rng).or_else(|| Self::proxy_equity(state))
+            }
+        }
+    }
+
+    /// Raises the proxy to the hero's draw equity when the `outs` knob is on.
+    ///
+    /// Takes the better of the two rather than adding them: a made hand keeps its
+    /// proxy score, and a drawing hand stops being valued as though it had missed.
+    /// A no-op when the knob is `Off`, when the street has no cards left to come,
+    /// or when no villain range resolves.
+    fn apply_outs(profile: &BotProfile, state: &TableSnapshot, proxy: f64) -> f64 {
+        use crate::arrays::two::Two;
+        use crate::bot::decision_config::Toggle;
+        use std::str::FromStr;
+
+        if profile.decision.outs != Toggle::On {
+            return proxy;
+        }
+        let cards_to_come = match state.board.len() {
+            3 => 2,
+            4 => 1,
+            _ => return proxy,
+        };
+        let Ok(hero) = Two::from_str(&state.hole_cards.to_string()) else {
+            return proxy;
+        };
+        // The field's range, taken from the first active villain. Multi-way this
+        // is a simplification: every villain is assumed to hold the same range.
+        let Some(range) = state
+            .stacks
+            .iter()
+            .enumerate()
+            .find(|(_, villain)| villain.is_active && villain.seat != state.seat)
+            .and_then(|(index, _)| crate::bot::range_model::villain_range(profile, state, index))
+        else {
+            return proxy;
+        };
+        let Some(outs) = crate::bot::draw_equity::outs_against(hero, &state.board, &range) else {
+            return proxy;
+        };
+        proxy.max(crate::bot::draw_equity::outs_equity(outs, cards_to_come))
+    }
+
+    /// Postflop hand-rank proxy: normalise the best 5-of-N `hand_rank_value` to
+    /// `[0.0, 1.0]` where `1.0` is a royal flush and `0.0` is 7-high nothing. This
+    /// is the pre-EPIC-36 postflop equity.
+    fn proxy_equity(state: &TableSnapshot) -> Option<f64> {
+        let combined = format!("{} {}", state.hole_cards, state.board);
+        let hrv = match state.hole_cards.len() + state.board.len() {
+            5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
+            6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
+            7 => combined.parse::<Seven>().ok().map(|h| h.hand_rank_value()),
+            _ => None,
+        }?;
+        Some(1.0 - f64::from(hrv) / 7462.0)
+    }
+
+    /// Resolves the preflop open-raise frequency for the hero's hole cards.
+    ///
+    /// With `ranges = position_aware` and a playbook entry for the current seat
+    /// count and position, the frequency comes from the position-aware range;
+    /// otherwise it falls back to the flat `range_strategy.open_raise`. The
+    /// position-aware range is reconstructed into a range string and evaluated
+    /// through the proven [`RangeStrategy::open_raise_frequency`] so that
+    /// plus-notation expansion (`QQ+`) and mixed-frequency suffixes (`JJ:0.95`)
+    /// are handled identically to the flat path.
+    fn preflop_open_frequency(profile: &BotProfile, state: &TableSnapshot) -> f64 {
+        if matches!(profile.decision.ranges, RangeMode::PositionAware)
+            && let Some(pos) = state.position()
+            && let Some(range) = profile.range_for(state.seat_count, pos, "open_raise")
+        {
+            let range_str = range
+                .combos()
+                .iter()
+                .map(|cw| {
+                    if (cw.frequency - 1.0).abs() < f64::EPSILON {
+                        cw.range.clone()
+                    } else {
+                        format!("{}:{}", cw.range, cw.frequency)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            return RangeStrategy::new(range_str, "", "", 0).open_raise_frequency(&state.hole_cards);
+        }
+        profile.range_strategy.open_raise_frequency(&state.hole_cards)
+    }
+
+    /// Real multi-way equity for the hero via the [`crate::analysis::equity`]
+    /// engine: hero as `Exact`, each active villain as whatever
+    /// [`villain_specs`](crate::bot::range_model::villain_specs) resolves — a
+    /// position range when the profile sets `ranges: position_aware`, `Random`
+    /// otherwise. Returns `None` (so the caller falls back to the proxy) when the
+    /// hero is not a 2-card NLHE hand, no active villain remains, or the seat
+    /// count is out of range.
+    #[cfg(feature = "equity")]
+    fn real_equity<R: rand::Rng + ?Sized>(
+        profile: &BotProfile,
+        state: &TableSnapshot,
+        max_samples: u64,
+        rng: &mut R,
+    ) -> Option<f64> {
+        use crate::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
+        use crate::arrays::two::Two;
+        use crate::play::board::Board;
+        use std::str::FromStr;
+
+        if state.hole_cards.len() != 2 {
+            return None;
+        }
+        let hero = Two::from_str(&state.hole_cards.to_string()).ok()?;
+        let board = Board::try_from(state.board.clone()).ok()?;
+        let villains = crate::bot::range_model::villain_specs(profile, state);
+        let total = villains.len() + 1;
+        if !(2..=10).contains(&total) {
+            return None;
+        }
+        let mut players = Vec::with_capacity(total);
+        players.push(PlayerSpec::Exact(hero));
+        players.extend(villains);
+        let opts = EquityOptions {
+            max_samples,
+            seed: Some(rng.random::<u64>()),
+            ..EquityOptions::default()
+        };
+        let report = EquityRequest { players, board, opts }.compute().ok()?;
+        report.players.first().map(|p| p.equity)
+    }
+
+    /// Feature-off stub: without the `equity` feature the real engine is absent,
+    /// so the equity knob transparently falls back to the proxy.
+    #[cfg(not(feature = "equity"))]
+    fn real_equity<R: rand::Rng + ?Sized>(
+        _profile: &BotProfile,
+        _state: &TableSnapshot,
+        _max_samples: u64,
+        _rng: &mut R,
+    ) -> Option<f64> {
+        None
+    }
+
+    /// Exploit knob: returns an opponent-adjusted profile when the knob is enabled
+    /// **and** an opponent-stats registry is attached, otherwise `None`.
+    ///
+    /// `Light` uses the default sample gates (adjusts only once opponents are
+    /// well-sampled); `Heavy` lowers the gates so it adjusts sooner and more
+    /// readily. The adjustment reads only aggregate opponent tendencies via
+    /// [`crate::bot::exploit::adjust_profile`] — never opponent identity — so the
+    /// knob is safe on any run path. The `DecisionConfig` is carried through the
+    /// clone, so the other knobs are preserved on the adjusted profile.
+    #[cfg(feature = "player-stats")]
+    fn exploit_profile(profile: &BotProfile, state: &TableSnapshot) -> Option<Box<BotProfile>> {
+        use crate::bot::decision_config::ExploitMode;
+        use crate::bot::exploit::{ExploitConfig, adjust_profile};
+
+        let config = match profile.decision.exploit {
+            ExploitMode::Off => return None,
+            ExploitMode::Light => ExploitConfig::default(),
+            ExploitMode::Heavy => ExploitConfig {
+                min_hands_light: 15,
+                min_hands_heavy: 25,
+                ..ExploitConfig::default()
+            },
+        };
+        state.opponent_stats?;
+        Some(Box::new(adjust_profile(profile, state, &config)))
+    }
+
+    /// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
+    /// mid-hand (3rd / 4th street). Returns a value in `[0.0, 1.0]`. Not a
+    /// real Monte Carlo equity — coarse "pair / trips / high cards"
+    /// classification. v1.1 polish item.
+    fn stud_partial_equity(state: &TableSnapshot) -> f64 {
+        use std::collections::HashMap;
+        use std::str::FromStr;
+        // Parse the bot's hole cards into Card values.
+        let cards_str = state.hole_cards.to_string();
+        let cards: Vec<crate::card::Card> = cards_str
+            .split_whitespace()
+            .filter_map(|tok| crate::card::Card::from_str(tok).ok())
+            .collect();
+        if cards.is_empty() {
+            return 0.25;
+        }
+        let mut rank_count: HashMap<u8, u8> = HashMap::new();
+        for c in &cards {
+            *rank_count.entry(c.get_rank() as u8).or_insert(0) += 1;
+        }
+        let max_count = rank_count.values().copied().max().unwrap_or(0);
+        let pair_count = rank_count.values().filter(|&&v| v == 2).count();
+        match (cards.len(), max_count) {
+            (3, 3) => 0.90,                    // trips on 3rd street — premium
+            (3, 2) => 0.65,                    // pair on 3rd
+            (4, 4) => 0.98,                    // quads on 4th — virtual lock
+            (4, 3) => 0.85,                    // trips on 4th
+            (4, 2) if pair_count >= 2 => 0.75, // two pair on 4th
+            (4, 2) => 0.55,                    // single pair on 4th
+            _ => {
+                // No pair: rank by highest card present. Aces ≈ 0.45,
+                // 2-rank ≈ 0.25. Linear interpolation keeps the value tame.
+                let top = cards.iter().map(|c| c.get_rank() as u8).max().unwrap_or(2);
+                // top is 2..=14
+                let t = f64::from(top.saturating_sub(2)) / 12.0; // 0.0..=1.0
+                0.20 + 0.25 * t
+            }
+        }
+    }
+
+    /// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
+    /// falling back to half-pot `(1, 2)` when the list is empty.
+    fn pick_bet_size<R: rand::Rng + ?Sized>(strategy: &BettingStrategy, rng: &mut R) -> (usize, usize) {
+        let sizes = &strategy.preferred_bet_sizes;
+        if sizes.is_empty() {
+            return (1, 2);
+        }
+        let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
+        (n as usize, d as usize)
+    }
+
+    /// EPIC-30 Phase 6: returns the tier increment (`small_bet` or `big_bet`)
+    /// for the current street if the table runs a Fixed-Limit structure.
+    /// `None` for No-Limit and Pot-Limit, indicating the caller should fall
+    /// back to pot-fraction sizing.
+    fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
+        match state.betting_structure {
+            BettingStructure::FixedLimit { small_bet, big_bet, .. } => Some(match state.bet_tier {
+                BetTier::Small => small_bet,
+                BetTier::Big => big_bet,
+            }),
+            _ => None,
+        }
+    }
+
+    /// EPIC-30 Phase 6: computes a raise target ("raise to N total") that's
+    /// legal under the current betting structure, or `None` when **no voluntary
+    /// raise of any size is legal** — the stack cannot reach the minimum.
+    ///
+    /// `DEFECT_007`: the previous version clamped with `.min(state.my_chips)`.
+    /// That is a unit error as well as a clamp-order error. `my_chips` is the
+    /// stack *behind*; a raise-to is measured against `current_bet`, which
+    /// includes chips this player already committed this street. The ceiling is
+    /// therefore [`TableSnapshot::max_raise_to`], and when it falls below
+    /// [`TableSnapshot::min_raise_to`] the correct answer is `None`, not a
+    /// clamped-down amount the engine rejects with
+    /// [`PKError::InsufficientIncrement`](crate::errors::PKError::InsufficientIncrement).
+    ///
+    /// Returning `Option` rather than substituting silently is deliberate: it
+    /// forces each call site to state what it does instead, because the right
+    /// substitute differs (all-in for a value raise, fold or call for a bluff).
+    fn sized_raise_to<R: rand::Rng + ?Sized>(
+        state: &TableSnapshot,
+        strategy: &BettingStrategy,
+        rng: &mut R,
+    ) -> Option<usize> {
+        let (floor, ceiling) = state.raise_bounds()?;
+        // Fixed-Limit has exactly one legal raise-to, so there is nothing to size.
+        if Self::fixed_limit_increment(state).is_some() {
+            return Some(floor);
+        }
+        let (n, d) = Self::pick_bet_size(strategy, rng);
+        Some(
+            state
+                .current_bet
+                .saturating_add(state.pot.saturating_mul(n) / d)
+                .clamp(floor, ceiling),
+        )
+    }
+
+    /// EPIC-30 Phase 6: computes a bet amount (no current bet to call) that's
+    /// legal under the current betting structure, or `None` when no legal
+    /// voluntary bet exists.
+    ///
+    /// `DEFECT_007`: an opening bet is a raise-from-zero — `Table::act_bet`
+    /// validates it through the very same `validate_raise` an actual raise goes
+    /// through — so it shares the window and the same infeasibility case. The
+    /// old `.max(big_blind).min(my_chips)` pair could produce an amount below
+    /// the minimum for the same reason `sized_raise_to` could.
+    /// Wraps a voluntary opening amount in the variant the engine advertises.
+    ///
+    /// `DEFECT_007`: `to_call == 0` does not mean the betting is open. On the
+    /// big-blind option a bet already stands and this seat has merely matched it,
+    /// so re-opening is a **`Raise`**, not a **`Bet`** —
+    /// [`Table::legal_actions`](crate::casino::table::Table::legal_actions) says so
+    /// in as many words.
+    ///
+    /// `Table::act_bet` accepts either, which is why this never surfaced as a
+    /// rejection, but the two are not interchangeable: a `Bet` records its
+    /// *absolute* amount as the raise increment rather than the delta over the
+    /// standing bet (doubling the next player's minimum re-raise), does not count
+    /// toward the per-street raise cap, and writes the wrong event to the log.
+    fn voluntary_open(state: &TableSnapshot, amount: usize) -> PlayerAction {
+        if state.current_bet == 0 {
+            PlayerAction::Bet(amount)
+        } else {
+            PlayerAction::Raise(amount)
+        }
+    }
+
+    fn sized_bet_amount<R: rand::Rng + ?Sized>(
+        state: &TableSnapshot,
+        strategy: &BettingStrategy,
+        rng: &mut R,
+    ) -> Option<usize> {
+        let (floor, ceiling) = state.raise_bounds()?;
+        if Self::fixed_limit_increment(state).is_some() {
+            return Some(floor);
+        }
+        let (n, d) = Self::pick_bet_size(strategy, rng);
+        Some((state.pot.saturating_mul(n) / d).clamp(floor, ceiling))
+    }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Computes a normalized equity proxy for the bot's hand.
-///
-/// Returns `None` when hole cards have not been dealt yet, which triggers the
-/// aggression-factor fallback path in `decide_with_rng`.
-///
-/// **Preflop:** rolls against the combo's `:f` frequency weight from the
-/// `open_raise` range. A hand at weight `0.7` plays as `1.0` equity 70% of
-/// the time and `0.0` the other 30%, producing a mixed strategy.
-///
-/// **Postflop:** evaluates the best 5-of-N hand from the combined hole cards
-/// and board, then normalises the `hand_rank_value` to `[0.0, 1.0]` where
-/// `1.0` is a royal flush and `0.0` is 7-high nothing.
-fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapshot, rng: &mut R) -> Option<f64> {
-    if state.hole_cards.is_empty() {
-        return None;
-    }
-    if state.phase.is_preflop() {
-        // preflop_charts knob: a real equity from the exact heads-up chart or
-        // the sampled engine. `None` means "no chart answer" — fall through.
-        if let Some(equity) = crate::bot::preflop_equity::preflop_equity(profile, state, rng) {
-            return Some(equity);
-        }
-        // Ranges knob: position-aware playbook lookup or the flat range.
-        let freq = preflop_open_frequency(profile, state);
-        return Some(if rng.random::<f64>() < freq { 1.0 } else { 0.0 });
-    }
-    let total = state.hole_cards.len() + state.board.len();
-    // EPIC-32 Phase 8: partial-hand heuristic for Stud-family mid-hand
-    // (3rd / 4th street) where total is 3 or 4. Returns a coarse strength
-    // bucket so the bot doesn't fall through to aggression-only logic.
-    // Gated on `stud_street_index().is_some()` so NLHE/FLHE/PLO are
-    // unaffected.
-    if state.phase.stud_street_index().is_some() && matches!(total, 3 | 4) {
-        return Some(stud_partial_equity(state));
-    }
-    // Equity knob: real multi-way engine (fast / exact) or the hand-rank proxy.
-    // Fast/Exact fall back to the proxy when the real engine can't answer (no
-    // active villain, non-NLHE hole size, or the `equity` feature is disabled).
-    match profile.decision.equity {
-        // outs knob: the proxy is blind to draws, so give it an out count.
-        // The engine paths already enumerate runouts and price draws, so a
-        // bonus there would double-count.
-        EquityMode::Off => proxy_equity(state).map(|proxy| apply_outs(profile, state, proxy)),
-        EquityMode::Fast { samples } => {
-            real_equity(profile, state, u64::from(samples), rng).or_else(|| proxy_equity(state))
-        }
-        EquityMode::Exact => real_equity(profile, state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state)),
-    }
-}
-
-/// Raises the proxy to the hero's draw equity when the `outs` knob is on.
-///
-/// Takes the better of the two rather than adding them: a made hand keeps its
-/// proxy score, and a drawing hand stops being valued as though it had missed.
-/// A no-op when the knob is `Off`, when the street has no cards left to come,
-/// or when no villain range resolves.
-fn apply_outs(profile: &BotProfile, state: &TableSnapshot, proxy: f64) -> f64 {
-    use crate::arrays::two::Two;
-    use crate::bot::decision_config::Toggle;
-    use std::str::FromStr;
-
-    if profile.decision.outs != Toggle::On {
-        return proxy;
-    }
-    let cards_to_come = match state.board.len() {
-        3 => 2,
-        4 => 1,
-        _ => return proxy,
-    };
-    let Ok(hero) = Two::from_str(&state.hole_cards.to_string()) else {
-        return proxy;
-    };
-    // The field's range, taken from the first active villain. Multi-way this
-    // is a simplification: every villain is assumed to hold the same range.
-    let Some(range) = state
-        .stacks
-        .iter()
-        .enumerate()
-        .find(|(_, villain)| villain.is_active && villain.seat != state.seat)
-        .and_then(|(index, _)| crate::bot::range_model::villain_range(profile, state, index))
-    else {
-        return proxy;
-    };
-    let Some(outs) = crate::bot::draw_equity::outs_against(hero, &state.board, &range) else {
-        return proxy;
-    };
-    proxy.max(crate::bot::draw_equity::outs_equity(outs, cards_to_come))
-}
 
 /// Sample budget used for `EquityMode::Exact`.
 ///
@@ -575,274 +850,6 @@ fn apply_outs(profile: &BotProfile, state: &TableSnapshot, proxy: f64) -> f64 {
 /// "exact" is realised as a high-budget seeded Monte Carlo that approaches the
 /// true multi-way equity. See the EPIC-36 corrigendum.
 const EXACT_EQUITY_SAMPLES: u64 = 100_000;
-
-/// Postflop hand-rank proxy: normalise the best 5-of-N `hand_rank_value` to
-/// `[0.0, 1.0]` where `1.0` is a royal flush and `0.0` is 7-high nothing. This
-/// is the pre-EPIC-36 postflop equity.
-fn proxy_equity(state: &TableSnapshot) -> Option<f64> {
-    let combined = format!("{} {}", state.hole_cards, state.board);
-    let hrv = match state.hole_cards.len() + state.board.len() {
-        5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
-        6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
-        7 => combined.parse::<Seven>().ok().map(|h| h.hand_rank_value()),
-        _ => None,
-    }?;
-    Some(1.0 - f64::from(hrv) / 7462.0)
-}
-
-/// Resolves the preflop open-raise frequency for the hero's hole cards.
-///
-/// With `ranges = position_aware` and a playbook entry for the current seat
-/// count and position, the frequency comes from the position-aware range;
-/// otherwise it falls back to the flat `range_strategy.open_raise`. The
-/// position-aware range is reconstructed into a range string and evaluated
-/// through the proven [`RangeStrategy::open_raise_frequency`] so that
-/// plus-notation expansion (`QQ+`) and mixed-frequency suffixes (`JJ:0.95`)
-/// are handled identically to the flat path.
-fn preflop_open_frequency(profile: &BotProfile, state: &TableSnapshot) -> f64 {
-    if matches!(profile.decision.ranges, RangeMode::PositionAware)
-        && let Some(pos) = state.position()
-        && let Some(range) = profile.range_for(state.seat_count, pos, "open_raise")
-    {
-        let range_str = range
-            .combos()
-            .iter()
-            .map(|cw| {
-                if (cw.frequency - 1.0).abs() < f64::EPSILON {
-                    cw.range.clone()
-                } else {
-                    format!("{}:{}", cw.range, cw.frequency)
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(", ");
-        return RangeStrategy::new(range_str, "", "", 0).open_raise_frequency(&state.hole_cards);
-    }
-    profile.range_strategy.open_raise_frequency(&state.hole_cards)
-}
-
-/// Real multi-way equity for the hero via the [`crate::analysis::equity`]
-/// engine: hero as `Exact`, each active villain as whatever
-/// [`villain_specs`](crate::bot::range_model::villain_specs) resolves — a
-/// position range when the profile sets `ranges: position_aware`, `Random`
-/// otherwise. Returns `None` (so the caller falls back to the proxy) when the
-/// hero is not a 2-card NLHE hand, no active villain remains, or the seat
-/// count is out of range.
-#[cfg(feature = "equity")]
-fn real_equity<R: rand::Rng + ?Sized>(
-    profile: &BotProfile,
-    state: &TableSnapshot,
-    max_samples: u64,
-    rng: &mut R,
-) -> Option<f64> {
-    use crate::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
-    use crate::arrays::two::Two;
-    use crate::play::board::Board;
-    use std::str::FromStr;
-
-    if state.hole_cards.len() != 2 {
-        return None;
-    }
-    let hero = Two::from_str(&state.hole_cards.to_string()).ok()?;
-    let board = Board::try_from(state.board.clone()).ok()?;
-    let villains = crate::bot::range_model::villain_specs(profile, state);
-    let total = villains.len() + 1;
-    if !(2..=10).contains(&total) {
-        return None;
-    }
-    let mut players = Vec::with_capacity(total);
-    players.push(PlayerSpec::Exact(hero));
-    players.extend(villains);
-    let opts = EquityOptions {
-        max_samples,
-        seed: Some(rng.random::<u64>()),
-        ..EquityOptions::default()
-    };
-    let report = EquityRequest { players, board, opts }.compute().ok()?;
-    report.players.first().map(|p| p.equity)
-}
-
-/// Feature-off stub: without the `equity` feature the real engine is absent,
-/// so the equity knob transparently falls back to the proxy.
-#[cfg(not(feature = "equity"))]
-fn real_equity<R: rand::Rng + ?Sized>(
-    _profile: &BotProfile,
-    _state: &TableSnapshot,
-    _max_samples: u64,
-    _rng: &mut R,
-) -> Option<f64> {
-    None
-}
-
-/// Exploit knob: returns an opponent-adjusted profile when the knob is enabled
-/// **and** an opponent-stats registry is attached, otherwise `None`.
-///
-/// `Light` uses the default sample gates (adjusts only once opponents are
-/// well-sampled); `Heavy` lowers the gates so it adjusts sooner and more
-/// readily. The adjustment reads only aggregate opponent tendencies via
-/// [`crate::bot::exploit::adjust_profile`] — never opponent identity — so the
-/// knob is safe on any run path. The `DecisionConfig` is carried through the
-/// clone, so the other knobs are preserved on the adjusted profile.
-#[cfg(feature = "player-stats")]
-fn exploit_profile(profile: &BotProfile, state: &TableSnapshot) -> Option<Box<BotProfile>> {
-    use crate::bot::decision_config::ExploitMode;
-    use crate::bot::exploit::{ExploitConfig, adjust_profile};
-
-    let config = match profile.decision.exploit {
-        ExploitMode::Off => return None,
-        ExploitMode::Light => ExploitConfig::default(),
-        ExploitMode::Heavy => ExploitConfig {
-            min_hands_light: 15,
-            min_hands_heavy: 25,
-            ..ExploitConfig::default()
-        },
-    };
-    state.opponent_stats?;
-    Some(Box::new(adjust_profile(profile, state, &config)))
-}
-
-/// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
-/// mid-hand (3rd / 4th street). Returns a value in `[0.0, 1.0]`. Not a
-/// real Monte Carlo equity — coarse "pair / trips / high cards"
-/// classification. v1.1 polish item.
-fn stud_partial_equity(state: &TableSnapshot) -> f64 {
-    use std::collections::HashMap;
-    use std::str::FromStr;
-    // Parse the bot's hole cards into Card values.
-    let cards_str = state.hole_cards.to_string();
-    let cards: Vec<crate::card::Card> = cards_str
-        .split_whitespace()
-        .filter_map(|tok| crate::card::Card::from_str(tok).ok())
-        .collect();
-    if cards.is_empty() {
-        return 0.25;
-    }
-    let mut rank_count: HashMap<u8, u8> = HashMap::new();
-    for c in &cards {
-        *rank_count.entry(c.get_rank() as u8).or_insert(0) += 1;
-    }
-    let max_count = rank_count.values().copied().max().unwrap_or(0);
-    let pair_count = rank_count.values().filter(|&&v| v == 2).count();
-    match (cards.len(), max_count) {
-        (3, 3) => 0.90,                    // trips on 3rd street — premium
-        (3, 2) => 0.65,                    // pair on 3rd
-        (4, 4) => 0.98,                    // quads on 4th — virtual lock
-        (4, 3) => 0.85,                    // trips on 4th
-        (4, 2) if pair_count >= 2 => 0.75, // two pair on 4th
-        (4, 2) => 0.55,                    // single pair on 4th
-        _ => {
-            // No pair: rank by highest card present. Aces ≈ 0.45,
-            // 2-rank ≈ 0.25. Linear interpolation keeps the value tame.
-            let top = cards.iter().map(|c| c.get_rank() as u8).max().unwrap_or(2);
-            // top is 2..=14
-            let t = f64::from(top.saturating_sub(2)) / 12.0; // 0.0..=1.0
-            0.20 + 0.25 * t
-        }
-    }
-}
-
-/// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
-/// falling back to half-pot `(1, 2)` when the list is empty.
-fn pick_bet_size<R: rand::Rng + ?Sized>(strategy: &BettingStrategy, rng: &mut R) -> (usize, usize) {
-    let sizes = &strategy.preferred_bet_sizes;
-    if sizes.is_empty() {
-        return (1, 2);
-    }
-    let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
-    (n as usize, d as usize)
-}
-
-/// EPIC-30 Phase 6: returns the tier increment (`small_bet` or `big_bet`)
-/// for the current street if the table runs a Fixed-Limit structure.
-/// `None` for No-Limit and Pot-Limit, indicating the caller should fall
-/// back to pot-fraction sizing.
-fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
-    match state.betting_structure {
-        BettingStructure::FixedLimit { small_bet, big_bet, .. } => Some(match state.bet_tier {
-            BetTier::Small => small_bet,
-            BetTier::Big => big_bet,
-        }),
-        _ => None,
-    }
-}
-
-/// EPIC-30 Phase 6: computes a raise target ("raise to N total") that's
-/// legal under the current betting structure, or `None` when **no voluntary
-/// raise of any size is legal** — the stack cannot reach the minimum.
-///
-/// `DEFECT_007`: the previous version clamped with `.min(state.my_chips)`.
-/// That is a unit error as well as a clamp-order error. `my_chips` is the
-/// stack *behind*; a raise-to is measured against `current_bet`, which
-/// includes chips this player already committed this street. The ceiling is
-/// therefore [`TableSnapshot::max_raise_to`], and when it falls below
-/// [`TableSnapshot::min_raise_to`] the correct answer is `None`, not a
-/// clamped-down amount the engine rejects with
-/// [`PKError::InsufficientIncrement`](crate::errors::PKError::InsufficientIncrement).
-///
-/// Returning `Option` rather than substituting silently is deliberate: it
-/// forces each call site to state what it does instead, because the right
-/// substitute differs (all-in for a value raise, fold or call for a bluff).
-fn sized_raise_to<R: rand::Rng + ?Sized>(
-    state: &TableSnapshot,
-    strategy: &BettingStrategy,
-    rng: &mut R,
-) -> Option<usize> {
-    let (floor, ceiling) = state.raise_bounds()?;
-    // Fixed-Limit has exactly one legal raise-to, so there is nothing to size.
-    if fixed_limit_increment(state).is_some() {
-        return Some(floor);
-    }
-    let (n, d) = pick_bet_size(strategy, rng);
-    Some(
-        state
-            .current_bet
-            .saturating_add(state.pot.saturating_mul(n) / d)
-            .clamp(floor, ceiling),
-    )
-}
-
-/// EPIC-30 Phase 6: computes a bet amount (no current bet to call) that's
-/// legal under the current betting structure, or `None` when no legal
-/// voluntary bet exists.
-///
-/// `DEFECT_007`: an opening bet is a raise-from-zero — `Table::act_bet`
-/// validates it through the very same `validate_raise` an actual raise goes
-/// through — so it shares the window and the same infeasibility case. The
-/// old `.max(big_blind).min(my_chips)` pair could produce an amount below
-/// the minimum for the same reason `sized_raise_to` could.
-/// Wraps a voluntary opening amount in the variant the engine advertises.
-///
-/// `DEFECT_007`: `to_call == 0` does not mean the betting is open. On the
-/// big-blind option a bet already stands and this seat has merely matched it,
-/// so re-opening is a **`Raise`**, not a **`Bet`** —
-/// [`Table::legal_actions`](crate::casino::table::Table::legal_actions) says so
-/// in as many words.
-///
-/// `Table::act_bet` accepts either, which is why this never surfaced as a
-/// rejection, but the two are not interchangeable: a `Bet` records its
-/// *absolute* amount as the raise increment rather than the delta over the
-/// standing bet (doubling the next player's minimum re-raise), does not count
-/// toward the per-street raise cap, and writes the wrong event to the log.
-fn voluntary_open(state: &TableSnapshot, amount: usize) -> PlayerAction {
-    if state.current_bet == 0 {
-        PlayerAction::Bet(amount)
-    } else {
-        PlayerAction::Raise(amount)
-    }
-}
-
-fn sized_bet_amount<R: rand::Rng + ?Sized>(
-    state: &TableSnapshot,
-    strategy: &BettingStrategy,
-    rng: &mut R,
-) -> Option<usize> {
-    let (floor, ceiling) = state.raise_bounds()?;
-    if fixed_limit_increment(state).is_some() {
-        return Some(floor);
-    }
-    let (n, d) = pick_bet_size(strategy, rng);
-    Some((state.pot.saturating_mul(n) / d).clamp(floor, ceiling))
-}
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -889,7 +896,7 @@ mod bot__decider_tests {
         let mut rng = SmallRng::seed_from_u64(7);
         let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
 
-        let raise_to = sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
+        let raise_to = RuleBasedDecider::sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
         assert!(
             raise_to >= snap.min_raise_to(),
             "raise_to {raise_to} is below the minimum {}",
@@ -905,7 +912,7 @@ mod bot__decider_tests {
         let mut rng = SmallRng::seed_from_u64(7);
         let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
 
-        let raise_to = sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
+        let raise_to = RuleBasedDecider::sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
         assert!(
             raise_to <= snap.my_total_chips(),
             "raise_to {raise_to} exceeds the stack"
@@ -927,7 +934,7 @@ mod bot__decider_tests {
         let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
 
         assert_eq!(None, snap.raise_bounds(), "fixture should have no legal raise");
-        assert_eq!(None, sized_raise_to(&snap, &strategy, &mut rng));
+        assert_eq!(None, RuleBasedDecider::sized_raise_to(&snap, &strategy, &mut rng));
     }
 
     /// The `sized_bet_amount` counterpart: an opening bet is validated against
@@ -945,7 +952,7 @@ mod bot__decider_tests {
         let mut rng = SmallRng::seed_from_u64(3);
         let strategy = BotProfile::tight_passive().betting_strategy.clone();
 
-        let bet = sized_bet_amount(&snap, &strategy, &mut rng).expect("a legal bet exists");
+        let bet = RuleBasedDecider::sized_bet_amount(&snap, &strategy, &mut rng).expect("a legal bet exists");
         assert!(bet >= snap.min_raise_to(), "bet {bet} is below the minimum");
     }
 
@@ -1733,9 +1740,9 @@ mod bot__decider_tests {
         exact.decision.equity = EquityMode::Exact;
 
         let mut rng = SmallRng::seed_from_u64(42);
-        let proxy = hand_equity(&off, &snap, &mut rng).expect("proxy equity");
+        let proxy = RuleBasedDecider::hand_equity(&off, &snap, &mut rng).expect("proxy equity");
         let mut rng2 = SmallRng::seed_from_u64(42);
-        let real = hand_equity(&exact, &snap, &mut rng2).expect("real equity");
+        let real = RuleBasedDecider::hand_equity(&exact, &snap, &mut rng2).expect("real equity");
 
         assert!(proxy < 0.65, "overpair proxy should understate: {proxy}");
         assert!(real > 0.75, "real overpair equity vs 1 villain should be high: {real}");
@@ -1775,8 +1782,8 @@ mod bot__decider_tests {
         let mut differs = false;
         for h in hands {
             snap.hole_cards = Cards::from_str(h).unwrap();
-            let f = preflop_open_frequency(&flat, &snap);
-            let p = preflop_open_frequency(&pa, &snap);
+            let f = RuleBasedDecider::preflop_open_frequency(&flat, &snap);
+            let p = RuleBasedDecider::preflop_open_frequency(&pa, &snap);
             if (f - p).abs() > 1e-9 {
                 differs = true;
                 break;
@@ -1804,8 +1811,8 @@ mod bot__decider_tests {
 
         for h in ["A♠ A♥", "7♠ 2♦", "K♠ Q♦"] {
             snap.hole_cards = Cards::from_str(h).unwrap();
-            let f = preflop_open_frequency(&flat, &snap);
-            let p = preflop_open_frequency(&pa, &snap);
+            let f = RuleBasedDecider::preflop_open_frequency(&flat, &snap);
+            let p = RuleBasedDecider::preflop_open_frequency(&pa, &snap);
             assert!(
                 (f - p).abs() < 1e-9,
                 "no playbook: position_aware must match flat for {h}"
@@ -1827,10 +1834,13 @@ mod bot__decider_tests {
         let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
 
         let mut p = BotProfile::tight_passive();
-        assert!(exploit_profile(&p, &snap).is_none(), "exploit Off must not adjust");
+        assert!(
+            RuleBasedDecider::exploit_profile(&p, &snap).is_none(),
+            "exploit Off must not adjust"
+        );
         p.decision.exploit = ExploitMode::Heavy;
         assert!(
-            exploit_profile(&p, &snap).is_some(),
+            RuleBasedDecider::exploit_profile(&p, &snap).is_some(),
             "exploit Heavy with a registry attached must engage the adjust path"
         );
     }
@@ -1843,7 +1853,7 @@ mod bot__decider_tests {
         let mut p = BotProfile::tight_passive();
         p.decision.exploit = ExploitMode::Heavy;
         assert!(
-            exploit_profile(&p, &snap).is_none(),
+            RuleBasedDecider::exploit_profile(&p, &snap).is_none(),
             "exploit knob must no-op when no stats registry is attached"
         );
     }
@@ -1874,9 +1884,9 @@ mod bot__decider_tests {
         let mut aware = flat.clone();
         aware.decision.ranges = RangeMode::PositionAware;
 
-        let random_villains = hand_equity(&flat, &state, &mut SmallRng::seed_from_u64(42))
+        let random_villains = RuleBasedDecider::hand_equity(&flat, &state, &mut SmallRng::seed_from_u64(42))
             .expect("the engine answers for a 2-card hero on a flop");
-        let ranged_villains = hand_equity(&aware, &state, &mut SmallRng::seed_from_u64(42))
+        let ranged_villains = RuleBasedDecider::hand_equity(&aware, &state, &mut SmallRng::seed_from_u64(42))
             .expect("the engine answers for a 2-card hero on a flop");
 
         // Ace-queen has missed this board. Against five opening ranges — which
@@ -1948,7 +1958,7 @@ mod bot__decider_tests {
         let mut charted = BotProfile::gto();
         charted.decision.preflop_charts = PreflopCharts::Hup;
 
-        let equity = hand_equity(&charted, &state, &mut SmallRng::seed_from_u64(11))
+        let equity = RuleBasedDecider::hand_equity(&charted, &state, &mut SmallRng::seed_from_u64(11))
             .expect("the chart answers for heads-up aces");
         assert!(
             equity > 0.7 && equity < 1.0,
@@ -1974,8 +1984,8 @@ mod bot__decider_tests {
 
         let profile = BotProfile::gto();
         for seed in 0..8 {
-            let equity =
-                hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(seed)).expect("the roll always answers");
+            let equity = RuleBasedDecider::hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(seed))
+                .expect("the roll always answers");
             assert!(
                 equity == 1.0 || equity == 0.0,
                 "the default preflop path is a coin flip, got {equity}"
@@ -2007,8 +2017,10 @@ mod bot__decider_tests {
         let mut on = off.clone();
         on.decision.outs = Toggle::On;
 
-        let proxy = hand_equity(&off, &state, &mut SmallRng::seed_from_u64(3)).expect("proxy answers");
-        let with_outs = hand_equity(&on, &state, &mut SmallRng::seed_from_u64(3)).expect("outs answer");
+        let proxy =
+            RuleBasedDecider::hand_equity(&off, &state, &mut SmallRng::seed_from_u64(3)).expect("proxy answers");
+        let with_outs =
+            RuleBasedDecider::hand_equity(&on, &state, &mut SmallRng::seed_from_u64(3)).expect("outs answer");
 
         assert!(proxy < 0.05, "the proxy throws this draw away, got {proxy:.4}");
         assert!(
@@ -2038,7 +2050,7 @@ mod bot__decider_tests {
         let mut profile = BotProfile::gto();
         profile.decision.equity = EquityMode::Off;
 
-        let equity = hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(3)).expect("answers");
+        let equity = RuleBasedDecider::hand_equity(&profile, &state, &mut SmallRng::seed_from_u64(3)).expect("answers");
         assert!(
             equity < 0.05,
             "the default profile still gets the untouched proxy, got {equity:.4}"

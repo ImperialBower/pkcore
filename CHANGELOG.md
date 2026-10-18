@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   crate-private functions in `pokerbench::parse` are now associated functions
   of a crate-private unit struct, per the house rule of no free functions. No
   public API changed.
+- **The `RuleBasedDecider` helpers live on `RuleBasedDecider`.** The 13
+  private free functions in `bot::decider` (equity, outs, bet sizing) only
+  served that decider, so they moved into an `impl RuleBasedDecider` block. No
+  public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
