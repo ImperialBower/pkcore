@@ -250,7 +250,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/bot/hand_order.rs`~~ — **done 2026-10-18**, `HandOrder`; old names deprecated | 6 | `hand_ordering`, `range_of_width`, `derive_hand_ordering` |
 | `src/casino/tda.rs` | 5 | — |
 | `src/casino/table/snapshot.rs` | 5 | — |
-| `src/bot/training/evaluator.rs` | 5 | `default_field`, `evaluate` |
+| ~~`src/bot/training/evaluator.rs`~~ — **done 2026-10-18**, `Evaluator`; old names deprecated | 5 | `default_field`, `evaluate` |
 | `src/play/stages/deal_eval.rs` | 3 | — |
 | `src/bot/training/encoding.rs` | 3 | `encode`, `decode`, `ranges` |
 | `src/analysis/player_stats.rs` | 3 | — |

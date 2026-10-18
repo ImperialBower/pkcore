@@ -1,6 +1,6 @@
 //! Fitness evaluation: runs `SimTable` sessions and returns mean BB/100.
 //!
-//! The core entry point is [`evaluate`], which measures how well a given
+//! The core entry point is [`Evaluator::evaluate`], which measures how well a given
 //! [`ExploitConfig`] performs against every opponent in the field over
 //! `replicates` independent sessions of `hands_per_eval` hands each.
 
@@ -39,58 +39,188 @@ const NO_RESULT_FITNESS: f64 = -1_000_000.0;
 pub type FieldEntry = (String, BotProfile);
 
 /// Returns all eight standard opponent profiles as the default training field.
-///
-/// # Domain
-///
-/// - **Role:** cohesive mechanism
+/// Fitness evaluation for exploit training. A unit struct that groups this
+/// module's functions; it holds no state.
 ///
 /// # Examples
 ///
 /// ```
-/// use pkcore::bot::training::evaluator::default_field;
+/// use pkcore::bot::training::evaluator::Evaluator;
 ///
-/// let field = default_field();
-/// assert_eq!(field.len(), 8);
-/// assert!(field.iter().all(|(name, _)| !name.is_empty()));
+/// assert_eq!(Evaluator, Evaluator::default());
 /// ```
-#[must_use]
-pub fn default_field() -> Vec<FieldEntry> {
-    BotProfile::default_profiles()
-        .into_iter()
-        .map(|p| (p.name.clone(), p))
-        .collect()
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Evaluator;
+
+impl Evaluator {
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::training::evaluator::Evaluator;
+    ///
+    /// let field = Evaluator::default_field();
+    /// assert_eq!(field.len(), 8);
+    /// assert!(field.iter().all(|(name, _)| !name.is_empty()));
+    /// ```
+    #[must_use]
+    pub fn default_field() -> Vec<FieldEntry> {
+        BotProfile::default_profiles()
+            .into_iter()
+            .map(|p| (p.name.clone(), p))
+            .collect()
+    }
+
+    /// Evaluates `config` against every entry in `field`.
+    ///
+    /// Runs `replicates` sessions of `hands_per_eval` hands per opponent and
+    /// returns the mean BB/100 over the full matrix.  A positive return value
+    /// means the exploit bot profited on average.
+    ///
+    /// `seed` makes the result deterministic: each (opponent, replicate) session
+    /// gets a distinct seed derived from `seed`, but that derivation does *not*
+    /// depend on `config`. Every candidate config is therefore scored on the
+    /// *same* hands (common random numbers), which both removes the RNG noise that
+    /// made training irreproducible (audit II.9) and reduces the variance the
+    /// optimiser sees between candidates.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    /// - **Invariants:**
+    ///   - deterministic for a given `seed`
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use pkcore::bot::exploit::ExploitConfig;
+    /// use pkcore::bot::training::evaluator::Evaluator;
+    ///
+    /// let field = Evaluator::default_field();
+    /// let bb100 = Evaluator::evaluate(&ExploitConfig::default(), &field, 200, 1, 42);
+    /// // No assertion — poker variance means any value is possible in 200 hands.
+    /// let _ = bb100;
+    /// ```
+    #[must_use]
+    // `count` is opponents × replicates, far below 2^52, so `as f64` is exact.
+    #[allow(clippy::cast_precision_loss)]
+    pub fn evaluate(
+        config: &ExploitConfig,
+        field: &[FieldEntry],
+        hands_per_eval: usize,
+        replicates: usize,
+        seed: u64,
+    ) -> f64 {
+        let mut total = 0.0_f64;
+        let mut count = 0_usize;
+        for (opp_idx, (_, opp)) in field.iter().enumerate() {
+            for replicate in 0..replicates {
+                total += Self::run_session(
+                    config,
+                    opp,
+                    hands_per_eval,
+                    Self::session_seed(seed, opp_idx, replicate),
+                );
+                count += 1;
+            }
+        }
+        if count == 0 { 0.0 } else { total / count as f64 }
+    }
+
+    /// Derives a deterministic per-session seed from the master `seed`.
+    ///
+    /// Distinct per `(opp_idx, replicate)` so different opponents and replicates
+    /// play different hands, but independent of the candidate config so every
+    /// candidate faces an identical hand distribution (common random numbers).
+    fn session_seed(seed: u64, opp_idx: usize, replicate: usize) -> u64 {
+        seed.wrapping_add((opp_idx as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+            .wrapping_add((replicate as u64).wrapping_mul(0xD1B5_4A32_D192_ED03))
+    }
+
+    /// Runs a single heads-up session of `hands` hands and returns the exploit
+    /// bot's BB/100 (seat 0 vs seat 1). `seed` fixes the deck shuffle and every
+    /// seeded decider draw, so the session is fully reproducible.
+    fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, seed: u64) -> f64 {
+        // Fixed ids (`docs/KERNEL_PURITY_AUDIT.md` fix 8): the session is reproducible from
+        // `seed`, and random ids would be the one part of it that is not.
+        let exploit = Player::with_id(Uuid::from_u128(1), "exploit".to_string(), STARTING_CHIPS);
+        let opp = Player::with_id(Uuid::from_u128(2), "opp".to_string(), STARTING_CHIPS);
+        let seats = Seats::new(vec![Seat::new(exploit), Seat::new(opp)]);
+        let table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(SB, BB), Uuid::nil());
+
+        let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
+            (
+                0,
+                BotProfile::tight_aggressive(),
+                Box::new(ExploitativeDecider::wrap_with_config(RuleBasedDecider, config.clone())),
+            ),
+            (1, opp_profile.clone(), Box::new(RuleBasedDecider)),
+        ];
+
+        let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new()).with_seed(seed);
+        Self::session_bb100(sim.run_n_hands(hands))
+    }
+
+    /// Maps a session outcome to seat 0's BB/100.
+    ///
+    /// A sim error or a zero-hand session yields no usable measurement; rather than
+    /// scoring it break-even (`0.0`, which the optimiser would retain over a
+    /// legitimately-losing candidate), it is logged and scored [`NO_RESULT_FITNESS`]
+    /// so error-prone configs are selected against (audit II.9 follow-up). A real
+    /// result returns the exploit bot's BB/100 for seat 0.
+    // Chip and hand counts are far below 2^52, so the `as f64` casts are exact.
+    #[allow(clippy::cast_precision_loss)]
+    fn session_bb100(outcome: Result<SimResult, PKError>) -> f64 {
+        match outcome {
+            Err(e) => {
+                log::warn!("[pkcore::training] session errored, scoring as failure: {e:?}");
+                NO_RESULT_FITNESS
+            }
+            Ok(result) if result.hands_played == 0 => {
+                log::warn!("[pkcore::training] session completed 0 hands, scoring as failure");
+                NO_RESULT_FITNESS
+            }
+            Ok(result) => {
+                let net = result.net_chips.get(&0).copied().unwrap_or(0);
+                (net as f64 / BB as f64) / result.hands_played as f64 * 100.0
+            }
+        }
+    }
 }
 
-/// Evaluates `config` against every entry in `field`.
-///
-/// Runs `replicates` sessions of `hands_per_eval` hands per opponent and
-/// returns the mean BB/100 over the full matrix.  A positive return value
-/// means the exploit bot profited on average.
-///
-/// `seed` makes the result deterministic: each (opponent, replicate) session
-/// gets a distinct seed derived from `seed`, but that derivation does *not*
-/// depend on `config`. Every candidate config is therefore scored on the
-/// *same* hands (common random numbers), which both removes the RNG noise that
-/// made training irreproducible (audit II.9) and reduces the variance the
-/// optimiser sees between candidates.
-///
-/// # Domain
-///
-/// - **Role:** cohesive mechanism
-/// - **Invariants:**
-///   - deterministic for a given `seed`
+/// Deprecated: use [`Evaluator::default_field`].
 ///
 /// # Examples
 ///
-/// ```no_run
-/// use pkcore::bot::exploit::ExploitConfig;
-/// use pkcore::bot::training::evaluator::{default_field, evaluate};
-///
-/// let field = default_field();
-/// let bb100 = evaluate(&ExploitConfig::default(), &field, 200, 1, 42);
-/// // No assertion — poker variance means any value is possible in 200 hands.
-/// let _ = bb100;
 /// ```
+/// # #![allow(deprecated)]
+/// use pkcore::bot::training::evaluator::default_field;
+///
+/// assert_eq!(8, default_field().len());
+/// ```
+#[deprecated(since = "0.16.0", note = "use `Evaluator::default_field`")]
+#[must_use]
+pub fn default_field() -> Vec<FieldEntry> {
+    Evaluator::default_field()
+}
+
+/// Deprecated: use [`Evaluator::evaluate`].
+///
+/// # Examples
+///
+/// ```
+/// # #![allow(deprecated)]
+/// use pkcore::bot::exploit::ExploitConfig;
+/// use pkcore::bot::training::evaluator::evaluate;
+///
+/// // An empty field has nothing to score.
+/// assert_eq!(0.0, evaluate(&ExploitConfig::default(), &[], 100, 1, 42));
+/// ```
+#[deprecated(since = "0.16.0", note = "use `Evaluator::evaluate`")]
 #[must_use]
 pub fn evaluate(
     config: &ExploitConfig,
@@ -99,73 +229,7 @@ pub fn evaluate(
     replicates: usize,
     seed: u64,
 ) -> f64 {
-    let mut total = 0.0_f64;
-    let mut count = 0_usize;
-    for (opp_idx, (_, opp)) in field.iter().enumerate() {
-        for replicate in 0..replicates {
-            total += run_session(config, opp, hands_per_eval, session_seed(seed, opp_idx, replicate));
-            count += 1;
-        }
-    }
-    if count == 0 { 0.0 } else { total / count as f64 }
-}
-
-/// Derives a deterministic per-session seed from the master `seed`.
-///
-/// Distinct per `(opp_idx, replicate)` so different opponents and replicates
-/// play different hands, but independent of the candidate config so every
-/// candidate faces an identical hand distribution (common random numbers).
-fn session_seed(seed: u64, opp_idx: usize, replicate: usize) -> u64 {
-    seed.wrapping_add((opp_idx as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
-        .wrapping_add((replicate as u64).wrapping_mul(0xD1B5_4A32_D192_ED03))
-}
-
-/// Runs a single heads-up session of `hands` hands and returns the exploit
-/// bot's BB/100 (seat 0 vs seat 1). `seed` fixes the deck shuffle and every
-/// seeded decider draw, so the session is fully reproducible.
-fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, seed: u64) -> f64 {
-    // Fixed ids (`docs/KERNEL_PURITY_AUDIT.md` fix 8): the session is reproducible from
-    // `seed`, and random ids would be the one part of it that is not.
-    let exploit = Player::with_id(Uuid::from_u128(1), "exploit".to_string(), STARTING_CHIPS);
-    let opp = Player::with_id(Uuid::from_u128(2), "opp".to_string(), STARTING_CHIPS);
-    let seats = Seats::new(vec![Seat::new(exploit), Seat::new(opp)]);
-    let table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(SB, BB), Uuid::nil());
-
-    let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
-        (
-            0,
-            BotProfile::tight_aggressive(),
-            Box::new(ExploitativeDecider::wrap_with_config(RuleBasedDecider, config.clone())),
-        ),
-        (1, opp_profile.clone(), Box::new(RuleBasedDecider)),
-    ];
-
-    let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new()).with_seed(seed);
-    session_bb100(sim.run_n_hands(hands))
-}
-
-/// Maps a session outcome to seat 0's BB/100.
-///
-/// A sim error or a zero-hand session yields no usable measurement; rather than
-/// scoring it break-even (`0.0`, which the optimiser would retain over a
-/// legitimately-losing candidate), it is logged and scored [`NO_RESULT_FITNESS`]
-/// so error-prone configs are selected against (audit II.9 follow-up). A real
-/// result returns the exploit bot's BB/100 for seat 0.
-fn session_bb100(outcome: Result<SimResult, PKError>) -> f64 {
-    match outcome {
-        Err(e) => {
-            log::warn!("[pkcore::training] session errored, scoring as failure: {e:?}");
-            NO_RESULT_FITNESS
-        }
-        Ok(result) if result.hands_played == 0 => {
-            log::warn!("[pkcore::training] session completed 0 hands, scoring as failure");
-            NO_RESULT_FITNESS
-        }
-        Ok(result) => {
-            let net = result.net_chips.get(&0).copied().unwrap_or(0);
-            (net as f64 / BB as f64) / result.hands_played as f64 * 100.0
-        }
-    }
+    Evaluator::evaluate(config, field, hands_per_eval, replicates, seed)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -177,7 +241,7 @@ mod bot__training__evaluator_tests {
 
     #[test]
     fn default_field_has_eight_archetypes() {
-        let field = default_field();
+        let field = Evaluator::default_field();
         assert_eq!(field.len(), 8, "default field must contain exactly 8 profiles");
         // All names must be non-empty and distinct.
         let names: std::collections::HashSet<&str> = field.iter().map(|(n, _)| n.as_str()).collect();
@@ -187,13 +251,13 @@ mod bot__training__evaluator_tests {
     #[test]
     fn evaluate_returns_finite_value() {
         let field = vec![("lp".to_string(), BotProfile::loose_passive())];
-        let bb100 = evaluate(&ExploitConfig::default(), &field, 100, 1, 42);
+        let bb100 = Evaluator::evaluate(&ExploitConfig::default(), &field, 100, 1, 42);
         assert!(bb100.is_finite(), "evaluate must return a finite value; got {bb100}");
     }
 
     #[test]
     fn evaluate_empty_field_returns_zero() {
-        let bb100 = evaluate(&ExploitConfig::default(), &[], 100, 1, 42);
+        let bb100 = Evaluator::evaluate(&ExploitConfig::default(), &[], 100, 1, 42);
         assert_eq!(bb100, 0.0);
     }
 
@@ -201,8 +265,8 @@ mod bot__training__evaluator_tests {
     fn evaluate_is_deterministic_for_fixed_seed() {
         // II.9: identical (config, field, seed) → identical score.
         let field = vec![("lp".to_string(), BotProfile::loose_passive())];
-        let a = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
-        let b = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
+        let a = Evaluator::evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
+        let b = Evaluator::evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
         assert_eq!(a, b, "seeded evaluate must be reproducible");
     }
 
@@ -213,7 +277,7 @@ mod bot__training__evaluator_tests {
         // A sim error mapped to 0.0 (break-even) would be retained by the
         // (1+λ)-ES over a legitimately-losing candidate. It must score as a
         // decisive failure instead.
-        let score = session_bb100(Err(crate::PKError::InvalidAction));
+        let score = Evaluator::session_bb100(Err(crate::PKError::InvalidAction));
         assert_eq!(NO_RESULT_FITNESS, score);
         assert!(score < -1_000.0, "an errored session must sort below any real BB/100");
     }
@@ -221,7 +285,7 @@ mod bot__training__evaluator_tests {
     #[test]
     fn session_bb100_zero_hands_scores_as_a_failure() {
         // A session that completes no hands is as uninformative as an error.
-        let score = session_bb100(Ok(crate::bot::sim::SimResult::default()));
+        let score = Evaluator::session_bb100(Ok(crate::bot::sim::SimResult::default()));
         assert_eq!(NO_RESULT_FITNESS, score);
     }
 
@@ -235,16 +299,36 @@ mod bot__training__evaluator_tests {
             net_chips: net,
             ..Default::default()
         };
-        assert!((session_bb100(Ok(result)) - 10.0).abs() < f64::EPSILON);
+        assert!((Evaluator::session_bb100(Ok(result)) - 10.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn session_seed_is_distinct_per_opponent_and_replicate() {
-        let s0 = session_seed(42, 0, 0);
-        let s1 = session_seed(42, 1, 0);
-        let s2 = session_seed(42, 0, 1);
+        let s0 = Evaluator::session_seed(42, 0, 0);
+        let s1 = Evaluator::session_seed(42, 1, 0);
+        let s2 = Evaluator::session_seed(42, 0, 1);
         assert_ne!(s0, s1);
         assert_ne!(s0, s2);
         assert_ne!(s1, s2);
+    }
+
+    #[test]
+    fn evaluator_is_a_stateless_unit_struct() {
+        assert_eq!(Evaluator, Evaluator::default());
+        assert_eq!("Evaluator", format!("{Evaluator:?}"));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_functions_match_the_methods() {
+        let field = Evaluator::default_field();
+        assert_eq!(field, default_field());
+
+        let one = &field[..1];
+        let config = ExploitConfig::default();
+        assert_eq!(
+            Evaluator::evaluate(&config, one, 100, 1, 42).to_bits(),
+            evaluate(&config, one, 100, 1, 42).to_bits()
+        );
     }
 }

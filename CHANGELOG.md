@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   feature, so `make lint`, `make ayce`, the docs build and the pedantic clippy
   job never compiled it. It needs only `csv` and `json`, which `full` already
   has.
+- **`full` now includes `bot-training`.** It was in no umbrella feature
+  either, so `make lint` and the clippy CI job never compiled `bot::training`,
+  and 16 pedantic clippy warnings built up there. They are fixed: the casts of
+  small counts are marked as exact, and two small cleanups. It needs no new
+  dependency, since `full` already has everything it turns on. Its one visible
+  effect in `full`: `ExploitConfig` now derives `Serialize` and `Deserialize`.
+  The extra CI run for it is removed, since the main jobs now cover it.
 - **The PokerBench parsing helpers live on `PokerBenchParser`.** The 18
   crate-private functions in `pokerbench::parse` are now associated functions
   of a crate-private unit struct, per the house rule of no free functions. No
@@ -72,6 +79,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `HandOrder::ordering`, `range_of_width` is now `HandOrder::range_of_width`,
   and `derive_hand_ordering` is now `HandOrder::derive`. The old names still
   work for this release; see Deprecated.
+- **The training evaluator functions live on `Evaluator`.** A new unit
+  struct in `bot::training::evaluator` holds `default_field`, `evaluate` and
+  the three private session helpers; the names did not change. The old free
+  functions still work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -113,6 +124,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`bot::hand_order::hand_ordering`, `range_of_width` and
   `derive_hand_ordering`.** Use `HandOrder::ordering`,
   `HandOrder::range_of_width` and `HandOrder::derive`. Same terms as above.
+- **`bot::training::evaluator::default_field` and `evaluate`.** Use
+  `Evaluator::default_field` and `Evaluator::evaluate`. Same terms as above.
 
 ### Fixed
 

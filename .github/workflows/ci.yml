@@ -35,7 +35,7 @@ jobs:
       - run: cargo clippy --features full -- -D warnings
 
   optional-features:
-    name: Optional features (bot-training, debug-json)
+    name: Optional features (debug-json)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,11 +43,9 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      # bot-training and debug-json compile today but nothing on CI built them,
-      # so they could silently rot (audit VI.4 / P7). Exercise both explicitly.
-      # The heavy `training_integration` run stays #[ignore]d (release-only), so
-      # this only compiles the feature + runs the fast unit/doc tests.
-      - run: cargo test --features full,bot-training
+      # debug-json is in no umbrella feature, so nothing else on CI builds it
+      # (audit VI.4 / P7). bot-training is in `full` since 0.16.0, so the main
+      # test and clippy jobs cover it.
       - run: cargo test --features full,debug-json
 
   marathon:

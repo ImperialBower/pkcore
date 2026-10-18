@@ -18,7 +18,7 @@ use rand::rngs::SmallRng;
 
 use crate::bot::exploit::ExploitConfig;
 use crate::bot::training::encoding::{self, DIM};
-use crate::bot::training::evaluator::{self, FieldEntry};
+use crate::bot::training::evaluator::{Evaluator, FieldEntry};
 
 // ── TrainingConfig ────────────────────────────────────────────────────────────
 
@@ -186,7 +186,7 @@ impl ExploitTrainer {
     pub fn new(config: TrainingConfig) -> Self {
         Self {
             config,
-            field: evaluator::default_field(),
+            field: Evaluator::default_field(),
         }
     }
 
@@ -220,6 +220,12 @@ impl ExploitTrainer {
         let mut sigma = self.config.initial_sigma_fraction;
         let lambda = self.config.lambda;
         // 1/5 success rule threshold: sigma increases when ≥ 1/5 of offspring improve.
+        // `lambda` is a small offspring count, so the casts are exact.
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         let success_threshold = ((lambda as f64 / 5.0).ceil() as usize).max(1);
 
         let mut rng = SmallRng::seed_from_u64(self.config.seed);
@@ -255,11 +261,10 @@ impl ExploitTrainer {
                 .iter()
                 .enumerate()
                 .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                && score > best_fitness
             {
-                if score > best_fitness {
-                    best_params = candidates[idx];
-                    best_fitness = score;
-                }
+                best_params = candidates[idx];
+                best_fitness = score;
             }
 
             // Adapt sigma: 1/5 success rule.
@@ -269,8 +274,9 @@ impl ExploitTrainer {
                 (sigma * 0.90_f64).max(self.config.sigma_tol)
             };
 
+            #[allow(clippy::cast_precision_loss)] // `scores.len()` is lambda, a small count.
             let mean_bb100 = scores.iter().sum::<f64>() / scores.len() as f64;
-            let generation_best = scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let generation_best = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
             history.push(GenerationRecord {
                 generation,
@@ -289,7 +295,7 @@ impl ExploitTrainer {
     }
 
     fn fitness(&self, config: &ExploitConfig) -> f64 {
-        evaluator::evaluate(
+        Evaluator::evaluate(
             config,
             &self.field,
             self.config.hands_per_eval,

@@ -69,6 +69,7 @@ full = [
     "terminal",
     "entropy",
     "pokerbench",
+    "bot-training",
 ]
 ## OS nondeterminism — randomness and the wall clock (0.15.0,
 ## docs/KERNEL_PURITY_AUDIT.md fix 8). On by default. It backs the

@@ -42,6 +42,8 @@ pub const HI: [f64; DIM] = [
 /// assert_eq!(v.len(), DIM);
 /// ```
 #[must_use]
+// The two sample-size gates are hand counts far below 2^52, so `as f64` is exact.
+#[allow(clippy::cast_precision_loss)]
 pub fn encode(c: &ExploitConfig) -> [f64; DIM] {
     [
         c.fold_to_cbet_high_threshold,
@@ -87,7 +89,10 @@ pub fn encode(c: &ExploitConfig) -> [f64; DIM] {
 #[must_use]
 pub fn decode(p: &[f64; DIM]) -> ExploitConfig {
     let v: [f64; DIM] = std::array::from_fn(|i| p[i].clamp(LO[i], HI[i]));
+    // Both are clamped to small non-negative bounds above, so the casts are exact.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let min_hands_light = v[14].round() as u64;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let min_hands_heavy = (v[15].round() as u64).max(min_hands_light);
     ExploitConfig {
         fold_to_cbet_high_threshold: v[0],
