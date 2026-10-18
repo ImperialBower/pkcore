@@ -99,7 +99,7 @@ impl RangeModel {
     /// A position chart is a prior; an observed VPIP is evidence. Once enough
     /// hands have been seen, the evidence wins: a villain who voluntarily plays
     /// 45% of hands is given the strongest 45% of starting hands
-    /// ([`range_of_width`](crate::bot::hand_order::range_of_width)), which widens
+    /// ([`HandOrder::range_of_width`](crate::bot::hand_order::HandOrder::range_of_width)), which widens
     /// a loose player's range and tightens a nit's.
     ///
     /// This reads **aggregate** statistics only — never the opponent's identity,
@@ -117,7 +117,7 @@ impl RangeModel {
             .and_then(|villain| state.opponent_stats?.get(villain.id))
             .filter(|stats| stats.hands_dealt >= MIN_HANDS_FOR_READ)
             .and_then(super::super::analysis::player_stats::PlayerStats::vpip)
-            .and_then(crate::bot::hand_order::range_of_width);
+            .and_then(crate::bot::hand_order::HandOrder::range_of_width);
 
         observed.unwrap_or(charted)
     }

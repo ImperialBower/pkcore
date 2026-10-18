@@ -67,6 +67,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   change. `combos_from_weighted` is now `WeightedRange::to_combos`, since it
   reads only the range. `MIN_HANDS_FOR_READ` stays at its old path. The old
   free functions still work for this release; see Deprecated.
+- **The hand order functions live on `HandOrder`.** A new unit struct in
+  `bot::hand_order` holds them, with shorter names: `hand_ordering` is now
+  `HandOrder::ordering`, `range_of_width` is now `HandOrder::range_of_width`,
+  and `derive_hand_ordering` is now `HandOrder::derive`. The old names still
+  work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -105,6 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`bot::range_model::combos_from_weighted`, `villain_range`,
   `villain_specs` and `villain_range_specs`.** Use `WeightedRange::to_combos`
   and the same names on `RangeModel`. Same terms as above.
+- **`bot::hand_order::hand_ordering`, `range_of_width` and
+  `derive_hand_ordering`.** Use `HandOrder::ordering`,
+  `HandOrder::range_of_width` and `HandOrder::derive`. Same terms as above.
 
 ### Fixed
 
