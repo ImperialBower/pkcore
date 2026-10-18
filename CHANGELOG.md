@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   functions. `hup_equity_vs_range` is now `PreflopEquity::hup_vs_range`, and
   `preflop_equity` is now `PreflopEquity::compute`. The old names still work
   for this release; see Deprecated.
+- **The exploit helpers live on the types they serve.** `adjust_profile` is
+  now `ExploitConfig::adjust_profile`, `scale_percentage` is now
+  `Percentage::scaled`, and `largest_active_opponent` is now
+  `TableSnapshot::largest_active_opponent`. The five private rule helpers are
+  private methods of `ExploitConfig`. The old names still work for this
+  release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -78,6 +84,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `bot::preflop_equity::preflop_equity`.** Use `PreflopEquity::hup_vs_range`
   and `PreflopEquity::compute`. The old functions call the new ones and give
   a compiler warning. They will be removed in the next minor release.
+- **`bot::exploit::adjust_profile`, `scale_percentage` and
+  `largest_active_opponent`.** Use `ExploitConfig::adjust_profile`,
+  `Percentage::scaled` and `TableSnapshot::largest_active_opponent`. Same
+  terms: the old functions call the new ones and will be removed in the next
+  minor release.
 
 ### Fixed
 

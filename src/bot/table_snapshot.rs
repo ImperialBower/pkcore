@@ -568,6 +568,42 @@ impl<'a> TableSnapshot<'a> {
         let max = self.max_raise_to();
         if min > max { None } else { Some((min, max)) }
     }
+
+    /// Returns the largest-stack active opponent.
+    ///
+    /// In heads-up play this is the only opponent.  In multiway play the
+    /// heuristic chooses the player still in the pot with the most chips —
+    /// a reasonable proxy for the most dangerous opponent.  Returns `None`
+    /// when all other seats are inactive or empty.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** read model
+    /// - **Invariants:**
+    ///   - never returns the hero's own seat
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Hero".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("Villain".to_string(), 800)),
+    /// ]);
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let snap = TableSnapshot::from_table(&table, 0);
+    /// assert_eq!("Villain", snap.largest_active_opponent().unwrap().name);
+    /// ```
+    #[must_use]
+    pub fn largest_active_opponent(&self) -> Option<&SeatInfo> {
+        self.stacks
+            .iter()
+            .filter(|seat| seat.is_active && seat.seat != self.seat)
+            .max_by_key(|seat| seat.chips)
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -586,6 +622,25 @@ mod bot__table_snapshot_tests {
             Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
         ]);
         Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    }
+
+    #[test]
+    fn largest_active_opponent_skips_hero_and_inactive_seats() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Hero".to_string(), 9_000)),
+            Seat::new(Player::new_with_chips("Folded".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("Small".to_string(), 500)),
+            Seat::new(Player::new_with_chips("Big".to_string(), 2_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut snap = TableSnapshot::from_table(&table, 0);
+        snap.stacks[1].is_active = false;
+        assert_eq!("Big", snap.largest_active_opponent().unwrap().name);
+
+        for seat in &mut snap.stacks[1..] {
+            seat.is_active = false;
+        }
+        assert!(snap.largest_active_opponent().is_none());
     }
 
     #[test]

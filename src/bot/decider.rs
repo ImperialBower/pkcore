@@ -677,13 +677,13 @@ impl RuleBasedDecider {
     /// `Light` uses the default sample gates (adjusts only once opponents are
     /// well-sampled); `Heavy` lowers the gates so it adjusts sooner and more
     /// readily. The adjustment reads only aggregate opponent tendencies via
-    /// [`crate::bot::exploit::adjust_profile`] — never opponent identity — so the
+    /// [`crate::bot::exploit::ExploitConfig::adjust_profile`] — never opponent identity — so the
     /// knob is safe on any run path. The `DecisionConfig` is carried through the
     /// clone, so the other knobs are preserved on the adjusted profile.
     #[cfg(feature = "player-stats")]
     fn exploit_profile(profile: &BotProfile, state: &TableSnapshot) -> Option<Box<BotProfile>> {
         use crate::bot::decision_config::ExploitMode;
-        use crate::bot::exploit::{ExploitConfig, adjust_profile};
+        use crate::bot::exploit::ExploitConfig;
 
         let config = match profile.decision.exploit {
             ExploitMode::Off => return None,
@@ -695,7 +695,7 @@ impl RuleBasedDecider {
             },
         };
         state.opponent_stats?;
-        Some(Box::new(adjust_profile(profile, state, &config)))
+        Some(Box::new(config.adjust_profile(profile, state)))
     }
 
     /// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
