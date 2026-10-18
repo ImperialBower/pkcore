@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   private free functions in `bot::decider` (equity, outs, bet sizing) only
   served that decider, so they moved into an `impl RuleBasedDecider` block. No
   public API changed.
+- **The `hand_history` helpers live on the types they serve.** The 8 private
+  free functions moved into `impl` blocks: the serde defaults and the replay
+  helpers onto `HandHistory`, `hand_has_position` onto `HandCollection`, and
+  `table_action_to_hand_action` onto `Streets`. The serde `default` paths now
+  read `"HandHistory::default_format_version"`. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use

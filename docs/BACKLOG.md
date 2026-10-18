@@ -243,7 +243,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/pokerbench/parse.rs`~~ — **done 2026-10-18**, `PokerBenchParser` | 18 | — |
 | ~~`src/bot/decider.rs`~~ — **done 2026-10-18**, onto `RuleBasedDecider` | 13 | — |
 | `src/bot/preflop_equity.rs` | 9 | `hup_equity_vs_range`, `preflop_equity` |
-| `src/hand_history.rs` | 8 | — |
+| ~~`src/hand_history.rs`~~ — **done 2026-10-18**, onto `HandHistory`, `HandCollection`, `Streets` | 8 | — |
 | `src/bot/exploit.rs` | 8 | `scale_percentage`, `largest_active_opponent`, `adjust_profile` |
 | `src/bot/draw_equity.rs` | 7 | `outs_against`, `outs_equity` |
 | `src/bot/range_model.rs` | 6 | `combos_from_weighted`, `villain_range`, `villain_specs`, `villain_range_specs` |

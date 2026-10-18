@@ -139,7 +139,7 @@ pub struct HandHistory {
     pub pkcore_version: Option<String>,
 
     /// Schema version for forward-compatibility checks.
-    #[serde(default = "default_format_version")]
+    #[serde(default = "HandHistory::default_format_version")]
     pub format_version: u32,
 
     /// Hand-level metadata: id, game type, timestamp, provenance.
@@ -178,14 +178,6 @@ pub struct HandHistory {
     /// then burn+flop, burn+turn, burn+river.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shuffled_deck: Option<String>,
-}
-
-fn default_pkcore_version() -> String {
-    env!("CARGO_PKG_VERSION").to_string()
-}
-
-fn default_format_version() -> u32 {
-    FORMAT_VERSION
 }
 
 /// Per-seat snapshot tuple consumed by
@@ -352,7 +344,7 @@ impl HandHistory {
                 let ending = ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
                 let net = ending.map(|e| e - *starting_stack as f64);
 
-                let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
+                let ranked = hole_cards.as_deref().and_then(|h| Self::rank_seven(h, board_str));
 
                 let outcome = if folded_seats.contains(seat) {
                     Outcome::Fold
@@ -688,8 +680,11 @@ impl HandHistory {
             .max(max_action_seat + 1);
         let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
-            seats_vec[p.seat as usize] =
-                Seat::new(Player::with_id(replay_player_id(p), p.name.clone(), p.stack as usize));
+            seats_vec[p.seat as usize] = Seat::new(Player::with_id(
+                Self::replay_player_id(p),
+                p.name.clone(),
+                p.stack as usize,
+            ));
         }
         let seats = Seats::new(seats_vec);
         // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
@@ -792,7 +787,7 @@ impl HandHistory {
         // ── Street replay helper ─────────────────────────────────────────────
         let mut replay_actions = |table: &mut Table, street: ReplayStreet, actions: &[Action]| -> Result<(), PKError> {
             for (index, action) in actions.iter().enumerate() {
-                if let Some(pa) = action_to_player_action(action) {
+                if let Some(pa) = Self::action_to_player_action(action) {
                     table.apply_action(action.seat, pa)?;
                 }
                 observe(&ReplayStep { street, index, action }, table);
@@ -808,7 +803,7 @@ impl HandHistory {
         }
 
         if table.is_game_over() {
-            return build_replay_result(table, &self.players, self.results.as_deref());
+            return Self::build_replay_result(table, &self.players, self.results.as_deref());
         }
 
         table.bring_it_in()?;
@@ -831,7 +826,7 @@ impl HandHistory {
             replay_actions(&mut table, ReplayStreet::Flop, &flop.actions)?;
 
             if table.is_game_over() {
-                return build_replay_result(table, &self.players, self.results.as_deref());
+                return Self::build_replay_result(table, &self.players, self.results.as_deref());
             }
 
             table.bring_it_in()?;
@@ -847,7 +842,7 @@ impl HandHistory {
                 replay_actions(&mut table, ReplayStreet::Turn, &turn.actions)?;
 
                 if table.is_game_over() {
-                    return build_replay_result(table, &self.players, self.results.as_deref());
+                    return Self::build_replay_result(table, &self.players, self.results.as_deref());
                 }
 
                 table.bring_it_in()?;
@@ -865,7 +860,7 @@ impl HandHistory {
             }
         }
 
-        build_replay_result(table, &self.players, self.results.as_deref())
+        Self::build_replay_result(table, &self.players, self.results.as_deref())
     }
 
     /// Convert the [`board`] string field to a pkcore [`Board`].
@@ -908,6 +903,97 @@ impl HandHistory {
             Some(s) => Board::from_str(s),
             None => Err(PKError::NotEnoughCards),
         }
+    }
+
+    fn default_pkcore_version() -> String {
+        env!("CARGO_PKG_VERSION").to_string()
+    }
+
+    fn default_format_version() -> u32 {
+        FORMAT_VERSION
+    }
+
+    /// The id a replayed player gets: the one the record carries, or, for a legacy
+    /// record without one, a UUID v5 of the player's name.
+    #[cfg(feature = "bot-profiles")]
+    fn replay_player_id(entry: &PlayerEntry) -> Uuid {
+        entry
+            .player_id
+            .unwrap_or_else(|| Uuid::new_v5(&REPLAY_ID_NAMESPACE, entry.name.as_bytes()))
+    }
+
+    /// Returns the best-hand evaluation for `hole_cards` on a completed 5-card
+    /// `board`.  Returns `None` if the board is not yet complete or cards cannot
+    /// be parsed.
+    fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
+        if board.split_whitespace().count() < 5 {
+            return None;
+        }
+        let seven = Seven::from_str(&format!("{hole_cards} {board}")).ok()?;
+        let (hand_rank, hand) = seven.hand_rank_and_hand();
+        Some(Eval::new(hand_rank, hand))
+    }
+
+    /// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
+    /// game engine.  Returns `None` for `Post` entries (handled by
+    /// `act_forced_bets`).
+    #[cfg(feature = "bot-profiles")]
+    fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        match action.action {
+            ActionType::Fold => Some(PlayerAction::Fold),
+            ActionType::Check => Some(PlayerAction::Check),
+            ActionType::Call => Some(PlayerAction::Call),
+            ActionType::Bet => action.amount.map(|a| PlayerAction::Bet(a as usize)),
+            ActionType::Raise => action.amount.map(|a| PlayerAction::Raise(a as usize)),
+            ActionType::AllIn => Some(PlayerAction::AllIn),
+            ActionType::Post => None,
+        }
+    }
+
+    /// Calls `end_hand` on `table` and builds a [`ReplayResult`], comparing final
+    /// chip counts against the recorded `results` when present.
+    /// Chip amounts are stored as `f64` in the YAML schema (for forward-compat with
+    /// fractional blinds), but represent whole-chip counts in practice.  The casts
+    /// here are intentional: stacks fit in `usize` and net values are bounded by the
+    /// starting stack.
+    #[cfg(feature = "bot-profiles")]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
+    fn build_replay_result(
+        mut table: Table,
+        players: &[PlayerEntry],
+        results: Option<&[ResultEntry]>,
+    ) -> Result<ReplayResult, PKError> {
+        let winnings = table.end_hand()?;
+        let _ = winnings;
+
+        let final_stacks: Vec<(u8, usize)> = players
+            .iter()
+            .filter_map(|p| table.seats.get_seat(p.seat).map(|s| (p.seat, s.player.chips)))
+            .collect();
+
+        let is_consistent = match results {
+            None => true,
+            Some(entries) => entries.iter().all(|r| {
+                let Some(net) = r.net else { return true };
+                let Some(player) = players.iter().find(|p| p.seat == r.seat) else {
+                    return false;
+                };
+                // Expected final stack: starting stack + net result, clamped to 0.
+                let expected = (player.stack + net).max(0.0).round() as usize;
+                let actual = final_stacks.iter().find(|(s, _)| *s == r.seat).map_or(0, |(_, c)| *c);
+                expected.abs_diff(actual) <= 1
+            }),
+        };
+
+        Ok(ReplayResult {
+            final_stacks,
+            is_consistent,
+        })
     }
 }
 
@@ -1052,11 +1138,11 @@ impl HandHistory {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandCollection {
     /// The pkcore crate version that produced this file.
-    #[serde(default = "default_pkcore_version")]
+    #[serde(default = "HandHistory::default_pkcore_version")]
     pub pkcore_version: String,
 
     /// Schema version for forward-compatibility checks.
-    #[serde(default = "default_format_version")]
+    #[serde(default = "HandHistory::default_format_version")]
     pub format_version: u32,
 
     /// The hands contained in this collection.
@@ -1078,8 +1164,8 @@ impl HandCollection {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            pkcore_version: default_pkcore_version(),
-            format_version: default_format_version(),
+            pkcore_version: HandHistory::default_pkcore_version(),
+            format_version: HandHistory::default_format_version(),
             hands: Vec::new(),
         }
     }
@@ -1232,7 +1318,7 @@ impl HandCollection {
     /// assert_eq!(0, collection.hands_by_position(Position::CO).count());
     /// ```
     pub fn hands_by_position(&self, pos: Position) -> impl Iterator<Item = &HandHistory> {
-        self.hands.iter().filter(move |h| hand_has_position(h, pos))
+        self.hands.iter().filter(move |h| Self::hand_has_position(h, pos))
     }
 
     /// Returns an iterator over hands that reached showdown — i.e. at least
@@ -1257,42 +1343,42 @@ impl HandCollection {
                 .is_some_and(|results| results.iter().filter(|r| r.outcome != Outcome::Fold).count() >= 2)
         })
     }
-}
 
-/// Returns `true` when `hand` would seat at least one player at `pos` given
-/// the recorded button and the count of occupied seats in `hand.players`.
-///
-/// Translates physical seat indices to logical (button-relative) positions
-/// the same way [`crate::bot::table_snapshot::TableSnapshot::from_table`]
-/// does, so sparse seat numbering after eliminations doesn't desync the
-/// position math.
-fn hand_has_position(hand: &HandHistory, pos: Position) -> bool {
-    let Some(button_phys) = hand.table.button else {
-        return false;
-    };
-    let mut occupied: Vec<u8> = hand.players.iter().map(|p| p.seat).collect();
-    if occupied.is_empty() {
-        return false;
+    /// Returns `true` when `hand` would seat at least one player at `pos` given
+    /// the recorded button and the count of occupied seats in `hand.players`.
+    ///
+    /// Translates physical seat indices to logical (button-relative) positions
+    /// the same way [`crate::bot::table_snapshot::TableSnapshot::from_table`]
+    /// does, so sparse seat numbering after eliminations doesn't desync the
+    /// position math.
+    fn hand_has_position(hand: &HandHistory, pos: Position) -> bool {
+        let Some(button_phys) = hand.table.button else {
+            return false;
+        };
+        let mut occupied: Vec<u8> = hand.players.iter().map(|p| p.seat).collect();
+        if occupied.is_empty() {
+            return false;
+        }
+        occupied.sort_unstable();
+        let Ok(seat_count) = u8::try_from(occupied.len()) else {
+            return false;
+        };
+        let Some(button_logical_idx) = occupied.iter().position(|&s| s == button_phys) else {
+            return false;
+        };
+        let Ok(button_logical) = u8::try_from(button_logical_idx) else {
+            return false;
+        };
+        hand.players.iter().any(|p| {
+            let Some(logical_idx) = occupied.iter().position(|&s| s == p.seat) else {
+                return false;
+            };
+            let Ok(logical) = u8::try_from(logical_idx) else {
+                return false;
+            };
+            Position::from_seat(logical, button_logical, seat_count) == Some(pos)
+        })
     }
-    occupied.sort_unstable();
-    let Ok(seat_count) = u8::try_from(occupied.len()) else {
-        return false;
-    };
-    let Some(button_logical_idx) = occupied.iter().position(|&s| s == button_phys) else {
-        return false;
-    };
-    let Ok(button_logical) = u8::try_from(button_logical_idx) else {
-        return false;
-    };
-    hand.players.iter().any(|p| {
-        let Some(logical_idx) = occupied.iter().position(|&s| s == p.seat) else {
-            return false;
-        };
-        let Ok(logical) = u8::try_from(logical_idx) else {
-            return false;
-        };
-        Position::from_seat(logical, button_logical, seat_count) == Some(pos)
-    })
 }
 
 impl<'a> IntoIterator for &'a HandCollection {
@@ -1983,7 +2069,7 @@ impl Streets {
                     }
                 }
                 other => {
-                    if let Some(action) = table_action_to_hand_action(other, seat_to_id) {
+                    if let Some(action) = Self::table_action_to_hand_action(other, seat_to_id) {
                         match current {
                             EventStreet::Preflop => preflop_actions.push(action),
                             EventStreet::Flop => flop_actions.push(action),
@@ -2021,36 +2107,36 @@ impl Streets {
             }),
         })
     }
-}
 
-/// Maps a single [`TableAction`] to a [`Action`] for the hand history.
-///
-/// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
-/// `seat_to_id` supplies the per-seat `Uuid` previously announced via
-/// `TableAction::PlayerSeated`; missing entries leave `Action.player_id` as
-/// `None` (e.g. legacy event logs that pre-date EPIC-26).
-#[allow(clippy::cast_precision_loss)]
-fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uuid>) -> Option<Action> {
-    let make = |seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>| Action {
-        seat,
-        player_id: seat_to_id.get(&seat).copied(),
-        action,
-        amount,
-        all_in,
-        agent: None,
-    };
-    match event {
-        TableAction::ForcedBetSmallBlind(seat, amount)
-        | TableAction::ForcedBetBigBlind(seat, amount)
-        | TableAction::BetAnteForced(seat, amount)
-        | TableAction::ForcedBet(seat, amount) => Some(make(*seat, ActionType::Post, Some(*amount as f64), None)),
-        TableAction::Check(seat) => Some(make(*seat, ActionType::Check, None, None)),
-        TableAction::Bet(seat, amount) => Some(make(*seat, ActionType::Bet, Some(*amount as f64), None)),
-        TableAction::Call(seat, amount) => Some(make(*seat, ActionType::Call, Some(*amount as f64), None)),
-        TableAction::Raise(seat, amount) => Some(make(*seat, ActionType::Raise, Some(*amount as f64), None)),
-        TableAction::AllIn(seat, amount) => Some(make(*seat, ActionType::AllIn, Some(*amount as f64), Some(true))),
-        TableAction::Fold(seat) => Some(make(*seat, ActionType::Fold, None, None)),
-        _ => None,
+    /// Maps a single [`TableAction`] to a [`Action`] for the hand history.
+    ///
+    /// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
+    /// `seat_to_id` supplies the per-seat `Uuid` previously announced via
+    /// `TableAction::PlayerSeated`; missing entries leave `Action.player_id` as
+    /// `None` (e.g. legacy event logs that pre-date EPIC-26).
+    #[allow(clippy::cast_precision_loss)]
+    fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uuid>) -> Option<Action> {
+        let make = |seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>| Action {
+            seat,
+            player_id: seat_to_id.get(&seat).copied(),
+            action,
+            amount,
+            all_in,
+            agent: None,
+        };
+        match event {
+            TableAction::ForcedBetSmallBlind(seat, amount)
+            | TableAction::ForcedBetBigBlind(seat, amount)
+            | TableAction::BetAnteForced(seat, amount)
+            | TableAction::ForcedBet(seat, amount) => Some(make(*seat, ActionType::Post, Some(*amount as f64), None)),
+            TableAction::Check(seat) => Some(make(*seat, ActionType::Check, None, None)),
+            TableAction::Bet(seat, amount) => Some(make(*seat, ActionType::Bet, Some(*amount as f64), None)),
+            TableAction::Call(seat, amount) => Some(make(*seat, ActionType::Call, Some(*amount as f64), None)),
+            TableAction::Raise(seat, amount) => Some(make(*seat, ActionType::Raise, Some(*amount as f64), None)),
+            TableAction::AllIn(seat, amount) => Some(make(*seat, ActionType::AllIn, Some(*amount as f64), Some(true))),
+            TableAction::Fold(seat) => Some(make(*seat, ActionType::Fold, None, None)),
+            _ => None,
+        }
     }
 }
 
@@ -2791,15 +2877,6 @@ impl AnalysisContext {
 #[cfg(feature = "bot-profiles")]
 const REPLAY_ID_NAMESPACE: Uuid = Uuid::from_u128(0x9b7e_2a41_c3d5_4f68_8e19_a0b2_c4d6_e8f0);
 
-/// The id a replayed player gets: the one the record carries, or, for a legacy
-/// record without one, a UUID v5 of the player's name.
-#[cfg(feature = "bot-profiles")]
-fn replay_player_id(entry: &PlayerEntry) -> Uuid {
-    entry
-        .player_id
-        .unwrap_or_else(|| Uuid::new_v5(&REPLAY_ID_NAMESPACE, entry.name.as_bytes()))
-}
-
 /// The betting round a [`ReplayStep`] belongs to.
 ///
 /// ```
@@ -2899,84 +2976,6 @@ impl HandCollection {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Private helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Returns the best-hand evaluation for `hole_cards` on a completed 5-card
-/// `board`.  Returns `None` if the board is not yet complete or cards cannot
-/// be parsed.
-fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
-    if board.split_whitespace().count() < 5 {
-        return None;
-    }
-    let seven = Seven::from_str(&format!("{hole_cards} {board}")).ok()?;
-    let (hand_rank, hand) = seven.hand_rank_and_hand();
-    Some(Eval::new(hand_rank, hand))
-}
-
-/// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
-/// game engine.  Returns `None` for `Post` entries (handled by
-/// `act_forced_bets`).
-#[cfg(feature = "bot-profiles")]
-fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    match action.action {
-        ActionType::Fold => Some(PlayerAction::Fold),
-        ActionType::Check => Some(PlayerAction::Check),
-        ActionType::Call => Some(PlayerAction::Call),
-        ActionType::Bet => action.amount.map(|a| PlayerAction::Bet(a as usize)),
-        ActionType::Raise => action.amount.map(|a| PlayerAction::Raise(a as usize)),
-        ActionType::AllIn => Some(PlayerAction::AllIn),
-        ActionType::Post => None,
-    }
-}
-
-/// Calls `end_hand` on `table` and builds a [`ReplayResult`], comparing final
-/// chip counts against the recorded `results` when present.
-/// Chip amounts are stored as `f64` in the YAML schema (for forward-compat with
-/// fractional blinds), but represent whole-chip counts in practice.  The casts
-/// here are intentional: stacks fit in `usize` and net values are bounded by the
-/// starting stack.
-#[cfg(feature = "bot-profiles")]
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
-)]
-fn build_replay_result(
-    mut table: Table,
-    players: &[PlayerEntry],
-    results: Option<&[ResultEntry]>,
-) -> Result<ReplayResult, PKError> {
-    let winnings = table.end_hand()?;
-    let _ = winnings;
-
-    let final_stacks: Vec<(u8, usize)> = players
-        .iter()
-        .filter_map(|p| table.seats.get_seat(p.seat).map(|s| (p.seat, s.player.chips)))
-        .collect();
-
-    let is_consistent = match results {
-        None => true,
-        Some(entries) => entries.iter().all(|r| {
-            let Some(net) = r.net else { return true };
-            let Some(player) = players.iter().find(|p| p.seat == r.seat) else {
-                return false;
-            };
-            // Expected final stack: starting stack + net result, clamped to 0.
-            let expected = (player.stack + net).max(0.0).round() as usize;
-            let actual = final_stacks.iter().find(|(s, _)| *s == r.seat).map_or(0, |(_, c)| *c);
-            expected.abs_diff(actual) <= 1
-        }),
-    };
-
-    Ok(ReplayResult {
-        final_stacks,
-        is_consistent,
-    })
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -3003,19 +3002,19 @@ mod tests {
     #[test]
     fn replay_player_id__uses_the_recorded_id() {
         let id = Uuid::from_u128(9);
-        assert_eq!(id, replay_player_id(&id_entry("Alice", Some(id))));
+        assert_eq!(id, HandHistory::replay_player_id(&id_entry("Alice", Some(id))));
     }
 
     #[cfg(feature = "bot-profiles")]
     #[test]
     fn replay_player_id__without_a_recorded_id_derives_one_from_the_name() {
         assert_eq!(
-            replay_player_id(&id_entry("Alice", None)),
-            replay_player_id(&id_entry("Alice", None))
+            HandHistory::replay_player_id(&id_entry("Alice", None)),
+            HandHistory::replay_player_id(&id_entry("Alice", None))
         );
         assert_ne!(
-            replay_player_id(&id_entry("Alice", None)),
-            replay_player_id(&id_entry("Bob", None))
+            HandHistory::replay_player_id(&id_entry("Alice", None)),
+            HandHistory::replay_player_id(&id_entry("Bob", None))
         );
     }
 
