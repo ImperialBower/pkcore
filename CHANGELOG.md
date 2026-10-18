@@ -23,8 +23,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   every run, so a new file needs no rebuild. `tests/defects/README.md` lists
   which defects have a file, which do not and why, and which files were shown
   to fail when their bug was put back.
+- **`RegretAccumulator::with_floor`, `floors` and `scale_signed`.** The CFR+
+  floor is now a switch, on by default. `scale_signed` multiplies positive and
+  negative regret by different factors, as DCFR needs.
+
+### Changed
+
+- **Breaking: `CfrVariant::Discounted` has a third field, `gamma`**
+  ([DEFECT_030](docs/defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md)).
+  The default is `Discounted { alpha: 1.5, beta: 0.0, gamma: 2.0 }`. `beta`
+  now discounts negative regret, as in Brown & Sandholm (2019); it used to
+  discount the strategy sum. Only `CfrPlus` floors regret at zero now, so
+  `Vanilla` is vanilla CFR. The solver cache key includes `gamma`, so results
+  cached by an older version are a miss and are solved again.
 
 ### Fixed
+
+- **A fold in the GTO solver now pays half the pot before the bet**
+  ([DEFECT_029](docs/defects/DEFECT_029_solver_fold_pays_half_the_bet.md)).
+  The fold terminal held `pot + bet`, so the folder also paid half of a bet it
+  never called. The solver found the equilibrium of a different game, with
+  folds punished and bluffs paid too much. An uncalled bet goes back to the
+  bettor, so the fold terminal now holds `pot`.
+- **DCFR averages the strategy as the paper does**
+  ([DEFECT_030](docs/defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md)).
+  With the default `beta = 0`, the strategy sum was halved every iteration, so
+  the "average" strategy was in fact the last few iterations. The sum now gets
+  `(t / (t + 1))^gamma`, so iteration `s` has weight in proportion to
+  `s^gamma`. The discounts also act on finished iterations only; they were one
+  iteration early.
+- **Exploitability no longer lets the best response see the other hand**
+  ([DEFECT_031](docs/defects/DEFECT_031_clairvoyant_exploitability.md)).
+  `Solver::compute_exploitability` picked the best action for each pair of
+  hands, so the responder knew the opponent's cards. The number could not
+  reach zero, even at a true equilibrium. The best response now picks one
+  action per node for each of its own hands, against all opponent hands that
+  reach the node. On a hand-written equilibrium with a known answer it now
+  reports 0, where it used to report 50 chips.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).

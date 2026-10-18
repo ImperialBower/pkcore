@@ -89,11 +89,11 @@
 //!
 //! Select the algorithm via [`solver_config::CfrVariant`]:
 //!
-//! | Variant | Strategy weight | Regret discount | Notes |
-//! |---------|----------------|-----------------|-------|
-//! | `Vanilla` | uniform (`1.0`) | none | Baseline; slowest convergence. |
-//! | `CfrPlus` | linear (`t`) | none | Full CFR+ (Tammelin 2014); fast in practice. |
-//! | `Discounted { alpha, beta }` | `t^β / (t^β + 1)` | `t^α / (t^α + 1)` | DCFR (Brown & Sandholm 2019); default α=1.5, β=0.0. |
+//! | Variant | Regret floor | Strategy weight | Notes |
+//! |---------|--------------|-----------------|-------|
+//! | `Vanilla` | no | uniform (`1.0`) | Baseline. |
+//! | `CfrPlus` | yes | linear (`t`) | CFR+ (Tammelin 2014). |
+//! | `Discounted { alpha, beta, gamma }` | no | `∝ t^γ` | DCFR (Brown & Sandholm 2019); default α=1.5, β=0, γ=2. |
 //!
 //! # Hand Range Constants
 //!

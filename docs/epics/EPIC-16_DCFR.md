@@ -5,6 +5,12 @@ variants: **CFR+** (Tammelin 2014) and **Discounted CFR** (DCFR, Brown &
 Sandholm 2019). Both converge to Nash equilibrium faster than vanilla CFR,
 reducing the iteration count needed to reach a given exploitability target.
 
+> **Corrected 2026-10-17 (`0.16.0`).** The design below uses `β` to discount
+> the strategy sum and floors regret in every variant. That was wrong; see
+> [`DEFECT_030`](../defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md).
+> `Discounted` now has `alpha`, `beta` and `gamma` as in the paper, and only
+> `CfrPlus` floors regret.
+
 ---
 
 ## What CFR+ and DCFR Actually Fix

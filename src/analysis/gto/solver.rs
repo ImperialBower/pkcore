@@ -21,16 +21,16 @@
 //!
 //! The specific algorithm is selected via [`SolverConfig::cfr_variant`]:
 //!
-//! - **`Vanilla`** — uniform strategy weighting, regret floor only.
+//! - **`Vanilla`** — uniform strategy weighting, no floor, no discount.
 //! - **`CfrPlus`** — linear strategy weighting (weight = iteration `t`) plus
-//!   regret floor. This is full CFR+ (Tammelin 2014).
-//! - **`Discounted { alpha, beta }`** — DCFR (Brown & Sandholm 2019): regrets
-//!   are multiplied by `t^α / (t^α + 1)` before each update; strategy sums
-//!   are multiplied by `t^β / (t^β + 1)`. Default: `α = 1.5`, `β = 0.0`.
+//!   the regret floor. This is CFR+ (Tammelin 2014).
+//! - **`Discounted { alpha, beta, gamma }`** — DCFR (Brown & Sandholm 2019):
+//!   positive regret is multiplied by `t^α / (t^α + 1)`, negative regret by
+//!   `t^β / (t^β + 1)`, and the strategy sum by `(t / (t + 1))^γ`. Default:
+//!   `α = 1.5`, `β = 0`, `γ = 2`.
 //!
-//! All variants share the **CFR+ regret floor**: accumulated regret is clamped
-//! to `max(0, value)` after each update inside [`RegretAccumulator`], discarding
-//! stale negative regret.
+//! Only `CfrPlus` clamps regret to `max(0, value)` inside
+//! [`RegretAccumulator`].
 //!
 //! # Examples
 //!
@@ -546,6 +546,62 @@ impl SolverResult {
 
 // ── Solver ────────────────────────────────────────────────────────────────────
 
+/// What one CFR iteration does to the stored sums before it adds its own.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Discounts {
+    /// Multiplies stored positive regret.
+    positive_regret: f64,
+    /// Multiplies stored negative regret.
+    negative_regret: f64,
+    /// Multiplies the stored strategy sum.
+    strategy_sum: f64,
+    /// Weight of this iteration's own strategy.
+    strategy_weight: f64,
+}
+
+impl Discounts {
+    /// The factors for `iteration` (1-based).
+    ///
+    /// `DEFECT_030`: DCFR discounts the sums of the `t` finished iterations at
+    /// the end of iteration `t`. Here that runs at the start of iteration
+    /// `t + 1`, so the exponents see `t = iteration - 1`.
+    fn for_iteration(variant: &CfrVariant, iteration: usize) -> Self {
+        #[allow(clippy::cast_precision_loss)]
+        let finished = iteration.saturating_sub(1) as f64;
+        match variant {
+            CfrVariant::Vanilla => Self {
+                positive_regret: 1.0,
+                negative_regret: 1.0,
+                strategy_sum: 1.0,
+                strategy_weight: 1.0,
+            },
+            CfrVariant::CfrPlus => Self {
+                positive_regret: 1.0,
+                negative_regret: 1.0,
+                strategy_sum: 1.0,
+                strategy_weight: finished + 1.0,
+            },
+            CfrVariant::Discounted { alpha, beta, gamma } => {
+                let ratio = |exponent: f64| {
+                    let scaled = finished.powf(exponent);
+                    scaled / (scaled + 1.0)
+                };
+                Self {
+                    positive_regret: ratio(*alpha),
+                    negative_regret: ratio(*beta),
+                    strategy_sum: (finished / (finished + 1.0)).powf(*gamma),
+                    strategy_weight: 1.0,
+                }
+            }
+        }
+    }
+
+    /// Returns `true` if either regret factor changes the stored regret.
+    fn discounts_regret(&self) -> bool {
+        (self.positive_regret - 1.0).abs() > f64::EPSILON || (self.negative_regret - 1.0).abs() > f64::EPSILON
+    }
+}
+
 /// Drives CFR over a river game tree until convergence or iteration limit.
 ///
 /// # Domain
@@ -579,8 +635,8 @@ pub struct Solver {
     pub config: SolverConfig,
     /// The game tree built from `config`.
     tree: GameTree,
-    /// CFR+ regret accumulator. Drives the current-iteration strategy via
-    /// regret-matching.
+    /// Regret accumulator. Drives the current-iteration strategy via
+    /// regret-matching. Floors at zero only for CFR+.
     regrets: RegretAccumulator,
     /// Raw cumulative strategy sums (reach-weighted, not normalised).
     ///
@@ -633,7 +689,8 @@ impl Solver {
     #[must_use]
     pub fn new(config: SolverConfig) -> Self {
         let tree = GameTree::build_river(&config);
-        let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
+        let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range)
+            .with_floor(config.cfr_variant == CfrVariant::CfrPlus);
         let strategy_sum = Solver::build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
         let board_cards: Vec<Card> = vec![
             config.board.flop.first(),
@@ -688,7 +745,8 @@ impl Solver {
     #[must_use]
     pub fn new_turn(config: SolverConfig) -> Self {
         let tree = GameTree::build_turn(&config);
-        let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
+        let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range)
+            .with_floor(config.cfr_variant == CfrVariant::CfrPlus);
         let strategy_sum = Solver::build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
 
         // For a turn tree the river card is unknown, so hand pairs are filtered
@@ -752,36 +810,14 @@ impl Solver {
     pub fn iterate(&mut self) -> f64 {
         self.iteration += 1;
 
-        // Compute per-iteration discount factors and strategy weight from the
-        // configured CFR variant.
-        //
-        // | Variant          | regret_factor            | strategy_factor          | strategy_weight |
-        // |------------------|--------------------------|--------------------------|-----------------|
-        // | Vanilla          | 1.0 (no change)          | 1.0 (no change)          | 1.0             |
-        // | CfrPlus          | 1.0 (floor already done) | 1.0 (no change)          | t               |
-        // | Discounted(α, β) | t^α / (t^α + 1)          | t^β / (t^β + 1)          | 1.0             |
-        //
-        // `regret_factor`  — multiply all stored regrets before adding new deltas.
-        // `strategy_factor`— multiply all stored strategy sums before this iteration.
-        // `strategy_weight`— weight applied when accumulating this iteration's strategy.
-        #[allow(clippy::cast_precision_loss)]
-        let t = self.iteration as f64;
-        let (strategy_weight, regret_factor, strategy_factor) = match &self.config.cfr_variant {
-            CfrVariant::Vanilla => (1.0_f64, 1.0_f64, 1.0_f64),
-            CfrVariant::CfrPlus => (t, 1.0, 1.0),
-            CfrVariant::Discounted { alpha, beta } => {
-                let ta = t.powf(*alpha);
-                let tb = t.powf(*beta);
-                (1.0, ta / (ta + 1.0), tb / (tb + 1.0))
-            }
-        };
-
-        // Apply pre-iteration discounting to stored state.
-        if (regret_factor - 1.0).abs() > f64::EPSILON {
-            self.regrets.scale_all(regret_factor);
+        let discounts = Discounts::for_iteration(&self.config.cfr_variant, self.iteration);
+        let strategy_weight = discounts.strategy_weight;
+        if discounts.discounts_regret() {
+            self.regrets
+                .scale_signed(discounts.positive_regret, discounts.negative_regret);
         }
-        if (strategy_factor - 1.0).abs() > f64::EPSILON {
-            Solver::scale_strategy_sum(&mut self.strategy_sum, strategy_factor);
+        if (discounts.strategy_sum - 1.0).abs() > f64::EPSILON {
+            Solver::scale_strategy_sum(&mut self.strategy_sum, discounts.strategy_sum);
         }
 
         // Clone the pair list so we can mutably borrow `self.regrets` and
@@ -1005,7 +1041,8 @@ impl Solver {
     /// Two tree traversals are performed:
     ///
     /// 1. **OOP best response** — OOP plays greedily (maximises at its nodes)
-    ///    while IP plays the fixed `profile`. Returns `br_oop`: the most OOP
+    ///    while IP plays the fixed `profile`. OOP sees only its own hand: at each
+    ///    node it picks one action against all IP hands that reach it. Returns `br_oop`: the most OOP
     ///    could earn against a non-adapting IP.
     /// 2. **IP best response** — IP plays greedily (minimises OOP payoff at its
     ///    nodes) while OOP plays the fixed `profile`. Returns `br_ip`: the least
@@ -1046,22 +1083,8 @@ impl Solver {
     /// ```
     #[must_use]
     pub fn compute_exploitability(&self, profile: &StrategyProfile) -> f64 {
-        let n = self.hand_pairs.len();
-        if n == 0 {
-            return 0.0;
-        }
-        let root = self.tree.root_id();
-        let mut total_br_oop = 0.0_f64;
-        let mut total_br_ip = 0.0_f64;
-        for &(oop_hand, ip_hand) in &self.hand_pairs {
-            let tree = &self.tree;
-            let showdown_map = &self.showdown_map;
-            total_br_oop += Solver::best_response_oop(root, oop_hand, ip_hand, tree, showdown_map, profile);
-            total_br_ip += Solver::best_response_ip(root, oop_hand, ip_hand, tree, showdown_map, profile);
-        }
-        #[allow(clippy::cast_precision_loss)]
-        let n_f = n as f64;
-        (total_br_oop / n_f - total_br_ip / n_f) / 2.0
+        let (best_for_oop, best_for_ip) = self.best_response_values(profile);
+        (best_for_oop - best_for_ip) / 2.0
     }
 
     // region Private helpers
@@ -1145,10 +1168,8 @@ impl Solver {
 
     /// Multiplies every entry in `strategy_sum` by `factor`.
     ///
-    /// Used by DCFR's β-discounting step: before accumulating this iteration's
-    /// strategy contribution, existing sums are scaled by `β_t = t^β / (t^β + 1)`.
-    /// With `β = 0` this equals `0.5` every iteration, which is equivalent in
-    /// expectation to CFR+'s linear strategy weighting.
+    /// Used by DCFR's γ step: before this iteration adds its strategy, the
+    /// sums of the `t` finished iterations are scaled by `(t / (t + 1))^γ`.
     fn scale_strategy_sum(strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>, factor: f64) {
         for hand_map in strategy_sum.values_mut() {
             for sums in hand_map.values_mut() {
@@ -1170,7 +1191,7 @@ impl Solver {
     /// reflects how much better they could have done if they had *always* played
     /// action `a`, ignoring their own past play.
     ///
-    /// The CFR+ floor (`max(0, accumulated + delta)`) is applied inside
+    /// For CFR+ the floor (`max(0, accumulated + delta)`) is applied inside
     /// [`RegretAccumulator::update`], so callers pass the raw delta.
     ///
     /// `showdown_map` holds pre-computed hand strength comparisons for every valid
@@ -1354,152 +1375,144 @@ impl Solver {
         }
     }
 
-    /// Best-response value for OOP against a fixed equilibrium IP strategy.
+    /// Average OOP payoff when OOP best-responds to `profile`, then when IP
+    /// does. The gap between the two is the exploitability.
+    fn best_response_values(&self, profile: &StrategyProfile) -> (f64, f64) {
+        if self.hand_pairs.is_empty() {
+            return (0.0, 0.0);
+        }
+        let mut oop_opponents: HashMap<Two, Vec<Two>> = HashMap::new();
+        let mut ip_opponents: HashMap<Two, Vec<Two>> = HashMap::new();
+        for &(oop_hand, ip_hand) in &self.hand_pairs {
+            oop_opponents.entry(oop_hand).or_default().push(ip_hand);
+            ip_opponents.entry(ip_hand).or_default().push(oop_hand);
+        }
+        let root = self.tree.root_id();
+        let total = |responder: Player, opponents_of: &HashMap<Two, Vec<Two>>| -> f64 {
+            opponents_of
+                .iter()
+                .map(|(&hand, opponents)| {
+                    let reach = vec![1.0; opponents.len()];
+                    self.best_response(root, responder, hand, opponents, &reach, profile)
+                })
+                .sum()
+        };
+        #[allow(clippy::cast_precision_loss)]
+        let n = self.hand_pairs.len() as f64;
+        (
+            total(Player::Oop, &oop_opponents) / n,
+            total(Player::Ip, &ip_opponents) / n,
+        )
+    }
+
+    /// OOP payoff, summed over `opponents` and weighted by `reach`, when
+    /// `responder` holds `hand` and plays its best response to `profile`.
     ///
-    /// OOP plays greedily — it takes the child action with the highest value at its
-    /// own nodes. IP follows the fixed `profile` strategy (weighted average of child
-    /// values). Returns the OOP payoff in chips for this specific hand matchup.
-    ///
-    /// Unlike CFR's [`traverse`], no reach probabilities are tracked: the
-    /// best-responder simply selects the argmax child at its decision nodes. This
-    /// makes the recursion simpler and stateless — only the tree structure, the
-    /// showdown map, and the fixed opponent strategy are needed.
-    fn best_response_oop(
+    /// `DEFECT_031`: the responder does not see the opponent's hand. At its own
+    /// nodes it picks one action for all `opponents` together. `reach` is how
+    /// often the opponent's `profile` gets each opponent hand to this node.
+    fn best_response(
+        &self,
         node_id: NodeId,
-        oop_hand: Two,
-        ip_hand: Two,
-        tree: &GameTree,
-        showdown_map: &ShowdownMap,
+        responder: Player,
+        hand: Two,
+        opponents: &[Two],
+        reach: &[f64],
         profile: &StrategyProfile,
     ) -> f64 {
-        match tree.get(node_id) {
-            Some(Node::Terminal(t)) => Solver::terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+        let pair = |opponent: Two| match responder {
+            Player::Oop => (hand, opponent),
+            Player::Ip => (opponent, hand),
+        };
+        match self.tree.get(node_id) {
             None => 0.0,
+            Some(Node::Terminal(terminal)) => opponents
+                .iter()
+                .zip(reach)
+                .map(|(&opponent, &weight)| {
+                    let (oop_hand, ip_hand) = pair(opponent);
+                    weight * Solver::terminal_payoff(terminal, oop_hand, ip_hand, &self.showdown_map)
+                })
+                .sum(),
             Some(Node::Chance(chance_node)) => {
-                let children: Vec<(Card, NodeId)> = chance_node.children.clone();
-                let valid: Vec<(Card, NodeId)> = children
-                    .into_iter()
-                    .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
-                    .collect();
-                if valid.is_empty() {
-                    return 0.0;
-                }
-                #[allow(clippy::cast_precision_loss)]
-                let n = valid.len() as f64;
-                let sum: f64 = valid
+                // Each pair averages over the runout cards that miss both hands.
+                let live_cards: Vec<usize> = opponents
                     .iter()
-                    .map(|(_, child_id)| {
-                        Solver::best_response_oop(*child_id, oop_hand, ip_hand, tree, showdown_map, profile)
+                    .map(|&opponent| {
+                        chance_node
+                            .children
+                            .iter()
+                            .filter(|(card, _)| !hand.contains_card(*card) && !opponent.contains_card(*card))
+                            .count()
                     })
-                    .sum();
-                sum / n
+                    .collect();
+                chance_node
+                    .children
+                    .iter()
+                    .filter(|(card, _)| !hand.contains_card(*card))
+                    .map(|&(card, child_id)| {
+                        let child_reach: Vec<f64> = opponents
+                            .iter()
+                            .zip(reach)
+                            .zip(&live_cards)
+                            .map(|((&opponent, &weight), &live)| {
+                                if live == 0 || opponent.contains_card(card) {
+                                    0.0
+                                } else {
+                                    #[allow(clippy::cast_precision_loss)]
+                                    let live = live as f64;
+                                    weight / live
+                                }
+                            })
+                            .collect();
+                        self.best_response(child_id, responder, hand, opponents, &child_reach, profile)
+                    })
+                    .sum()
             }
             Some(Node::Action(action_node)) => {
-                let player = action_node.player;
-                let children: Vec<NodeId> = action_node.children.clone();
-                if children.is_empty() {
-                    return 0.0;
-                }
-                let n_actions = children.len();
-                let child_values: Vec<f64> = children
-                    .iter()
-                    .map(|&child_id| {
-                        Solver::best_response_oop(child_id, oop_hand, ip_hand, tree, showdown_map, profile)
-                    })
-                    .collect();
-                match player {
-                    // OOP plays best-response: choose the action with the highest value.
-                    Player::Oop => child_values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-                    // IP plays the fixed equilibrium strategy: weighted average.
-                    Player::Ip => {
-                        let strategy: Vec<f64> = profile.get(node_id, &ip_hand).map_or_else(
-                            || {
-                                #[allow(clippy::cast_precision_loss)]
-                                let p = 1.0 / n_actions as f64;
-                                vec![p; n_actions]
-                            },
-                            |af| af.as_slice().to_vec(),
-                        );
-                        strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
-                    }
+                let n_actions = action_node.children.len();
+                if action_node.player == responder {
+                    let values = action_node
+                        .children
+                        .iter()
+                        .map(|&child_id| self.best_response(child_id, responder, hand, opponents, reach, profile));
+                    let best = match responder {
+                        Player::Oop => values.fold(f64::NEG_INFINITY, f64::max),
+                        Player::Ip => values.fold(f64::INFINITY, f64::min),
+                    };
+                    if best.is_finite() { best } else { 0.0 }
+                } else {
+                    action_node
+                        .children
+                        .iter()
+                        .enumerate()
+                        .map(|(action, &child_id)| {
+                            let child_reach: Vec<f64> = opponents
+                                .iter()
+                                .zip(reach)
+                                .map(|(&opponent, &weight)| {
+                                    weight * Solver::probability(profile, node_id, opponent, action, n_actions)
+                                })
+                                .collect();
+                            self.best_response(child_id, responder, hand, opponents, &child_reach, profile)
+                        })
+                        .sum()
                 }
             }
         }
     }
 
-    /// Best-response value for IP against a fixed equilibrium OOP strategy.
-    ///
-    /// IP plays greedily — it takes the child action that *minimises* OOP's payoff
-    /// at its own nodes. OOP follows the fixed `profile` strategy (weighted average
-    /// of child values). Returns the OOP payoff in chips (which IP is trying to
-    /// minimise) for this specific hand matchup.
-    ///
-    /// The relationship between the two passes:
-    /// - [`best_response_oop`] gives the ceiling: most OOP can earn against a
-    ///   non-adapting IP.
-    /// - [`best_response_ip`] gives the floor: least IP allows OOP to earn against
-    ///   a non-adapting OOP.
-    /// - At Nash equilibrium the ceiling and floor meet; their gap is the
-    ///   exploitability.
-    fn best_response_ip(
-        node_id: NodeId,
-        oop_hand: Two,
-        ip_hand: Two,
-        tree: &GameTree,
-        showdown_map: &ShowdownMap,
-        profile: &StrategyProfile,
-    ) -> f64 {
-        match tree.get(node_id) {
-            Some(Node::Terminal(t)) => Solver::terminal_payoff(t, oop_hand, ip_hand, showdown_map),
-            None => 0.0,
-            Some(Node::Chance(chance_node)) => {
-                let children: Vec<(Card, NodeId)> = chance_node.children.clone();
-                let valid: Vec<(Card, NodeId)> = children
-                    .into_iter()
-                    .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
-                    .collect();
-                if valid.is_empty() {
-                    return 0.0;
-                }
+    /// How often `hand` takes `action` at `node_id` under `profile`. A hand the
+    /// profile does not cover plays every action equally.
+    fn probability(profile: &StrategyProfile, node_id: NodeId, hand: Two, action: usize, n_actions: usize) -> f64 {
+        profile
+            .get(node_id, &hand)
+            .and_then(|freqs| freqs.get(action))
+            .unwrap_or_else(|| {
                 #[allow(clippy::cast_precision_loss)]
-                let n = valid.len() as f64;
-                let sum: f64 = valid
-                    .iter()
-                    .map(|(_, child_id)| {
-                        Solver::best_response_ip(*child_id, oop_hand, ip_hand, tree, showdown_map, profile)
-                    })
-                    .sum();
-                sum / n
-            }
-            Some(Node::Action(action_node)) => {
-                let player = action_node.player;
-                let children: Vec<NodeId> = action_node.children.clone();
-                if children.is_empty() {
-                    return 0.0;
-                }
-                let n_actions = children.len();
-                let child_values: Vec<f64> = children
-                    .iter()
-                    .map(|&child_id| Solver::best_response_ip(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
-                    .collect();
-                match player {
-                    // OOP plays the fixed equilibrium strategy: weighted average.
-                    Player::Oop => {
-                        let strategy: Vec<f64> = profile.get(node_id, &oop_hand).map_or_else(
-                            || {
-                                #[allow(clippy::cast_precision_loss)]
-                                let p = 1.0 / n_actions as f64;
-                                vec![p; n_actions]
-                            },
-                            |af| af.as_slice().to_vec(),
-                        );
-                        strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
-                    }
-                    // IP plays best-response: choose the action that minimises OOP value.
-                    Player::Ip => child_values.iter().copied().fold(f64::INFINITY, f64::min),
-                }
-            }
-        }
+                let uniform = 1.0 / n_actions as f64;
+                uniform
+            })
     }
 
     /// Builds the pre-computed showdown outcome map for a river-only solve.
@@ -1559,7 +1572,7 @@ impl Solver {
 #[allow(non_snake_case)]
 mod analysis__gto__solver__tests {
     use super::*;
-    use crate::analysis::gto::solver_config::SolverConfig;
+    use crate::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
     use crate::play::board::Board;
     use std::str::FromStr;
 
@@ -1709,30 +1722,20 @@ mod analysis__gto__solver__tests {
 
     #[test]
     fn test_solver_strong_range_learns_to_bet() {
-        // AA is a heavy favourite vs KK on a blank board.
-        // After 200 iterations OOP (AA) should bet more than 50% with at least
-        // some hands, as betting captures more equity than checking.
-        let oop = Combos::from_str("AA").unwrap_or_default();
-        let ip = Combos::from_str("KK").unwrap_or_default();
-        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
-        let config = SolverConfig::new(oop, ip, board, 1_000, 200).with_max_iterations(50);
-        let mut solver = Solver::new(config);
+        // In the polarized river AA always bets at Nash. The old version of
+        // this test used a board straight, where every hand ties, and passed
+        // only because folds overpaid the bettor (DEFECT_029).
+        let mut solver = Solver::new(polarized_config().with_max_iterations(500));
         let result = solver.solve();
-        let eq = &result.equilibrium;
         let root = solver.tree.root_id();
-
-        // Action index 1 = Bet (default sizings: [Check, Bet(half_pot), Bet(pot)])
-        // After 50 iterations AA should strongly prefer betting vs KK.
-        let any_bet_dominant = solver
-            .hand_pairs
-            .iter()
-            .map(|&(oop_hand, _)| oop_hand)
-            .any(|hand| eq.get(root, &hand).and_then(|f| f.get(1)).unwrap_or(0.0) > 0.5);
-
-        assert!(
-            any_bet_dominant,
-            "AA should bet >50% with at least one hand vs KK after 50 iterations"
-        );
+        for hand in hands("AA") {
+            let bet = result
+                .equilibrium
+                .get(root, &hand)
+                .and_then(|f| f.get(1))
+                .unwrap_or(0.0);
+            assert!(bet > 0.9, "{hand} bets {bet:.3}");
+        }
     }
 
     // ── CfrVariant convergence ───────────────────────────────────────────────
@@ -1764,7 +1767,14 @@ mod analysis__gto__solver__tests {
 
     #[test]
     fn test_cfr_variant_discounted_runs() {
-        let expl = exploitability_after(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 }, 20);
+        let expl = exploitability_after(
+            CfrVariant::Discounted {
+                alpha: 1.5,
+                beta: 0.0,
+                gamma: 2.0,
+            },
+            20,
+        );
         assert!(expl >= 0.0);
     }
 
@@ -1783,7 +1793,14 @@ mod analysis__gto__solver__tests {
     fn test_dcfr_converges_faster_than_vanilla() {
         // DCFR (α=1.5, β=0) should reach lower exploitability than vanilla in 50 iterations.
         let vanilla = exploitability_after(CfrVariant::Vanilla, 50);
-        let dcfr = exploitability_after(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 }, 50);
+        let dcfr = exploitability_after(
+            CfrVariant::Discounted {
+                alpha: 1.5,
+                beta: 0.0,
+                gamma: 2.0,
+            },
+            50,
+        );
         assert!(
             dcfr < vanilla,
             "DCFR exploitability ({dcfr:.4}) should be below vanilla ({vanilla:.4}) at 50 iters"
@@ -1985,14 +2002,9 @@ mod analysis__gto__solver__tests {
 
     #[test]
     fn test_dcfr_discount_factor_formula() {
-        // DCFR applies regret_factor = t^α / (t^α + 1) before each iteration.
-        // At t=2, α=1.5:  2^1.5 = 2.828…  →  factor = 2.828 / 3.828 ≈ 0.7386
-        //
-        // We verify this indirectly: seed a known regret, run exactly one
-        // DCFR iteration (t=1 → factor = 1/(1+1) = 0.5), then confirm the
-        // stored regret was halved before the new delta was added.
-        //
-        // At t=1, α=1.5:  1^1.5 = 1  →  factor = 1 / (1 + 1) = 0.5
+        // DCFR discounts only finished iterations. Iteration 1 has none, so one
+        // DCFR iteration must match one vanilla iteration exactly. The factors
+        // themselves are checked in `dcfr_discounts_the_regret_of_finished_iterations`.
         let oop = Combos::from_str("AA").unwrap_or_default();
         let ip = Combos::from_str("KK").unwrap_or_default();
         let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
@@ -2003,21 +2015,177 @@ mod analysis__gto__solver__tests {
             .with_cfr_variant(CfrVariant::Vanilla);
         let vanilla_expl = Solver::new(vanilla_config).solve().exploitability;
 
-        // DCFR with α=1.5: at t=1 the discount factor is 0.5.
-        // After just one iteration both solvers start from zero regret, so the
-        // discount has no effect yet — exploitability should agree closely.
         let dcfr_config = SolverConfig::new(oop, ip, board, 1_000, 200)
             .with_max_iterations(1)
-            .with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+            .with_cfr_variant(CfrVariant::Discounted {
+                alpha: 1.5,
+                beta: 0.0,
+                gamma: 2.0,
+            });
         let dcfr_expl = Solver::new(dcfr_config).solve().exploitability;
 
-        // At iteration 1 both variants start from zero stored regret, so the
-        // pre-iteration scale (0.5 × 0 = 0) is identical. Exploitability must match.
         assert!(
             (vanilla_expl - dcfr_expl).abs() < 1e-9,
             "at t=1 DCFR discount acts on zero regret — exploitability must equal vanilla \
              (vanilla={vanilla_expl:.6}, dcfr={dcfr_expl:.6})"
         );
+    }
+
+    // ── The polarized river: a game with a known answer ─────────────────────
+    //
+    // OOP holds the nuts (AA) or air (QQ), half the time each. IP holds a
+    // bluff catcher (KK). The board pairs nobody. Pot 200, one bet size: pot.
+    //
+    // Nash: AA always bets. QQ bets half the time, so one bet in three is a
+    // bluff. IP calls a bet half the time. After a check, IP checks back.
+    // OOP's game value is 50: AA wins 200 on average, QQ loses 100.
+
+    fn polarized_config() -> SolverConfig {
+        SolverConfig::new(
+            Combos::from_str("AA,QQ").unwrap_or_default(),
+            Combos::from_str("KK").unwrap_or_default(),
+            Board::from_str("Jd 8c 5h 3s 2d").unwrap_or_default(),
+            1_000,
+            200,
+        )
+        .with_bet_sizings(BetSizings::uniform(vec![BetSize::pot()]))
+    }
+
+    fn hands(range: &str) -> Vec<Two> {
+        Combos::from_str(range)
+            .unwrap_or_default()
+            .iter()
+            .flat_map(|combo| Twos::from(*combo).to_vec())
+            .collect()
+    }
+
+    fn child(solver: &Solver, node: NodeId, action: usize) -> NodeId {
+        match solver.tree.get(node) {
+            Some(Node::Action(n)) => n.children[action],
+            other => panic!("expected an action node at {node}, got {other:?}"),
+        }
+    }
+
+    /// The Nash equilibrium of the polarized river, written out by hand.
+    fn polarized_nash(solver: &Solver) -> StrategyProfile {
+        let root = solver.tree.root_id();
+        let ip_after_check = child(solver, root, 0);
+        let oop_facing_bet = child(solver, ip_after_check, 1);
+        let ip_facing_bet = child(solver, root, 1);
+
+        let freqs = |range: &str, mix: Vec<f64>| -> HashMap<Two, ActionFrequencies> {
+            hands(range)
+                .into_iter()
+                .map(|hand| (hand, ActionFrequencies::from_normalized(mix.clone())))
+                .collect()
+        };
+        let mut root_mix = freqs("AA", vec![0.0, 1.0]);
+        root_mix.extend(freqs("QQ", vec![0.5, 0.5]));
+        let mut facing_mix = freqs("AA", vec![0.0, 1.0]);
+        facing_mix.extend(freqs("QQ", vec![1.0, 0.0]));
+
+        StrategyProfile::from_map(HashMap::from([
+            (root, root_mix),
+            (ip_after_check, freqs("KK", vec![1.0, 0.0])),
+            (oop_facing_bet, facing_mix),
+            (ip_facing_bet, freqs("KK", vec![0.5, 0.5])),
+        ]))
+    }
+
+    #[test]
+    fn analytic_equilibrium_has_zero_exploitability() {
+        let solver = Solver::new(polarized_config());
+        let nash = polarized_nash(&solver);
+        let exploitability = solver.compute_exploitability(&nash);
+        assert!(exploitability.abs() < 1e-9, "exploitability {exploitability}");
+    }
+
+    // ── DEFECT_030: what each variant does to the stored sums ───────────────
+
+    #[test]
+    fn dcfr_weights_iteration_s_by_s_over_t_to_the_gamma() {
+        // After 10 iterations of the default DCFR (γ = 2), iteration 1 keeps
+        // (1/10)² of the weight of iteration 10. The old β = 0 rule kept 2⁻⁹.
+        let variant = CfrVariant::default();
+        let mut first = Discounts::for_iteration(&variant, 1).strategy_weight;
+        for t in 2..=10 {
+            first *= Discounts::for_iteration(&variant, t).strategy_sum;
+        }
+        let last = Discounts::for_iteration(&variant, 10).strategy_weight;
+        assert!((first / last - 0.01).abs() < 1e-12, "ratio {}", first / last);
+    }
+
+    #[test]
+    fn dcfr_discounts_the_regret_of_finished_iterations() {
+        // At the start of iteration 3, iterations 1 and 2 are done: t = 2.
+        let discounts = Discounts::for_iteration(&CfrVariant::default(), 3);
+        let two_to_alpha = 2.0_f64.powf(1.5);
+        assert!((discounts.positive_regret - two_to_alpha / (two_to_alpha + 1.0)).abs() < 1e-12);
+        assert!((discounts.negative_regret - 0.5).abs() < 1e-12);
+        assert!((discounts.strategy_sum - (2.0_f64 / 3.0).powi(2)).abs() < 1e-12);
+    }
+
+    #[test]
+    fn cfr_plus_weights_iteration_t_by_t() {
+        let discounts = Discounts::for_iteration(&CfrVariant::CfrPlus, 7);
+        assert_eq!(discounts.strategy_weight, 7.0);
+        assert_eq!(discounts.strategy_sum, 1.0);
+    }
+
+    #[test]
+    fn vanilla_never_discounts() {
+        let discounts = Discounts::for_iteration(&CfrVariant::Vanilla, 7);
+        assert_eq!(
+            (
+                discounts.positive_regret,
+                discounts.negative_regret,
+                discounts.strategy_sum,
+                discounts.strategy_weight
+            ),
+            (1.0, 1.0, 1.0, 1.0)
+        );
+    }
+
+    #[test]
+    fn only_cfr_plus_floors_regret() {
+        let floors = |variant: CfrVariant| {
+            Solver::new(polarized_config().with_cfr_variant(variant))
+                .regrets
+                .floors()
+        };
+        assert!(floors(CfrVariant::CfrPlus));
+        assert!(!floors(CfrVariant::Vanilla));
+        assert!(!floors(CfrVariant::default()));
+    }
+
+    #[test]
+    fn default_solver_converges_on_the_polarized_river() {
+        let result = Solver::new(polarized_config().with_max_iterations(1_000)).solve();
+        assert!(result.exploitability < 0.5, "exploitability {}", result.exploitability);
+    }
+
+    #[test]
+    fn analytic_equilibrium_is_worth_fifty_to_oop() {
+        let solver = Solver::new(polarized_config());
+        let (best_for_oop, best_for_ip) = solver.best_response_values(&polarized_nash(&solver));
+        assert!((best_for_oop - 50.0).abs() < 1e-9, "OOP best response {best_for_oop}");
+        assert!((best_for_ip - 50.0).abs() < 1e-9, "IP best response {best_for_ip}");
+    }
+
+    #[test]
+    fn calling_station_is_exploitable_by_twenty_five() {
+        // IP calls every bet. OOP stops bluffing QQ (-100) and AA wins 300:
+        // OOP's best response is worth 100, so the gap is (100 - 50) / 2.
+        let solver = Solver::new(polarized_config());
+        let mut profile = polarized_nash(&solver);
+        let ip_facing_bet = child(&solver, solver.tree.root_id(), 1);
+        if let Some(by_hand) = profile.get_mut(ip_facing_bet) {
+            for freqs in by_hand.values_mut() {
+                *freqs = ActionFrequencies::from_normalized(vec![0.0, 1.0]);
+            }
+        }
+        let exploitability = solver.compute_exploitability(&profile);
+        assert!((exploitability - 25.0).abs() < 1e-9, "exploitability {exploitability}");
     }
 
     #[test]

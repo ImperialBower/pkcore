@@ -157,17 +157,18 @@ pub fn cache_key(config: &SolverConfig) -> u64 {
 /// `CfrVariant` cannot derive [`Hash`] because `Discounted` carries `f64`
 /// exponents, so this writes a discriminant tag first — keeping `Vanilla` and
 /// `CfrPlus` apart even though neither has a payload — then the IEEE-754 bit
-/// patterns of `alpha` and `beta`. Bit-pattern hashing means `-0.0` and `0.0`
+/// patterns of `alpha`, `beta` and `gamma`. Bit-pattern hashing means `-0.0` and `0.0`
 /// hash differently despite comparing equal; for a disk cache that is a miss
 /// and a re-solve, never a wrong answer.
 fn hash_cfr_variant(variant: &CfrVariant, hasher: &mut impl Hasher) {
     match variant {
         CfrVariant::Vanilla => 0_u8.hash(hasher),
         CfrVariant::CfrPlus => 1_u8.hash(hasher),
-        CfrVariant::Discounted { alpha, beta } => {
+        CfrVariant::Discounted { alpha, beta, gamma } => {
             2_u8.hash(hasher);
             alpha.to_bits().hash(hasher);
             beta.to_bits().hash(hasher);
+            gamma.to_bits().hash(hasher);
         }
     }
 }
@@ -507,8 +508,16 @@ mod tests {
 
     #[test]
     fn cache_key_different_discount_exponents_differ() {
-        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
-        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 3.0, beta: 0.0 });
+        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 1.5,
+            beta: 0.0,
+            gamma: 2.0,
+        });
+        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 3.0,
+            beta: 0.0,
+            gamma: 2.0,
+        });
         assert_ne!(cache_key(&config1), cache_key(&config2));
     }
 
@@ -521,7 +530,11 @@ mod tests {
 
     #[test]
     fn cache_key_same_cfr_variant_is_deterministic() {
-        let config = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        let config = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 1.5,
+            beta: 0.0,
+            gamma: 2.0,
+        });
         assert_eq!(cache_key(&config), cache_key(&config));
     }
 
