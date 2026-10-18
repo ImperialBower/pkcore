@@ -216,8 +216,8 @@ The ones that read as more than cleanup:
    `0.16.0`, [`DEFECT_031`](defects/DEFECT_031_clairvoyant_exploitability.md).
 5. ~~**Short all-in sent as `Raise` lowers `table.bet`**~~ — **fixed 2026-10-17**
    in `0.16.0`, [`DEFECT_027`](defects/DEFECT_027_short_all_in_lowers_the_table_bet.md).
-6. **`outs` knob scores any made hand ahead of the median as ~100% equity.**
-   (`src/bot/draw_equity.rs:60-75`)
+6. ~~**`outs` knob scores any made hand ahead of the median as ~100% equity.**~~
+   — **fixed 2026-10-18** in `0.16.0`, [`DEFECT_032`](defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md).
 
 Plus: MC seeds 0–7 identical (`src/analysis/equity/engine.rs:222`),
 `Five::is_straight` true for `9999 5` (`src/arrays/five.rs:95-99`),
@@ -268,12 +268,11 @@ Not authored by the user. Keep, edit, or delete.
 - ~~🤖 Re-run the automated debt review in `TECHNICAL_DEBT.md`~~ — **done
   2026-10-17**, six reviewers. See **Tech debt** above and
   [`TECHNICAL_DEBT.md` § 2026-10-17 pass](TECHNICAL_DEBT.md#-2026-10-17-pass--new-findings).
-- 🤖 **Open DEFECT docs for the six headline defects from the 2026-10-17
-  review** (Razz ladder, solver fold payoff, DCFR averaging, clairvoyant
+- ~~🤖 **Open DEFECT docs for the six headline defects from the 2026-10-17
+  review**~~ — **done 2026-10-18**, all six fixed (Razz ladder, solver fold payoff, DCFR averaging, clairvoyant
   exploitability, short-all-in raise lowering `table.bet`, `outs` knob). Each
-  is a behaviour bug with no record in `docs/defects/`. Five are done
-  (`DEFECT_026`, `DEFECT_027`, `DEFECT_029`–`DEFECT_031`); the `outs` knob
-  remains.
+  is a behaviour bug with no record in `docs/defects/`. They are
+  `DEFECT_026`, `DEFECT_027` and `DEFECT_029`–`DEFECT_032`.
 - 🤖 **Re-run `TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`,
   2026-08-25; `0.15.0`'s seeded-by-default entropy change is exactly the
   kind of controllability move it measures.

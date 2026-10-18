@@ -60,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   action per node for each of its own hands, against all opponent hands that
   reach the node. On a hand-written equilibrium with a known answer it now
   reports 0, where it used to report 50 chips.
+- **The `outs` setting no longer scores a made hand as a sure winner**
+  ([DEFECT_032](docs/defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md)).
+  `outs_against` counted every card that kept the hero ahead of the range's
+  median, without checking that the hero was behind. Bottom set got 47 outs,
+  which the rule of four turned into 100% equity, so a bot with `outs: on`
+  played any hand ahead of the median as the nuts. A hand already ahead now has
+  0 outs and keeps its made-strength score.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).

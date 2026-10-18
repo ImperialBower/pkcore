@@ -28,6 +28,8 @@ use crate::cards::Cards;
 /// it lifts the hero past that yardstick. This is why the same hand has more
 /// outs against a loose range than a tight one: the bar is lower.
 ///
+/// A hand already ahead of the yardstick has no outs, so the count is `0`.
+///
 /// Returns `None` unless the board holds three or four cards, or when no
 /// holding in the range survives the dead cards.
 ///
@@ -62,6 +64,11 @@ pub fn outs_against(hero: Two, board: &Cards, range: &Combos) -> Option<usize> {
         return None;
     }
     let yardstick = range_median_strength(board, range, hero)?;
+    // DEFECT_032: an out takes the hero from behind to ahead. A hand already
+    // ahead of the yardstick has none; its made strength speaks for it.
+    if made_strength(hero, board)? < yardstick {
+        return Some(0);
+    }
     let unseen = unseen_cards(hero, board);
 
     Some(
@@ -107,7 +114,7 @@ fn range_median_strength(board: &Cards, range: &Combos, hero: Two) -> Option<u16
         .to_vec()
         .into_iter()
         .filter(|villain| !collides(*villain, hero, board))
-        .filter_map(|villain| villain_strength(villain, board))
+        .filter_map(|villain| made_strength(villain, board))
         .collect();
     if strengths.is_empty() {
         return None;
@@ -116,8 +123,8 @@ fn range_median_strength(board: &Cards, range: &Combos, hero: Two) -> Option<u16
     Some(strengths[strengths.len() / 2])
 }
 
-/// Best five-card value for a villain holding on this board.
-fn villain_strength(villain: Two, board: &Cards) -> Option<u16> {
+/// Best five-card value for a holding on this board, before the next card.
+fn made_strength(villain: Two, board: &Cards) -> Option<u16> {
     let combined = format!("{villain} {board}");
     match board.len() {
         3 => combined.parse::<Five>().ok().map(|hand| hand.hand_rank_value()),
@@ -217,6 +224,17 @@ mod bot__draw_equity_tests {
             vs_wide > vs_premium,
             "a wider range makes more improvements good: {vs_wide} vs {vs_premium}"
         );
+    }
+
+    /// DEFECT_032: bottom set is already ahead of a wide range, so no card is
+    /// an out. The old count took every card that kept it ahead.
+    #[test]
+    fn a_hand_already_ahead_of_the_range_has_no_outs() {
+        let wide = range("22+, A2s+, K2s+, Q2s+, J2s+, T2s+, 32s+");
+        let flop = outs_against(two("2S 2D"), &cards("2H 7C KD"), &wide).expect("a flop hand resolves");
+        assert_eq!(0, flop, "a set on the flop has no outs");
+        let turn = outs_against(two("2S 2D"), &cards("2H 7C KD 9S"), &wide).expect("a turn hand resolves");
+        assert_eq!(0, turn, "a set on the turn has no outs");
     }
 
     #[test]
