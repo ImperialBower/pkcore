@@ -16,7 +16,7 @@ use crate::bard::Bard;
 use crate::bot::decision_config::PreflopCharts;
 use crate::bot::profile::BotProfile;
 #[cfg(feature = "hup-charts")]
-use crate::bot::range_model::villain_range;
+use crate::bot::range_model::RangeModel;
 use crate::bot::table_snapshot::TableSnapshot;
 use std::str::FromStr;
 
@@ -176,7 +176,7 @@ impl PreflopEquity {
     fn hup_chart_equity(profile: &BotProfile, state: &TableSnapshot, hero: Two) -> Option<f64> {
         let mut villains = Self::active_villain_indices(state);
         let only = villains.pop().filter(|_| villains.is_empty())?;
-        let range = villain_range(profile, state, only)?;
+        let range = RangeModel::villain_range(profile, state, only)?;
         Self::hup_vs_range(&hero, &range)
     }
 
@@ -235,7 +235,7 @@ impl PreflopEquity {
         use crate::play::board::Board;
 
         let mut players = vec![PlayerSpec::Exact(hero)];
-        players.extend(crate::bot::range_model::villain_range_specs(profile, state));
+        players.extend(crate::bot::range_model::RangeModel::villain_range_specs(profile, state));
         if !(2..=10).contains(&players.len()) {
             return None;
         }

@@ -61,6 +61,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `bot::draw_equity` holds `outs_against`, `outs_equity` and the five private
   helpers. The function names did not change. The old free functions still
   work for this release; see Deprecated.
+- **The range model functions live on `RangeModel`.** A new unit struct in
+  `bot::range_model` holds `villain_range`, `villain_specs`,
+  `villain_range_specs` and the private `widen_by_reads`; the names did not
+  change. `combos_from_weighted` is now `WeightedRange::to_combos`, since it
+  reads only the range. `MIN_HANDS_FOR_READ` stays at its old path. The old
+  free functions still work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -96,6 +102,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`bot::draw_equity::outs_against` and `outs_equity`.** Use
   `DrawEquity::outs_against` and `DrawEquity::outs_equity`. Same terms as
   above.
+- **`bot::range_model::combos_from_weighted`, `villain_range`,
+  `villain_specs` and `villain_range_specs`.** Use `WeightedRange::to_combos`
+  and the same names on `RangeModel`. Same terms as above.
 
 ### Fixed
 

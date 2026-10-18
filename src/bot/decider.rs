@@ -563,7 +563,7 @@ impl RuleBasedDecider {
             .iter()
             .enumerate()
             .find(|(_, villain)| villain.is_active && villain.seat != state.seat)
-            .and_then(|(index, _)| crate::bot::range_model::villain_range(profile, state, index))
+            .and_then(|(index, _)| crate::bot::range_model::RangeModel::villain_range(profile, state, index))
         else {
             return proxy;
         };
@@ -620,7 +620,7 @@ impl RuleBasedDecider {
 
     /// Real multi-way equity for the hero via the [`crate::analysis::equity`]
     /// engine: hero as `Exact`, each active villain as whatever
-    /// [`villain_specs`](crate::bot::range_model::villain_specs) resolves — a
+    /// [`RangeModel::villain_specs`](crate::bot::range_model::RangeModel::villain_specs) resolves — a
     /// position range when the profile sets `ranges: position_aware`, `Random`
     /// otherwise. Returns `None` (so the caller falls back to the proxy) when the
     /// hero is not a 2-card NLHE hand, no active villain remains, or the seat
@@ -642,7 +642,7 @@ impl RuleBasedDecider {
         }
         let hero = Two::from_str(&state.hole_cards.to_string()).ok()?;
         let board = Board::try_from(state.board.clone()).ok()?;
-        let villains = crate::bot::range_model::villain_specs(profile, state);
+        let villains = crate::bot::range_model::RangeModel::villain_specs(profile, state);
         let total = villains.len() + 1;
         if !(2..=10).contains(&total) {
             return None;
@@ -1911,7 +1911,7 @@ mod bot__decider_tests {
     fn default_profile_postflop_equity_is_unchanged_by_the_range_model() {
         use crate::analysis::equity::PlayerSpec;
         use crate::bot::decision_config::EquityMode;
-        use crate::bot::range_model::villain_specs;
+        use crate::bot::range_model::RangeModel;
         use crate::cards::Cards;
         use std::str::FromStr;
 
@@ -1930,7 +1930,7 @@ mod bot__decider_tests {
         profile.decision.equity = EquityMode::Fast { samples: 5_000 };
 
         assert!(
-            villain_specs(&profile, &state)
+            RangeModel::villain_specs(&profile, &state)
                 .iter()
                 .all(|spec| matches!(spec, PlayerSpec::Random)),
             "the default `ranges: flat` profile still sees Random villains"
