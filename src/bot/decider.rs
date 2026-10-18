@@ -567,10 +567,10 @@ impl RuleBasedDecider {
         else {
             return proxy;
         };
-        let Some(outs) = crate::bot::draw_equity::outs_against(hero, &state.board, &range) else {
+        let Some(outs) = crate::bot::draw_equity::DrawEquity::outs_against(hero, &state.board, &range) else {
             return proxy;
         };
-        proxy.max(crate::bot::draw_equity::outs_equity(outs, cards_to_come))
+        proxy.max(crate::bot::draw_equity::DrawEquity::outs_equity(outs, cards_to_come))
     }
 
     /// Postflop hand-rank proxy: normalise the best 5-of-N `hand_rank_value` to

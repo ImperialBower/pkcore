@@ -57,6 +57,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TableSnapshot::largest_active_opponent`. The five private rule helpers are
   private methods of `ExploitConfig`. The old names still work for this
   release; see Deprecated.
+- **The draw equity functions live on `DrawEquity`.** A new unit struct in
+  `bot::draw_equity` holds `outs_against`, `outs_equity` and the five private
+  helpers. The function names did not change. The old free functions still
+  work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -89,6 +93,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Percentage::scaled` and `TableSnapshot::largest_active_opponent`. Same
   terms: the old functions call the new ones and will be removed in the next
   minor release.
+- **`bot::draw_equity::outs_against` and `outs_equity`.** Use
+  `DrawEquity::outs_against` and `DrawEquity::outs_equity`. Same terms as
+  above.
 
 ### Fixed
 
