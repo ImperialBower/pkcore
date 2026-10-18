@@ -68,6 +68,7 @@ full = [
     "persistence",
     "terminal",
     "entropy",
+    "pokerbench",
 ]
 ## OS nondeterminism — randomness and the wall clock (0.15.0,
 ## docs/KERNEL_PURITY_AUDIT.md fix 8). On by default. It backs the
@@ -137,7 +138,7 @@ bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 ## anyway. See EPIC-39 corrigendum 16.
 hup-charts = []
 
-## Enables the HuggingFace `pokerbench` module.
+## Enables the HuggingFace `pokerbench` module. In `full` since 0.16.0.
 pokerbench = ["csv", "json"]
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
 ## 5-card hand enumeration read from a self-generated file).

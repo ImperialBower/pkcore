@@ -28,11 +28,11 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      # The pokerbench module is gated off by default, so the plain `test` job
-      # never compiles it. Exercise it explicitly here (tests, doc tests, lints).
+      # `full` includes `pokerbench` since 0.16.0, so the other jobs compile it
+      # too. This job still runs the whole suite and lints on stable.
       # clippy comes from rust-toolchain.toml's components on the pinned toolchain.
-      - run: cargo test --features full,pokerbench
-      - run: cargo clippy --features full,pokerbench -- -D warnings
+      - run: cargo test --features full
+      - run: cargo clippy --features full -- -D warnings
 
   optional-features:
     name: Optional features (bot-training, debug-json)

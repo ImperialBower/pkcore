@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`full` now includes `pokerbench`.** The module was in no umbrella
+  feature, so `make lint`, `make ayce`, the docs build and the pedantic clippy
+  job never compiled it. It needs only `csv` and `json`, which `full` already
+  has.
 - **The PokerBench parsing helpers live on `PokerBenchParser`.** The 18
   crate-private functions in `pokerbench::parse` are now associated functions
   of a crate-private unit struct, per the house rule of no free functions. No
