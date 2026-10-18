@@ -1,0 +1,26 @@
+# Used only by `make check-purity-fs` (via CLIPPY_CONF_DIR), never by a normal
+# clippy run. The lean builds (`--no-default-features` and the defaults) must
+# not touch the filesystem: file access sits behind `persistence` and the other
+# IO features (docs/KERNEL_PURITY_AUDIT.md, DEFECT_038). Clippy sees only the
+# code a build compiles, so any hit here is file IO that leaked into the kernel.
+disallowed-methods = [
+    { path = "std::fs::copy", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::create_dir", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::create_dir_all", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::metadata", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::read", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::read_dir", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::read_to_string", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::remove_dir", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::remove_dir_all", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::remove_file", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::rename", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::write", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::File::open", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::File::create", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::OpenOptions::open", reason = "file IO belongs behind `persistence`" },
+]
+disallowed-types = [
+    { path = "std::fs::File", reason = "file IO belongs behind `persistence`" },
+    { path = "std::fs::OpenOptions", reason = "file IO belongs behind `persistence`" },
+]

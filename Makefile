@@ -1,4 +1,4 @@
-.PHONY: lint test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -53,6 +53,7 @@ help:
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
 	@echo "  make check-purity       - Fail on rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon/clap/csv/serde_json in the default and --no-default-features builds; warn on the rest"
+	@echo "  make check-purity-fs    - Fail on std::fs calls in the default and --no-default-features builds (run by check-purity)"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -329,7 +330,20 @@ PURITY_MATCH = (^|[^[:alnum:]_-])($(1)) v[0-9]
 
 # `$$mode` is left unquoted on purpose: empty, it expands to no argument at all,
 # which is the plain default build.
-check-purity:
+# No filesystem calls in the lean builds (DEFECT_038). Clippy checks only the
+# code each build compiles, with the extra config in .config/purity/.
+check-purity-fs:
+	@for mode in --no-default-features ""; do \
+		label=$${mode:-default features}; \
+		CLIPPY_CONF_DIR=.config/purity cargo clippy $$mode --lib --quiet -- \
+			-A clippy::all -A warnings \
+			-D clippy::disallowed_methods -D clippy::disallowed_types || { \
+			echo "::error::Purity gate failed ($$label): file IO outside \`persistence\` (see above)."; \
+			exit 1; }; \
+		echo "Purity gate passed ($$label): no std::fs calls."; \
+	done
+
+check-purity: check-purity-fs
 	@for mode in --no-default-features ""; do \
 		label=$${mode:-default features}; \
 		tree=$$(cargo tree $$mode -e no-dev) || exit 1; \

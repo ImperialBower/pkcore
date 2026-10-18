@@ -106,7 +106,8 @@ make ayce           # the full local gate: fmt, clippy, test, docs, plus the
                     # bare-kernel test and per-feature checks CI runs.
                     # Slow: run it only when asked or before a release
 make check-purity   # assert no rusqlite/zstd/termion/dotenvy leak into
-                    # --no-default-features (the domain-kernel gate)
+                    # --no-default-features (the domain-kernel gate), and no
+                    # std::fs calls in the lean builds (check-purity-fs)
 make perf-check     # fmt + clippy + test the standalone perf/ crate, which
                     # sits OUTSIDE the workspace and is not covered by `ayce`
 make perf-native    # measure the kernel, write docs/perf/results/

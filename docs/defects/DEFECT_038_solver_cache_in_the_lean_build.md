@@ -64,8 +64,12 @@ features. Turn on `persistence` (or `full`) to keep it.
 
 ## Prevention
 
-`make check-purity` could also search the lean build for `std::fs`. That is
-not done here.
+`make check-purity` now runs `make check-purity-fs` (added 2026-10-18). It
+runs clippy on the `--no-default-features` and default builds with an extra
+config, `.config/purity/clippy.toml`, that bans `std::fs` calls and types.
+Clippy sees only the code a build compiles, so file access behind
+`persistence` is fine and a leak fails. With this defect put back, the check
+failed on `solver_cache.rs`.
 
 ---
 

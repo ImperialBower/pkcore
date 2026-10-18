@@ -105,7 +105,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/rust-toolchain
         with:
-          components: rust-src
+          # clippy: `make check-purity` runs `check-purity-fs`.
+          components: rust-src,clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       # Full test run with default features off: compiles lib, tests, AND
       # examples (which `--lib --tests` skips) and runs the non-gated suite.
@@ -130,7 +131,8 @@ jobs:
       # lands.
       # Single source: the gate lives in the Makefile (`check-purity`) so CI and
       # local runs cannot drift (audit P9j.4). The `::error::` annotation is
-      # emitted by the Makefile target itself.
+      # emitted by the Makefile target itself. It also runs `check-purity-fs`:
+      # no `std::fs` calls in the lean builds (DEFECT_038).
       - name: Kernel purity gate (no-default-features)
         run: make check-purity
 
