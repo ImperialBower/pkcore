@@ -240,7 +240,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 
 | File | Free fns | Public ones (breaking to move) |
 |---|---|---|
-| `src/pokerbench/parse.rs` | 18 | — |
+| ~~`src/pokerbench/parse.rs`~~ — **done 2026-10-18**, `PokerBenchParser` | 18 | — |
 | `src/bot/decider.rs` | 13 | — |
 | `src/bot/preflop_equity.rs` | 9 | `hup_equity_vs_range`, `preflop_equity` |
 | `src/hand_history.rs` | 8 | — |
