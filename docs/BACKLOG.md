@@ -221,8 +221,10 @@ The ones that read as more than cleanup:
 
 Plus: ~~MC seeds 0–7 identical~~ (fixed 2026-10-18, [`DEFECT_033`](defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)),
 ~~`Five::is_straight` true for `9999 5`~~ (fixed 2026-10-18, [`DEFECT_034`](defects/DEFECT_034_paired_hand_is_a_straight.md)),
-`Card::from_str("AsKd")` is `Ok(A♠)` (`src/card.rs:307-334`), `Eval` and
-`Cards` break the Hash/Eq contract, `SolverCache` does `std::fs` in the lean
+~~`Card::from_str("AsKd")` is `Ok(A♠)`~~ (fixed 2026-10-18, [`DEFECT_035`](defects/DEFECT_035_card_parse_ignores_trailing_text.md)), ~~`Eval` and
+`Cards` break the Hash/Eq contract~~ (fixed 2026-10-18,
+[`DEFECT_036`](defects/DEFECT_036_eval_hash_disagrees_with_eq.md),
+[`DEFECT_037`](defects/DEFECT_037_cards_hash_disagrees_with_eq.md)), `SolverCache` does `std::fs` in the lean
 default build, and ~300 `test_`-prefixed test functions.
 
 ### Refactor — move free functions into an `impl`

@@ -329,6 +329,10 @@ impl FromStr for Card {
                 suit
             }
         };
+        // DEFECT_035: "AsKd" is two cards, not the ace of spades.
+        if chars.next().is_some() {
+            return Err(PKError::InvalidCardIndex);
+        }
         Ok(Card::new(rank, suit))
     }
 }
@@ -823,6 +827,14 @@ mod card_tests {
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
         assert_eq!(PKError::InvalidCardIndex, Card::from_str("  ").unwrap_err());
         assert_eq!(PKError::InvalidCardIndex, Card::from_str("QQ").unwrap_err());
+    }
+
+    /// DEFECT_035: text left after the rank and suit is an error, not ignored.
+    #[test]
+    fn from_str__rejects_trailing_characters() {
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("AsKd").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("AsX").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("As Kd").unwrap_err());
     }
 
     #[test]

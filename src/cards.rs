@@ -946,11 +946,15 @@ impl FromStr for Cards {
     }
 }
 
+/// Hashes the set of cards as a [`Bard`] mask, one bit per card, so order does
+/// not count. That matches the derived `PartialEq`, which `IndexSet` makes
+/// order-blind (`DEFECT_037`).
 impl Hash for Cards {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        for card in self {
-            card.hash(state);
-        }
+        self.iter()
+            .fold(Bard::default(), |bard, card| bard.fold_in(*card))
+            .as_u64()
+            .hash(state);
     }
 }
 
@@ -1080,6 +1084,29 @@ mod cards_tests {
     use super::*;
     use crate::util::data::TestData;
     use rstest::rstest;
+    use std::hash::{DefaultHasher, Hasher};
+
+    fn hash_of(cards: &Cards) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        cards.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// DEFECT_037: `==` ignores order, so the hash must ignore it too.
+    #[test]
+    fn equal_cards_in_a_different_order_have_equal_hashes() {
+        let forward = Cards::from_str("A♠ K♠ Q♠").unwrap();
+        let backward = Cards::from_str("Q♠ K♠ A♠").unwrap();
+        assert_eq!(forward, backward);
+        assert_eq!(hash_of(&forward), hash_of(&backward));
+    }
+
+    #[test]
+    fn different_cards_have_different_hashes() {
+        let one = Cards::from_str("A♠ K♠ Q♠").unwrap();
+        let other = Cards::from_str("A♠ K♠ J♠").unwrap();
+        assert_ne!(hash_of(&one), hash_of(&other));
+    }
 
     #[test]
     fn bitand_is_intersection() {
@@ -1568,6 +1595,12 @@ mod cards_tests {
     #[test]
     fn from_str__invalid() {
         assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
+    }
+
+    /// DEFECT_035: run-together cards were read as their first card only.
+    #[test]
+    fn from_str__rejects_cards_without_spaces() {
+        assert!(Cards::from_str("AsKdQh").is_err());
     }
 
     #[test]

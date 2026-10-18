@@ -83,6 +83,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `9 9 9 9 5` was a straight. It now also needs five different ranks.
   `is_straight_flush` is fixed with it. Hand ranking used lookup tables and
   was never affected.
+- **`Card::from_str` rejects text after the card**
+  ([DEFECT_035](docs/defects/DEFECT_035_card_parse_ignores_trailing_text.md)).
+  It read a rank and a suit and dropped the rest, so `"AsKd"` parsed as the
+  ace of spades and `Cards::from_str("AsKdQh")` as one card. Leftover
+  characters are now `PKError::InvalidCardIndex`. Surrounding spaces are
+  still trimmed.
+- **Equal `Eval`s now have equal hashes**
+  ([DEFECT_036](docs/defects/DEFECT_036_eval_hash_disagrees_with_eq.md)).
+  `==` compares only the hand rank, so two royal flushes are equal, but the
+  hash also used the five cards. A hash set or map keyed by `Eval` or
+  `CaseEval` could miss a key or hold it twice. The hash now uses the hand
+  rank only.
+- **Equal `Cards` now have equal hashes**
+  ([DEFECT_037](docs/defects/DEFECT_037_cards_hash_disagrees_with_eq.md)).
+  `==` ignores order, but the hash followed it, so `A♠ K♠` and `K♠ A♠` were
+  equal with different hashes. The hash now uses the `Bard` mask, one bit per
+  card, which is the same in any order.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).
