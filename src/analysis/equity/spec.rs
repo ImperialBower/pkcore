@@ -167,14 +167,14 @@ impl EquityRequest {
         }
     }
 
-    /// Runs the calculation. See [`crate::analysis::equity::compute`].
+    /// Runs the calculation. See [`crate::analysis::equity::EquityEngine::compute`].
     ///
     /// # Errors
     ///
     /// Returns a [`crate::PKError`] when the request is invalid (wrong number of
     /// seats, duplicated cards, an over-full board, or an impossible range).
     pub fn compute(&self) -> Result<super::result::EquityReport, crate::PKError> {
-        super::engine::compute(self)
+        super::engine::EquityEngine::compute(self)
     }
 }
 

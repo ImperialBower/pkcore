@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking: the equity engine's functions live on `EquityEngine`.** The free
+  function `analysis::equity::compute` is now `EquityEngine::compute`, a unit
+  struct that holds no state. `EquityRequest::compute` is unchanged. The
+  engine's private helpers moved onto the same struct.
 - **Breaking: `CfrVariant::Discounted` has a third field, `gamma`**
   ([DEFECT_030](docs/defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md)).
   The default is `Discounted { alpha: 1.5, beta: 0.0, gamma: 2.0 }`. `beta`

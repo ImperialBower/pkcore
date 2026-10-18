@@ -43,6 +43,6 @@ pub mod engine;
 pub mod result;
 pub mod spec;
 
-pub use engine::compute;
+pub use engine::EquityEngine;
 pub use result::{EquityReport, Method, PlayerEquity};
 pub use spec::{EquityOptions, EquityRequest, PlayerSpec};

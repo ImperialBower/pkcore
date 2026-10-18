@@ -25,7 +25,7 @@
 //! ```
 
 use clap::Parser;
-use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec, compute};
+use pkcore::analysis::equity::{EquityEngine, EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::analysis::gto::combos::Combos;
 use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
@@ -113,7 +113,7 @@ fn main() {
     let request = EquityRequest { players, board, opts };
 
     let start = Instant::now();
-    let report = match compute(&request) {
+    let report = match EquityEngine::compute(&request) {
         Ok(report) => report,
         Err(e) => {
             eprintln!("error: {e:?}");
