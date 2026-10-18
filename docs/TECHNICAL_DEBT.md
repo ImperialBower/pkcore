@@ -256,7 +256,7 @@ _The 2026-08-18 line "the whole bot / decision layer returned zero findings" is 
 
 #### Correctness — card kernel (`src/*.rs`, `src/arrays/`)
 
-- [ ] 🤖 ✔ **`Five::is_straight` is true for paired hands** — `trailing_zeros + leading_zeros == 27` only says the lowest and highest ranks are 4 apart; `9 9 9 9 5` passes. Ranking is unaffected (tables), the public predicate and `examples/decon_dump.rs:412` are wrong. Suggested: also require `rank_bits.count_ones() == 5`. (`src/arrays/five.rs:95-99`)
+- [x] ~~🤖 ✔ **`Five::is_straight` is true for paired hands**~~ — **FIXED 2026-10-18** in `0.16.0`, recorded as [`DEFECT_034`](defects/DEFECT_034_paired_hand_is_a_straight.md). Original finding: `trailing_zeros + leading_zeros == 27` only says the lowest and highest ranks are 4 apart; `9 9 9 9 5` passes. Ranking is unaffected (tables), the public predicate and `examples/decon_dump.rs:412` are wrong. Suggested: also require `rank_bits.count_ones() == 5`. (`src/arrays/five.rs:95-99`)
 - [ ] 🤖 **`StartingHands::from(Vec<Two>)` indexes past its 9-slot array**, reachable from `from_str` with ≥ 20 cards. (`src/arrays/hole_cards/twos.rs:317-325`, `:388-397`)
 - [ ] 🤖 ✔ **`Card::from_str` ignores trailing characters** — `"AsKd"` → `Ok(A♠)`, so `Cards::from_str("AsKdQh")` yields one card with no error. (`src/card.rs:307-334`)
 - [ ] 🤖 **`Two` deserialization still maps corrupt input to `[BLANK, BLANK]`** (the behaviour `Card` fixed in EPIC-88); `SortedHeadsUp::read_csv` cannot detect a corrupt hand cell; zero serde tests for `Two`. (`src/arrays/two.rs:25`, `:1687-1697`)

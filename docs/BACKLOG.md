@@ -220,7 +220,7 @@ The ones that read as more than cleanup:
    — **fixed 2026-10-18** in `0.16.0`, [`DEFECT_032`](defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md).
 
 Plus: ~~MC seeds 0–7 identical~~ (fixed 2026-10-18, [`DEFECT_033`](defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)),
-`Five::is_straight` true for `9999 5` (`src/arrays/five.rs:95-99`),
+~~`Five::is_straight` true for `9999 5`~~ (fixed 2026-10-18, [`DEFECT_034`](defects/DEFECT_034_paired_hand_is_a_straight.md)),
 `Card::from_str("AsKd")` is `Ok(A♠)` (`src/card.rs:307-334`), `Eval` and
 `Cards` break the Hash/Eq contract, `SolverCache` does `std::fs` in the lean
 default build, and ~300 `test_`-prefixed test functions.

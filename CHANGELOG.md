@@ -77,6 +77,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reorders the same sample seeds. So seeds 0 to 7, including the default 0,
   drew the same samples. Sample seeds now step by the 64-bit golden ratio.
   Every seeded Monte Carlo result changes; exact enumeration does not.
+- **`Five::is_straight` is false for paired hands**
+  ([DEFECT_034](docs/defects/DEFECT_034_paired_hand_is_a_straight.md)).
+  It checked only that the lowest and highest ranks were four apart, so
+  `9 9 9 9 5` was a straight. It now also needs five different ranks.
+  `is_straight_flush` is fixed with it. Hand ranking used lookup tables and
+  was never affected.
 
 - **A six-low now beats a seven-low in Razz**
   ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).

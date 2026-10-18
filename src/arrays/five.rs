@@ -91,11 +91,24 @@ impl Five {
         (self.and_bits() & Card::SUIT_FLAG_FILTER) != 0
     }
 
+    /// Returns `true` for five different ranks in a row, the wheel included.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use std::str::FromStr;
+    ///
+    /// assert!(Five::from_str("9♠ 8♦ 7♠ 6♥ 5♠").unwrap().is_straight());
+    /// assert!(!Five::from_str("9♠ 9♥ 9♦ 9♣ 5♠").unwrap().is_straight());
+    /// ```
     #[must_use]
     pub fn is_straight(&self) -> bool {
         let rank_bits = self.or_rank_bits();
-        ((rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING)
-            || rank_bits == Five::WHEEL_OR_BITS
+        // DEFECT_034: the span test alone passed `9 9 9 9 5`; a pair shares a bit.
+        rank_bits.count_ones() == 5
+            && (((rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING)
+                || rank_bits == Five::WHEEL_OR_BITS)
     }
 
     #[must_use]
@@ -499,6 +512,15 @@ mod arrays__five_tests {
         assert!(Five::from_str("4♦ 3♠ 2♥ A♠ 5♠").unwrap().is_straight());
         assert!(!Five::from_str("4♦ 3♠ 9♥ A♠ 5♠").unwrap().is_straight());
         assert!(!Five::from_str("4♦ 3♠ 2♥ 8♠ 5♠").unwrap().is_straight());
+    }
+
+    /// DEFECT_034: a paired hand whose lowest and highest ranks are four apart
+    /// is not a straight. A straight needs five different ranks.
+    #[test]
+    fn paired_hand_spanning_five_ranks_is_not_a_straight() {
+        assert!(!Five::from_str("9♠ 9♥ 9♦ 9♣ 5♠").unwrap().is_straight());
+        assert!(!Five::from_str("9♠ 9♥ 8♦ 7♣ 5♠").unwrap().is_straight());
+        assert!(!Five::from_str("A♠ A♥ 2♦ 3♣ 5♠").unwrap().is_straight());
     }
 
     #[test]
