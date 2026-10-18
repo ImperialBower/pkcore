@@ -225,6 +225,62 @@ Plus: ~~MC seeds 0–7 identical~~ (fixed 2026-10-18, [`DEFECT_033`](defects/DEF
 `Cards` break the Hash/Eq contract, `SolverCache` does `std::fs` in the lean
 default build, and ~300 `test_`-prefixed test functions.
 
+### Refactor — move free functions into an `impl`
+
+House style from 2026-10-18: no free-standing functions. Each one goes in an
+`impl`, on the type it serves or on an empty unit struct named for the
+module's job. `src/analysis/equity/engine.rs` is the model: its 11 functions
+are now `EquityEngine` methods.
+
+Census at 2026-10-18: **118 free functions in 29 files**, counted as `fn` at
+column 0 outside test modules. **25 are public**, so moving those is a breaking
+change and needs a CHANGELOG entry. Do one file per change.
+
+| File | Free fns | Public ones (breaking to move) |
+|---|---|---|
+| `src/pokerbench/parse.rs` | 18 | — |
+| `src/bot/decider.rs` | 13 | — |
+| `src/bot/preflop_equity.rs` | 9 | `hup_equity_vs_range`, `preflop_equity` |
+| `src/hand_history.rs` | 8 | — |
+| `src/bot/exploit.rs` | 8 | `scale_percentage`, `largest_active_opponent`, `adjust_profile` |
+| `src/bot/draw_equity.rs` | 7 | `outs_against`, `outs_equity` |
+| `src/bot/range_model.rs` | 6 | `combos_from_weighted`, `villain_range`, `villain_specs`, `villain_range_specs` |
+| `src/bot/hand_order.rs` | 6 | `hand_ordering`, `range_of_width`, `derive_hand_ordering` |
+| `src/casino/tda.rs` | 5 | — |
+| `src/casino/table/snapshot.rs` | 5 | — |
+| `src/bot/training/evaluator.rs` | 5 | `default_field`, `evaluate` |
+| `src/play/stages/deal_eval.rs` | 3 | — |
+| `src/bot/training/encoding.rs` | 3 | `encode`, `decode`, `ranges` |
+| `src/analysis/player_stats.rs` | 3 | — |
+| `src/pokerbench/scenario.rs` | 2 | — |
+| `src/games/kuhn.rs` | 2 | — |
+| `src/analysis/store/bcm/binary_card_map.rs` | 2 | `load_bc_rank_map`, `bc_rank_hashmap` |
+| `src/analysis/gto/solver_cache.rs` | 2 | `cache_key` |
+| `src/util/data.rs` | 1 | — |
+| `src/util/csv.rs` | 1 | `distinct_shus_from_csv_as_masked_vec` |
+| `src/pokerbench/score.rs` | 1 | `score_action` |
+| `src/pokerbench/action.rs` | 1 | — |
+| `src/play/game.rs` | 1 | — |
+| `src/casino/equity/table_equity.rs` | 1 | — |
+| `src/card.rs` | 1 | — |
+| `src/bot/training/trainer.rs` | 1 | — |
+| `src/bot/decision_config.rs` | 1 | — |
+| `src/arrays/two.rs` | 1 | — |
+| `src/analysis/store/embedded/hup_cache.rs` | 1 | `lookup_odds` |
+
+Notes:
+
+- **Not counted:** free functions inside inline non-test modules, such as
+  `mod color` in `src/analysis/nubibus.rs`, `alloc_probe` in `src/lib.rs` and
+  `bet_size_fractions` in `src/bot/betting_strategy.rs`. Check these too when
+  their file is done.
+- **Serde helpers.** Eight `#[serde(default = "…")]` or `with = "…"`
+  attributes name functions by path. An associated function works there as
+  `"Type::name"`, so these can move too.
+- **Start with the private-only files.** They break nothing:
+  `src/pokerbench/parse.rs`, `src/bot/decider.rs` and `src/hand_history.rs`
+  hold 39 of the 118.
+
 ---
 
 ## Open GitHub issues
