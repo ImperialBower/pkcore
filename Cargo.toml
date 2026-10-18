@@ -81,7 +81,8 @@ full = [
 ## check-purity` fails on `getrandom` there).
 entropy = ["rand/os_rng", "rand/thread_rng", "uuid/v4", "dep:getrandom_v3"]
 ## Filesystem convenience wrappers over the pure serializers:
-## `SolverResult::save`/`load` (+ `_binary`, `_json`), `BotProfile::to_file`/
+## `SolverResult::save`/`load` (+ `_binary`, `_json`), the `SolverCache` disk
+## cache, `BotProfile::to_file`/
 ## `from_file`, `HandCollection::save`, `Pluribus::read_in_log`. Each has a
 ## pure twin that works on bytes or strings and is always available.
 persistence = []

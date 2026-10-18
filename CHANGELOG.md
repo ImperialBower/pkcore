@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking: `SolverCache` needs the `persistence` feature**
+  ([DEFECT_038](docs/defects/DEFECT_038_solver_cache_in_the_lean_build.md)).
+  It reads and writes files, but it was in the lean default build and the
+  prelude since `0.15.0`, against the rule that file access sits behind
+  `persistence`. Turn on `persistence` (or `full`) to keep using it.
 - **Breaking: the equity engine's functions live on `EquityEngine`.** The free
   function `analysis::equity::compute` is now `EquityEngine::compute`, a unit
   struct that holds no state. `EquityRequest::compute` is unchanged. The

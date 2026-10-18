@@ -59,7 +59,7 @@
 //! | [`regret`] | [`regret::RegretAccumulator`] — stores cumulative counterfactual regrets per `(node, hand)`. Implements regret-matching to derive the current mixed strategy. |
 //! | [`strategy_profile`] | [`strategy_profile::StrategyProfile`] — maps every action node to a per-hand [`strategy_profile::ActionFrequencies`] probability distribution. Extracted as the average strategy after convergence. |
 //! | [`solver`] | [`solver::Solver`] — drives CFR iterations. [`solver::Solver::iterate`] runs one full traversal; [`solver::Solver::equilibrium`] extracts the converged [`strategy_profile::StrategyProfile`]. [`solver::SolverResult`] packages the equilibrium with exploitability and metadata for serialization. |
-//! | [`solver_cache`] | [`solver_cache::SolverCache`] — persists [`solver::SolverResult`] to disk keyed by a deterministic hash of [`solver_config::SolverConfig`]. Not available on `wasm32`. |
+//! | `solver_cache` | `SolverCache` — persists [`solver::SolverResult`] to disk keyed by a deterministic hash of [`solver_config::SolverConfig`]. Needs the `persistence` feature; not available on `wasm32`. |
 //!
 //! # Quick Start
 //!
@@ -129,7 +129,8 @@ pub mod game_tree;
 pub mod odds;
 pub mod regret;
 pub mod solver;
-#[cfg(not(target_arch = "wasm32"))]
+// DEFECT_038: a disk cache is filesystem I/O, so it needs `persistence`.
+#[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
 pub mod solver_cache;
 pub mod solver_config;
 pub mod strategy_profile;

@@ -224,8 +224,8 @@ Plus: ~~MC seeds 0–7 identical~~ (fixed 2026-10-18, [`DEFECT_033`](defects/DEF
 ~~`Card::from_str("AsKd")` is `Ok(A♠)`~~ (fixed 2026-10-18, [`DEFECT_035`](defects/DEFECT_035_card_parse_ignores_trailing_text.md)), ~~`Eval` and
 `Cards` break the Hash/Eq contract~~ (fixed 2026-10-18,
 [`DEFECT_036`](defects/DEFECT_036_eval_hash_disagrees_with_eq.md),
-[`DEFECT_037`](defects/DEFECT_037_cards_hash_disagrees_with_eq.md)), `SolverCache` does `std::fs` in the lean
-default build, and ~300 `test_`-prefixed test functions.
+[`DEFECT_037`](defects/DEFECT_037_cards_hash_disagrees_with_eq.md)), ~~`SolverCache` does `std::fs` in the lean
+default build~~ (fixed 2026-10-18, [`DEFECT_038`](defects/DEFECT_038_solver_cache_in_the_lean_build.md)), and ~300 `test_`-prefixed test functions.
 
 ### Refactor — move free functions into an `impl`
 
