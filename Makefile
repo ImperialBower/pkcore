@@ -1,4 +1,4 @@
-.PHONY: test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: lint test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -25,6 +25,7 @@ help:
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
+	@echo "  make lint            - fmt + clippy with warnings denied (the everyday gate)"
 	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
@@ -130,6 +131,12 @@ fmt:
 # Run clippy linter
 clippy:
 	cargo clippy $(FULL)
+
+# The everyday gate: format, then clippy with warnings as errors, as ayce does.
+# Pair it with only the tests for the code you touched; keep ayce for special
+# occasions.
+lint: export RUSTFLAGS := -Dwarnings
+lint: fmt clippy
 
 test-nightly:
 	cargo +nightly test --all-targets --all-features
