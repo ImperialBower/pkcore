@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   helpers onto `HandHistory`, `hand_has_position` onto `HandCollection`, and
   `table_action_to_hand_action` onto `Streets`. The serde `default` paths now
   read `"HandHistory::default_format_version"`. No public API changed.
+- **The preflop equity functions live on `PreflopEquity`.** A new unit
+  struct in `bot::preflop_equity` holds them, per the house rule of no free
+  functions. `hup_equity_vs_range` is now `PreflopEquity::hup_vs_range`, and
+  `preflop_equity` is now `PreflopEquity::compute`. The old names still work
+  for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -67,8 +72,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Vanilla` is vanilla CFR. The solver cache key includes `gamma`, so results
   cached by an older version are a miss and are solved again.
 
+### Deprecated
+
+- **`bot::preflop_equity::hup_equity_vs_range` and
+  `bot::preflop_equity::preflop_equity`.** Use `PreflopEquity::hup_vs_range`
+  and `PreflopEquity::compute`. The old functions call the new ones and give
+  a compiler warning. They will be removed in the next minor release.
+
 ### Fixed
 
+- **`cargo clippy --no-default-features -- -D warnings` passes again.** The
+  `TableSnapshot` lifetime is only used with `player-stats`, so clippy flagged
+  it in the lean build. The lint is now allowed only when that feature is off.
 - **A fold in the GTO solver now pays half the pot before the bet**
   ([DEFECT_029](docs/defects/DEFECT_029_solver_fold_pays_half_the_bet.md)).
   The fold terminal held `pot + bet`, so the folder also paid half of a bet it

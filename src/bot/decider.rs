@@ -501,7 +501,7 @@ impl RuleBasedDecider {
         if state.phase.is_preflop() {
             // preflop_charts knob: a real equity from the exact heads-up chart or
             // the sampled engine. `None` means "no chart answer" — fall through.
-            if let Some(equity) = crate::bot::preflop_equity::preflop_equity(profile, state, rng) {
+            if let Some(equity) = crate::bot::preflop_equity::PreflopEquity::compute(profile, state, rng) {
                 return Some(equity);
             }
             // Ranges knob: position-aware playbook lookup or the flat range.

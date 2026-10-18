@@ -189,7 +189,7 @@ fn equity_vs_field(hero: Two, field: &[Two]) -> Option<f64> {
             continue;
         };
         // The chart reports from the higher hand's side; see the perspective
-        // note on `crate::bot::preflop_equity::hup_equity_vs_range`.
+        // note on `crate::bot::preflop_equity::PreflopEquity::hup_vs_range`.
         let odds = if result.higher == hero_bard {
             result.odds
         } else {

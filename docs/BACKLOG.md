@@ -242,7 +242,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 |---|---|---|
 | ~~`src/pokerbench/parse.rs`~~ — **done 2026-10-18**, `PokerBenchParser` | 18 | — |
 | ~~`src/bot/decider.rs`~~ — **done 2026-10-18**, onto `RuleBasedDecider` | 13 | — |
-| `src/bot/preflop_equity.rs` | 9 | `hup_equity_vs_range`, `preflop_equity` |
+| ~~`src/bot/preflop_equity.rs`~~ — **done 2026-10-18**, `PreflopEquity`; old names deprecated | 9 | `hup_equity_vs_range`, `preflop_equity` |
 | ~~`src/hand_history.rs`~~ — **done 2026-10-18**, onto `HandHistory`, `HandCollection`, `Streets` | 8 | — |
 | `src/bot/exploit.rs` | 8 | `scale_percentage`, `largest_active_opponent`, `adjust_profile` |
 | `src/bot/draw_equity.rs` | 7 | `outs_against`, `outs_equity` |
@@ -279,6 +279,10 @@ Notes:
 - **Serde helpers.** Eight `#[serde(default = "…")]` or `with = "…"`
   attributes name functions by path. An associated function works there as
   `"Type::name"`, so these can move too.
+- **Public functions: deprecate, then remove** (decided 2026-10-18). Move the
+  function onto the type. Keep the old path as a `#[deprecated]` wrapper that
+  calls the new one, for one release. Add a Deprecated line to the CHANGELOG.
+  `src/bot/preflop_equity.rs` is the model.
 - **Start with the private-only files.** They break nothing:
   `src/pokerbench/parse.rs`, `src/bot/decider.rs` and `src/hand_history.rs`
   hold 39 of the 118.
