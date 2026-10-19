@@ -252,7 +252,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | `src/casino/table/snapshot.rs` | 5 | — |
 | ~~`src/bot/training/evaluator.rs`~~ — **done 2026-10-18**, `Evaluator`; old names deprecated | 5 | `default_field`, `evaluate` |
 | `src/play/stages/deal_eval.rs` | 3 | — |
-| `src/bot/training/encoding.rs` | 3 | `encode`, `decode`, `ranges` |
+| ~~`src/bot/training/encoding.rs`~~ — **done 2026-10-18**, `Encoding`; old names deprecated | 3 | `encode`, `decode`, `ranges` |
 | `src/analysis/player_stats.rs` | 3 | — |
 | `src/pokerbench/scenario.rs` | 2 | — |
 | `src/games/kuhn.rs` | 2 | — |

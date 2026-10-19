@@ -17,7 +17,7 @@ use rand::SeedableRng;
 use rand::rngs::SmallRng;
 
 use crate::bot::exploit::ExploitConfig;
-use crate::bot::training::encoding::{self, DIM};
+use crate::bot::training::encoding::{DIM, Encoding};
 use crate::bot::training::evaluator::{Evaluator, FieldEntry};
 
 // ── TrainingConfig ────────────────────────────────────────────────────────────
@@ -213,9 +213,9 @@ impl ExploitTrainer {
     /// and per-generation statistics.
     #[must_use]
     pub fn train(&self, baseline: &ExploitConfig) -> TrainingResult {
-        let ranges = encoding::ranges();
-        let mut best_params: [f64; DIM] = encoding::encode(baseline);
-        let mut best_fitness = self.fitness(&encoding::decode(&best_params));
+        let ranges = Encoding::ranges();
+        let mut best_params: [f64; DIM] = Encoding::encode(baseline);
+        let mut best_fitness = self.fitness(&Encoding::decode(&best_params));
 
         let mut sigma = self.config.initial_sigma_fraction;
         let lambda = self.config.lambda;
@@ -251,7 +251,7 @@ impl ExploitTrainer {
                 .collect();
 
             // Evaluate all candidates.
-            let scores: Vec<f64> = candidates.iter().map(|p| self.fitness(&encoding::decode(p))).collect();
+            let scores: Vec<f64> = candidates.iter().map(|p| self.fitness(&Encoding::decode(p))).collect();
 
             // Count offspring that improved over the current parent.
             let successes = scores.iter().filter(|&&s| s > best_fitness).count();
@@ -287,7 +287,7 @@ impl ExploitTrainer {
         }
 
         TrainingResult {
-            best_config: encoding::decode(&best_params),
+            best_config: Encoding::decode(&best_params),
             best_fitness,
             generations_run: history.len(),
             history,
@@ -374,8 +374,8 @@ mod bot__training__trainer_tests {
         assert_eq!(a.generations_run, b.generations_run);
         assert_eq!(a.best_fitness, b.best_fitness, "seeded training must be reproducible");
         assert_eq!(
-            encoding::encode(&a.best_config),
-            encoding::encode(&b.best_config),
+            Encoding::encode(&a.best_config),
+            Encoding::encode(&b.best_config),
             "same seed must yield the same best_config"
         );
     }

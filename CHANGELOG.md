@@ -83,6 +83,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   struct in `bot::training::evaluator` holds `default_field`, `evaluate` and
   the three private session helpers; the names did not change. The old free
   functions still work for this release; see Deprecated.
+- **The parameter encoding functions live on `Encoding`.** A new unit struct
+  in `bot::training::encoding` holds `encode`, `decode` and `ranges`; the
+  names did not change. `DIM`, `LO` and `HI` stay at their old paths. The old
+  free functions still work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -126,6 +130,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `HandOrder::range_of_width` and `HandOrder::derive`. Same terms as above.
 - **`bot::training::evaluator::default_field` and `evaluate`.** Use
   `Evaluator::default_field` and `Evaluator::evaluate`. Same terms as above.
+- **`bot::training::encoding::encode`, `decode` and `ranges`.** Use
+  `Encoding::encode`, `Encoding::decode` and `Encoding::ranges`. Same terms
+  as above.
 
 ### Fixed
 
