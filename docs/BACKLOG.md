@@ -268,7 +268,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | `src/bot/training/trainer.rs` | 1 | — |
 | `src/bot/decision_config.rs` | 1 | — |
 | `src/arrays/two.rs` | 1 | — |
-| `src/analysis/store/embedded/hup_cache.rs` | 1 | `lookup_odds` |
+| ~~`src/analysis/store/embedded/hup_cache.rs`~~ — **done 2026-10-19**, `HupCache`; old name deprecated | 1 | `lookup_odds` |
 
 Notes:
 

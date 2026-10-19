@@ -115,6 +115,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pokerbench::score_action` is now `ActionScore::score`. The scoring is
   unchanged. The old name, and its `pokerbench::score_action` re-export, still
   work for this release; see Deprecated.
+- **The embedded HUP chart lookup lives on `HupCache`.** A new unit struct in
+  `analysis::store::embedded::hup_cache` holds `lookup_odds`; the name did not
+  change. The `HUP_CACHE` static stays where it is. The old free function
+  still works for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -170,6 +174,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Masked::distinct_from_csv`. Same terms as above.
 - **`pokerbench::score_action`.** Use `ActionScore::score`. Same terms as
   above.
+- **`analysis::store::embedded::hup_cache::lookup_odds`.** Use
+  `HupCache::lookup_odds`. Same terms as above.
 
 ### Fixed
 
