@@ -248,7 +248,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/bot/draw_equity.rs`~~ — **done 2026-10-18**, `DrawEquity`; old names deprecated | 7 | `outs_against`, `outs_equity` |
 | ~~`src/bot/range_model.rs`~~ — **done 2026-10-18**, `RangeModel` and `WeightedRange::to_combos`; old names deprecated | 6 | `combos_from_weighted`, `villain_range`, `villain_specs`, `villain_range_specs` |
 | ~~`src/bot/hand_order.rs`~~ — **done 2026-10-18**, `HandOrder`; old names deprecated | 6 | `hand_ordering`, `range_of_width`, `derive_hand_ordering` |
-| `src/casino/tda.rs` | 5 | — |
+| ~~`src/casino/tda.rs`~~ — **done 2026-10-19**, `Tda` | 5 | — |
 | `src/casino/table/snapshot.rs` | 5 | — |
 | ~~`src/bot/training/evaluator.rs`~~ — **done 2026-10-18**, `Evaluator`; old names deprecated | 5 | `default_field`, `evaluate` |
 | `src/play/stages/deal_eval.rs` | 3 | — |

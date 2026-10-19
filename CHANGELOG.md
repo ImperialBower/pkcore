@@ -119,6 +119,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `analysis::store::embedded::hup_cache` holds `lookup_odds`; the name did not
   change. The `HUP_CACHE` static stays where it is. The old free function
   still works for this release; see Deprecated.
+- **The TDA rule primitives live on `Tda`.** The 5 crate-private functions
+  in `casino::tda` (odd-chip order, chip split, seat distance, high card by
+  suit) are now associated functions of a crate-private unit struct. They
+  stay pure, so they are still tested without a table. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use

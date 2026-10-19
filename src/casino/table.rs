@@ -22,7 +22,7 @@ use crate::casino::equity::seat_equity::SeatEquity;
 use crate::casino::equity::seatbit::Seatbit;
 use crate::casino::equity::table_equity::TableEquity;
 use crate::casino::game::ForcedBets;
-use crate::casino::tda;
+use crate::casino::tda::Tda;
 use crate::casino::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
@@ -2566,7 +2566,7 @@ impl Table {
     /// ```
     #[must_use]
     pub fn tda_odd_chip_order(&self, winners: &[u8]) -> Vec<u8> {
-        tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
+        Tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
             self.build_eval_for_seat(seat).hand
         })
     }
@@ -2574,7 +2574,7 @@ impl Table {
     /// Splits `total` among tied `winners`, awarding odd chips by TDA 2024
     /// Rule 20 (`DEFECT_011`). Returns `(seat, share)` pairs.
     fn tda_shares(&self, total: usize, winners: &[u8]) -> Vec<(u8, usize)> {
-        tda::pair_shares(
+        Tda::pair_shares(
             total,
             winners,
             self.game.family(),
