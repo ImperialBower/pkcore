@@ -6,7 +6,8 @@ default: ayce
 # Default features are the pure kernel since 0.15.0 (docs/KERNEL_PURITY_AUDIT.md
 # fix 1). Dev targets build and test with `full`, which restores everything that
 # used to be on by default — YAML, bots, rayon, JSON, CSV, file and console
-# helpers. test-kernel and check-purity are what cover the lean builds.
+# helpers — plus the SQLite/zstd `store` layer. test-kernel and check-purity
+# are what cover the lean builds.
 FULL := --features full
 
 # Display help information

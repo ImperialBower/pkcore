@@ -40,6 +40,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dependency, since `full` already has everything it turns on. Its one visible
   effect in `full`: `ExploitConfig` now derives `Serialize` and `Deserialize`.
   The extra CI run for it is removed, since the main jobs now cover it.
+- **`full` now includes `store`.** The SQLite HUP store and the zstd Binary
+  Card Map were in no umbrella feature either, so `make lint`, the pedantic
+  clippy job and the main test job never compiled them. Only the coverage job
+  and the docs.rs build did, through `--all-features`. It adds `rusqlite` and
+  `zstd` to a `full` build. The lean builds do not change, and
+  `make check-purity` still keeps both out of them. The `store` code needs no
+  data files to test: without `generated/bcm.zst` it returns
+  `Err(BcmUnavailable)`.
 - **The PokerBench parsing helpers live on `PokerBenchParser`.** The 18
   crate-private functions in `pokerbench::parse` are now associated functions
   of a crate-private unit struct, per the house rule of no free functions. No
