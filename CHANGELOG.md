@@ -93,6 +93,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SevenFiveBCM::load_rank_map`, and `bc_rank_hashmap` is now
   `SevenFiveBCM::rank_map`. The `BC_RANK_HASHMAP` static stays where it is.
   The old names still work for this release; see Deprecated.
+- **`cache_key` lives on `SolverCache`.** The key names the file the cache
+  reads and writes, so `analysis::gto::solver_cache::cache_key` is now
+  `SolverCache::cache_key`. The key value did not change, so cached solves
+  still hit. The old name still works for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -142,6 +146,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`analysis::store::bcm::binary_card_map::load_bc_rank_map` and
   `bc_rank_hashmap`.** Use `SevenFiveBCM::load_rank_map` and
   `SevenFiveBCM::rank_map`. Same terms as above.
+- **`analysis::gto::solver_cache::cache_key`.** Use `SolverCache::cache_key`.
+  Same terms as above.
 
 ### Fixed
 

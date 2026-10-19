@@ -257,7 +257,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | `src/pokerbench/scenario.rs` | 2 | — |
 | `src/games/kuhn.rs` | 2 | — |
 | ~~`src/analysis/store/bcm/binary_card_map.rs`~~ — **done 2026-10-18**, onto `SevenFiveBCM`; old names deprecated | 2 | `load_bc_rank_map`, `bc_rank_hashmap` |
-| `src/analysis/gto/solver_cache.rs` | 2 | `cache_key` |
+| ~~`src/analysis/gto/solver_cache.rs`~~ — **done 2026-10-18**, onto `SolverCache`; old name deprecated | 2 | `cache_key` |
 | `src/util/data.rs` | 1 | — |
 | `src/util/csv.rs` | 1 | `distinct_shus_from_csv_as_masked_vec` |
 | `src/pokerbench/score.rs` | 1 | `score_action` |
