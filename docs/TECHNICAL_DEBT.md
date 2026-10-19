@@ -56,6 +56,16 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
 - [x] **`TableManager` / `TableEvent` removal overdue** — done in `0.13.0`:
   `src/casino/manager.rs` deleted, along with the `pub mod manager;`
   declaration and the `TableManager` re-export from `pkcore::prelude`.
+- [ ] **Hand-history seats are 0-based, kept as debt** — decided 2026-10-19
+  for EPIC-93: seat numbers in the hand-history format are 0-based, matching
+  replay (`src/hand_history.rs:681-688`) and every fixture under
+  `tests/defects/`. The `Action::seat` doc said "1-indexed" (`:2571`) and is
+  corrected in EPIC-93 item 0d, not the code. Every poker player and every
+  published hand history counts seats from 1, so a hand typed from a
+  broadcast is off by one until someone converts it, and bowery's `seat:` and
+  bower's ```` ```bowery ```` blocks inherit the 0. Revisit if typed-in hands
+  become common: a `seat_base` field, or a `format_version` 2 that is
+  1-based. ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#open-decisions))
 - [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:626`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
