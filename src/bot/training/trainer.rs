@@ -244,7 +244,7 @@ impl ExploitTrainer {
                 .map(|_| {
                     let mut candidate = best_params;
                     for i in 0..DIM {
-                        candidate[i] += sigma * ranges[i] * standard_normal(&mut rng);
+                        candidate[i] += sigma * ranges[i] * Self::standard_normal(&mut rng);
                     }
                     candidate
                 })
@@ -305,11 +305,13 @@ impl ExploitTrainer {
     }
 }
 
-/// Box-Muller transform: generates a N(0,1) sample from two U(0,1) draws.
-fn standard_normal<R: rand::Rng>(rng: &mut R) -> f64 {
-    let u1 = (rng.random::<f64>()).max(f64::MIN_POSITIVE);
-    let u2: f64 = rng.random();
-    (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos()
+impl ExploitTrainer {
+    /// Box-Muller transform: generates a N(0,1) sample from two U(0,1) draws.
+    fn standard_normal<R: rand::Rng>(rng: &mut R) -> f64 {
+        let u1 = (rng.random::<f64>()).max(f64::MIN_POSITIVE);
+        let u2: f64 = rng.random();
+        (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos()
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

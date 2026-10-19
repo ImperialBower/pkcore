@@ -139,6 +139,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   free functions in `pokerbench::scenario` (position to seat, and position to
   short name) only served `canonical_seating`, so they moved into its `impl`
   block. No public API changed.
+- **The last private free functions live on the types they serve.** This
+  closes the no-free-functions refactor. No public API changed:
+  - `KuhnStrategy::best_response_value` and `eval_deal_policy` (now `&self`
+    methods), in `games::kuhn`.
+  - `TestData::fixture_player`, in `util::data`.
+  - `PokerBenchAction::parse_chips` (crate-private), shared by the action
+    parser and the loaders.
+  - `StreetEquity::per_seat`, which was `street_equities_from_results`.
+  - `TableEquity::default_seat_equity_ref`.
+  - `ExploitTrainer::standard_normal`.
+  - The serde helpers `Card::deserialize_card_index`,
+    `Two::deserialize_two_index` and `EquityMode::default_samples`. Their
+    `#[serde(...)]` attributes now name them as `"Type::name"`. The wire
+    format did not change.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use

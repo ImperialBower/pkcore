@@ -229,6 +229,14 @@ default build~~ (fixed 2026-10-18, [`DEFECT_038`](defects/DEFECT_038_solver_cach
 
 ### Refactor — move free functions into an `impl`
 
+**Status: done 2026-10-19.** Every file in the table is moved. What is left at
+column 0 is the 25 `#[deprecated]` wrappers for the public names; remove them
+in the next minor release. The inline modules were checked too: `mod color`
+in `nubibus.rs` holds only trait methods, `alloc_probe` is test-only, and
+`bet_size_fractions` in `betting_strategy.rs` stays a module on purpose,
+because serde's `with = "…"` looks for `serialize` and `deserialize` in a
+module, and that is the idiom readers expect.
+
 House style from 2026-10-18: no free-standing functions. Each one goes in an
 `impl`, on the type it serves or on an empty unit struct named for the
 module's job. `src/analysis/equity/engine.rs` is the model: its 11 functions
@@ -255,19 +263,19 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/bot/training/encoding.rs`~~ — **done 2026-10-18**, `Encoding`; old names deprecated | 3 | `encode`, `decode`, `ranges` |
 | ~~`src/analysis/player_stats.rs`~~ — **done 2026-10-19**, onto `PlayerStats` | 3 | — |
 | ~~`src/pokerbench/scenario.rs`~~ — **done 2026-10-19**, onto `PokerBenchScenario` | 2 | — |
-| `src/games/kuhn.rs` | 2 | — |
+| ~~`src/games/kuhn.rs`~~ — **done 2026-10-19**, onto `KuhnStrategy` | 2 | — |
 | ~~`src/analysis/store/bcm/binary_card_map.rs`~~ — **done 2026-10-18**, onto `SevenFiveBCM`; old names deprecated | 2 | `load_bc_rank_map`, `bc_rank_hashmap` |
 | ~~`src/analysis/gto/solver_cache.rs`~~ — **done 2026-10-18**, onto `SolverCache`; old name deprecated | 2 | `cache_key` |
-| `src/util/data.rs` | 1 | — |
+| ~~`src/util/data.rs`~~ — **done 2026-10-19**, onto `TestData` | 1 | — |
 | ~~`src/util/csv.rs`~~ — **done 2026-10-19**, onto `Masked`; old name deprecated | 1 | `distinct_shus_from_csv_as_masked_vec` |
 | ~~`src/pokerbench/score.rs`~~ — **done 2026-10-19**, onto `ActionScore`; old name deprecated | 1 | `score_action` |
-| `src/pokerbench/action.rs` | 1 | — |
-| `src/play/game.rs` | 1 | — |
-| `src/casino/equity/table_equity.rs` | 1 | — |
-| `src/card.rs` | 1 | — |
-| `src/bot/training/trainer.rs` | 1 | — |
-| `src/bot/decision_config.rs` | 1 | — |
-| `src/arrays/two.rs` | 1 | — |
+| ~~`src/pokerbench/action.rs`~~ — **done 2026-10-19**, onto `PokerBenchAction` | 1 | — |
+| ~~`src/play/game.rs`~~ — **done 2026-10-19**, `StreetEquity::per_seat` | 1 | — |
+| ~~`src/casino/equity/table_equity.rs`~~ — **done 2026-10-19**, onto `TableEquity` | 1 | — |
+| ~~`src/card.rs`~~ — **done 2026-10-19**, onto `Card` (serde path) | 1 | — |
+| ~~`src/bot/training/trainer.rs`~~ — **done 2026-10-19**, onto `ExploitTrainer` | 1 | — |
+| ~~`src/bot/decision_config.rs`~~ — **done 2026-10-19**, onto `EquityMode` (serde path) | 1 | — |
+| ~~`src/arrays/two.rs`~~ — **done 2026-10-19**, onto `Two` (serde path) | 1 | — |
 | ~~`src/analysis/store/embedded/hup_cache.rs`~~ — **done 2026-10-19**, `HupCache`; old name deprecated | 1 | `lookup_odds` |
 
 Notes:

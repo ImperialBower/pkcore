@@ -8,7 +8,7 @@
 
 use crate::card::Card;
 use crate::casino::position::Position;
-use crate::pokerbench::action::{PokerBenchAction, parse_chips};
+use crate::pokerbench::action::PokerBenchAction;
 use crate::pokerbench::error::PokerBenchError;
 use std::str::FromStr;
 
@@ -327,7 +327,7 @@ impl PokerBenchParser {
     pub(crate) fn extract_pot(instruction: &str) -> Result<u32, PokerBenchError> {
         let token = Self::slice_after(instruction, "pot size is ", |c| c.is_ascii_digit() || c == '.')
             .ok_or_else(|| PokerBenchError::MissingField("pot".to_string()))?;
-        parse_chips(token)
+        PokerBenchAction::parse_chips(token)
     }
 }
 

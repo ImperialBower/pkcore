@@ -83,23 +83,23 @@ impl PokerBenchAction {
     pub fn same_kind(self, other: PokerBenchAction) -> bool {
         std::mem::discriminant(&self) == std::mem::discriminant(&other)
     }
-}
 
-/// Parses a non-negative chip amount, tolerating a trailing decimal (`18` or
-/// `18.0`), the form PokerBench uses for pot sizes. Shared by [`FromStr`] here
-/// and by the loaders' `pot_size` parsing.
-// The `as u32` is guarded by the `is_finite() && >= 0.0` filter and saturates on
-// overflow (well-defined since Rust 1.45), so truncation/sign-loss can't produce
-// an invalid value for the small integer chip counts PokerBench emits.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-pub(crate) fn parse_chips(token: &str) -> Result<u32, PokerBenchError> {
-    token
-        .trim()
-        .parse::<f64>()
-        .ok()
-        .filter(|n| n.is_finite() && *n >= 0.0)
-        .map(|n| n.round() as u32)
-        .ok_or_else(|| PokerBenchError::Action(token.to_string()))
+    /// Parses a non-negative chip amount, tolerating a trailing decimal (`18` or
+    /// `18.0`), the form PokerBench uses for pot sizes. Shared by [`FromStr`] here
+    /// and by the loaders' `pot_size` parsing.
+    // The `as u32` is guarded by the `is_finite() && >= 0.0` filter and saturates on
+    // overflow (well-defined since Rust 1.45), so truncation/sign-loss can't produce
+    // an invalid value for the small integer chip counts PokerBench emits.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub(crate) fn parse_chips(token: &str) -> Result<u32, PokerBenchError> {
+        token
+            .trim()
+            .parse::<f64>()
+            .ok()
+            .filter(|n| n.is_finite() && *n >= 0.0)
+            .map(|n| n.round() as u32)
+            .ok_or_else(|| PokerBenchError::Action(token.to_string()))
+    }
 }
 
 impl FromStr for PokerBenchAction {
@@ -124,12 +124,12 @@ impl FromStr for PokerBenchAction {
             "all in" | "allin" | "all-in" => Ok(PokerBenchAction::AllIn),
             other => {
                 if let Some(rest) = other.strip_prefix("bet ") {
-                    Ok(PokerBenchAction::Bet(parse_chips(rest)?))
+                    Ok(PokerBenchAction::Bet(Self::parse_chips(rest)?))
                 } else if let Some(rest) = other.strip_prefix("raise ") {
-                    Ok(PokerBenchAction::Raise(parse_chips(rest)?))
+                    Ok(PokerBenchAction::Raise(Self::parse_chips(rest)?))
                 } else if let Some(rest) = other.strip_suffix("bb") {
                     // Bare to-amount, e.g. "3.0bb": PokerBench's pre-flop raise label.
-                    Ok(PokerBenchAction::Raise(parse_chips(rest)?))
+                    Ok(PokerBenchAction::Raise(Self::parse_chips(rest)?))
                 } else {
                     Err(PokerBenchError::Action(s.to_string()))
                 }
@@ -258,6 +258,6 @@ mod pokerbench__tests {
 
     #[test]
     fn parse_chips_rejects_negative() {
-        assert!(parse_chips("-5").is_err());
+        assert!(PokerBenchAction::parse_chips("-5").is_err());
     }
 }

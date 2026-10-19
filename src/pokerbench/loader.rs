@@ -7,7 +7,7 @@
 //! [`seed_stacks`](crate::pokerbench::parse) usage and
 //! [`PB_BIG_BLIND`](crate::pokerbench::PB_BIG_BLIND).
 
-use crate::pokerbench::action::{PokerBenchAction, parse_chips};
+use crate::pokerbench::action::PokerBenchAction;
 use crate::pokerbench::error::PokerBenchError;
 use crate::pokerbench::parse::PokerBenchParser;
 use crate::pokerbench::scenario::{PB_BIG_BLIND, PokerBenchScenario, PokerBenchSplit};
@@ -57,7 +57,7 @@ impl PreflopRow {
             hero: PokerBenchParser::parse_position(&self.hero_pos)?,
             board: Vec::new(),
             hole: PokerBenchParser::parse_cards_concat(&self.hero_holding)?,
-            pot: parse_chips(&self.pot_size)?,
+            pot: PokerBenchAction::parse_chips(&self.pot_size)?,
             to_call: PokerBenchParser::derive_to_call(&history),
             big_blind: PB_BIG_BLIND,
             stacks: PokerBenchParser::seed_stacks(),
@@ -80,7 +80,7 @@ impl PostflopRow {
             hero: PokerBenchParser::resolve_postflop_hero(&self.preflop_action, &self.hero_position)?,
             board,
             hole: PokerBenchParser::parse_cards_concat(&self.holding)?,
-            pot: parse_chips(&self.pot_size)?,
+            pot: PokerBenchAction::parse_chips(&self.pot_size)?,
             to_call: PokerBenchParser::derive_to_call(&history),
             big_blind: PB_BIG_BLIND,
             stacks: PokerBenchParser::seed_stacks(),

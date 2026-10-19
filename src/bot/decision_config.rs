@@ -9,11 +9,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Default Monte Carlo sample budget for [`EquityMode::Fast`].
-fn default_samples() -> u32 {
-    2000
-}
-
 /// Graded configuration for every pkcore decision capability.
 ///
 /// Every field carries a `#[serde(default)]` and the struct's [`Default`] is
@@ -73,11 +68,18 @@ pub enum EquityMode {
     /// Seeded Monte Carlo with a bounded sample budget.
     Fast {
         /// Monte Carlo sample budget.
-        #[serde(default = "default_samples")]
+        #[serde(default = "EquityMode::default_samples")]
         samples: u32,
     },
     /// Exact enumeration of remaining runouts.
     Exact,
+}
+
+impl EquityMode {
+    /// Default Monte Carlo sample budget for [`EquityMode::Fast`].
+    fn default_samples() -> u32 {
+        2000
+    }
 }
 
 /// Preflop range source.
