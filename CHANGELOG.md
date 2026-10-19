@@ -135,6 +135,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   functions in `analysis::player_stats` (`ratio`, the postflop aggression
   sums, and the per-action counter step) are now private associated functions
   of `PlayerStats`, whose counters they read and fill. No public API changed.
+- **The PokerBench seat helpers live on `PokerBenchScenario`.** The 2 private
+  free functions in `pokerbench::scenario` (position to seat, and position to
+  short name) only served `canonical_seating`, so they moved into its `impl`
+  block. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
