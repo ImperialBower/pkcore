@@ -87,6 +87,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `bot::training::encoding` holds `encode`, `decode` and `ranges`; the
   names did not change. `DIM`, `LO` and `HI` stay at their old paths. The old
   free functions still work for this release; see Deprecated.
+- **The Binary Card Map loaders live on `SevenFiveBCM`.** That type already
+  writes the BCM file (`generate_bin`) and names its path (`get_filepath`), so
+  reading it back belongs there too. `load_bc_rank_map` is now
+  `SevenFiveBCM::load_rank_map`, and `bc_rank_hashmap` is now
+  `SevenFiveBCM::rank_map`. The `BC_RANK_HASHMAP` static stays where it is.
+  The old names still work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -133,6 +139,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`bot::training::encoding::encode`, `decode` and `ranges`.** Use
   `Encoding::encode`, `Encoding::decode` and `Encoding::ranges`. Same terms
   as above.
+- **`analysis::store::bcm::binary_card_map::load_bc_rank_map` and
+  `bc_rank_hashmap`.** Use `SevenFiveBCM::load_rank_map` and
+  `SevenFiveBCM::rank_map`. Same terms as above.
 
 ### Fixed
 
