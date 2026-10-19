@@ -40,22 +40,24 @@ pub struct StreetEquity {
     pub equity: f64,
 }
 
-/// Normalizes a `WinResults` (percent 0–100) into per-seat split-pot
-/// `StreetEquity` fractions for `n` seats.
-#[cfg(feature = "equity")]
-fn street_equities_from_results(results: &WinResults, n: usize) -> Vec<StreetEquity> {
-    (0..n)
-        .map(|i| {
-            let (w, t) = results.wins_and_ties_percentages(i);
-            let win = f64::from(w) / 100.0;
-            let tie = f64::from(t) / 100.0;
-            StreetEquity {
-                win,
-                tie,
-                equity: win + tie / 2.0,
-            }
-        })
-        .collect()
+impl StreetEquity {
+    /// Normalizes a `WinResults` (percent 0–100) into per-seat split-pot
+    /// `StreetEquity` fractions for `n` seats.
+    #[cfg(feature = "equity")]
+    fn per_seat(results: &WinResults, n: usize) -> Vec<StreetEquity> {
+        (0..n)
+            .map(|i| {
+                let (w, t) = results.wins_and_ties_percentages(i);
+                let win = f64::from(w) / 100.0;
+                let tie = f64::from(t) / 100.0;
+                StreetEquity {
+                    win,
+                    tie,
+                    equity: win + tie / 2.0,
+                }
+            })
+            .collect()
+    }
 }
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -333,13 +335,13 @@ impl Game {
                 .collect())
         } else if !self.board.turn.is_dealt() {
             let eval = FlopEval::try_from(self.clone())?;
-            Ok(street_equities_from_results(&eval.results, n))
+            Ok(StreetEquity::per_seat(&eval.results, n))
         } else if !self.board.river.is_dealt() {
             let eval = TurnEval::try_from(self)?;
-            Ok(street_equities_from_results(&eval.results, n))
+            Ok(StreetEquity::per_seat(&eval.results, n))
         } else {
             let eval = RiverEval::try_from(self.clone())?;
-            Ok(street_equities_from_results(&eval.results, n))
+            Ok(StreetEquity::per_seat(&eval.results, n))
         }
     }
 

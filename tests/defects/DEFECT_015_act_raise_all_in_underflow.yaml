@@ -1,0 +1,49 @@
+# DEFECT_015 — a raise all-in for less than the bet underflowed.
+# docs/defects/DEFECT_015_act_raise_all_in_underflow.md
+#
+# NL 50/100. Seat 0 (button, first to act) raises to 400. Seat 1 folds. Seat
+# 2, the big blind with 300 in total, sends Raise(300): all-in for less than
+# the 400 bet. Computing 300 - 400 used to underflow. The bet stays 400 and
+# the increment stays at seat 0's full 300 raise.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_015
+  game: holdem
+  description: "A raise all-in for less than the current bet does not underflow"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: UTG, stack: 5000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: SB, stack: 5000.0, hole_cards: "Q♠ Q♥" }
+  - { seat: 2, name: BB, stack: 300.0, hole_cards: "K♠ K♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 400.0 }
+      - { seat: 1, action: fold }
+      - { seat: 2, action: raise, amount: 300.0, all_in: true }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions: []
+  turn:
+    card: "J♣"
+    actions: []
+  river:
+    card: "3♥"
+    actions: []
+
+expect:
+  - after: { street: preflop, index: 0 }
+    bet: 400
+    raise_increment: 300
+  - after: { street: preflop, index: 2 }
+    bet: 400
+    raise_increment: 300
+    min_raise_to: 700
+    chips: { 2: 0 }
+final:
+  stacks: { 0: 5350, 1: 4950, 2: 0 }

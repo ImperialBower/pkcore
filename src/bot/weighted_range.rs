@@ -10,12 +10,14 @@
 //! (all combos at frequency 1.0) and [`WeightedRange::push`] to build a
 //! mixed-strategy range entry by entry.
 
+use crate::analysis::gto::combos::Combos;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{self, MapAccess, SeqAccess, Visitor},
     ser::SerializeSeq,
 };
 use std::fmt;
+use std::str::FromStr;
 
 // ── ComboWeight ───────────────────────────────────────────────────────────────
 
@@ -344,6 +346,51 @@ impl WeightedRange {
     pub fn is_empty(&self) -> bool {
         self.combos.is_empty()
     }
+
+    /// Flattens the range into a [`Combos`] set.
+    ///
+    /// Entries at frequency `0.0` are dropped; everything else is kept at full
+    /// weight, because [`PlayerSpec::Range`] samples its combinations *uniformly*
+    /// and has no way to honour a mixed frequency. Returns `None` when nothing
+    /// survives or the notation does not parse.
+    ///
+    /// [`PlayerSpec::Range`]: crate::analysis::equity::PlayerSpec::Range
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** value object
+    /// - **Invariants:**
+    ///   - zero-frequency entries are dropped
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::bot::weighted_range::WeightedRange;
+    ///
+    /// let combos = WeightedRange::from_flat("QQ+").to_combos().unwrap();
+    /// // `Combos` stores notation, so "QQ+" is one combo carrying a `plus` flag.
+    /// assert_eq!(1, combos.len());
+    /// // It expands to the eighteen hands QQ, KK and AA only when asked.
+    /// assert_eq!(18, Twos::from(&combos).to_vec().len());
+    ///
+    /// assert!(WeightedRange::new().to_combos().is_none());
+    /// ```
+    #[must_use]
+    pub fn to_combos(&self) -> Option<Combos> {
+        let notation = self
+            .combos
+            .iter()
+            .filter(|weighted| weighted.frequency > 0.0)
+            .map(|weighted| weighted.range.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        if notation.is_empty() {
+            return None;
+        }
+        let combos = Combos::from_str(&notation).ok()?;
+        if combos.is_empty() { None } else { Some(combos) }
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -351,6 +398,19 @@ impl WeightedRange {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn to_combos_drops_zero_frequency_entries() {
+        let mut range = WeightedRange::new();
+        range.push("AA", 1.0).push("KK", 0.5).push("72o", 0.0);
+        let combos = range.to_combos().unwrap();
+        assert_eq!(Combos::from_str("AA, KK").unwrap(), combos);
+
+        let mut never = WeightedRange::new();
+        never.push("AA", 0.0);
+        assert!(never.to_combos().is_none());
+        assert!(WeightedRange::from_flat("not a range").to_combos().is_none());
+    }
 
     #[test]
     fn test_combo_weight_new_clamps_above_one() {

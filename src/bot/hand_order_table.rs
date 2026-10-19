@@ -10,7 +10,7 @@
 //! random opposing hand, strongest first, derived from `generated/hups.bin`.
 //! Shipping the 169 numbers rather than reading the 15.8 MB chart at runtime
 //! is what keeps that chart out of a linked binary — see
-//! [`crate::bot::hand_order::derive_hand_ordering`].
+//! [`crate::bot::hand_order::HandOrder::derive`].
 
 /// The 169 canonical classes with their equity, strongest first.
 pub(crate) static HAND_ORDER: &[(&str, f64)] = &[

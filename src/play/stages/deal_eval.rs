@@ -57,58 +57,59 @@ impl DealEval {
             // `docs/KERNEL_PURITY_AUDIT.md` §3, fix 2: no chart without `hup-charts`, so two
             // seats fall through to the equity engine.
             #[cfg(feature = "hup-charts")]
-            2 => heads_up_report(&hands)?,
-            _ => multiway_report(&hands)?,
+            2 => Self::heads_up_report(&hands)?,
+            _ => Self::multiway_report(&hands)?,
         };
         Ok(DealEval { hands, report })
     }
-}
 
-/// Converts a heads-up win/lose/draw tally into a single seat's equity.
-#[cfg(feature = "hup-charts")]
-#[allow(clippy::cast_precision_loss)]
-fn player_equity_from_wld(wld: WinLoseDraw) -> PlayerEquity {
-    let total = wld.total().max(1) as f64;
-    PlayerEquity {
-        win: wld.wins as f64 / total,
-        tie: wld.draws as f64 / total,
-        equity: (wld.wins as f64 + wld.draws as f64 / 2.0) / total,
-        wins: wld.wins,
-        ties: wld.draws,
+    /// Converts a heads-up win/lose/draw tally into a single seat's equity.
+    #[cfg(feature = "hup-charts")]
+    // Preflop tallies are far below 2^52, so the `as f64` casts are exact.
+    #[allow(clippy::cast_precision_loss)]
+    fn player_equity_from_wld(wld: WinLoseDraw) -> PlayerEquity {
+        let total = wld.total().max(1) as f64;
+        PlayerEquity {
+            win: wld.wins as f64 / total,
+            tie: wld.draws as f64 / total,
+            equity: (wld.wins as f64 + wld.draws as f64 / 2.0) / total,
+            wins: wld.wins,
+            ties: wld.draws,
+        }
     }
-}
 
-/// Heads-up branch: O(1) embedded HUP lookup, mapped back to seat order.
-///
-/// The HUP table is oriented by higher/lower hand, never seat order, so the
-/// odds are assigned to seats by checking which seat holds the higher hand.
-#[cfg(feature = "hup-charts")]
-fn heads_up_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
-    let a = *hands.get(0).ok_or(PKError::NotEnoughHands)?;
-    let b = *hands.get(1).ok_or(PKError::NotEnoughHands)?;
-    let shu = SortedHeadsUp::new(a, b);
-    let hup = shu.hup_result()?;
-    let higher = player_equity_from_wld(hup.odds);
-    let lower = player_equity_from_wld(hup.flip_mode().odds);
-    let players = if shu.is_higher(&a) {
-        vec![higher, lower]
-    } else {
-        vec![lower, higher]
-    };
-    Ok(EquityReport {
-        players,
-        method: Method::Hup,
-        samples: hup.odds.total(),
-    })
-}
+    /// Heads-up branch: O(1) embedded HUP lookup, mapped back to seat order.
+    ///
+    /// The HUP table is oriented by higher/lower hand, never seat order, so the
+    /// odds are assigned to seats by checking which seat holds the higher hand.
+    #[cfg(feature = "hup-charts")]
+    fn heads_up_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
+        let a = *hands.get(0).ok_or(PKError::NotEnoughHands)?;
+        let b = *hands.get(1).ok_or(PKError::NotEnoughHands)?;
+        let shu = SortedHeadsUp::new(a, b);
+        let hup = shu.hup_result()?;
+        let higher = Self::player_equity_from_wld(hup.odds);
+        let lower = Self::player_equity_from_wld(hup.flip_mode().odds);
+        let players = if shu.is_higher(&a) {
+            vec![higher, lower]
+        } else {
+            vec![lower, higher]
+        };
+        Ok(EquityReport {
+            players,
+            method: Method::Hup,
+            samples: hup.odds.total(),
+        })
+    }
 
-/// Multi-way branch (3–10 seats, or 2 without `hup-charts`): the equity engine,
-/// seeded for reproducibility.
-fn multiway_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
-    let players: Vec<PlayerSpec> = hands.iter().map(|two| PlayerSpec::Exact(*two)).collect();
-    let mut req = EquityRequest::new(players);
-    req.opts.seed = Some(PREFLOP_SAMPLING_SEED);
-    req.compute()
+    /// Multi-way branch (3–10 seats, or 2 without `hup-charts`): the equity engine,
+    /// seeded for reproducibility.
+    fn multiway_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
+        let players: Vec<PlayerSpec> = hands.iter().map(|two| PlayerSpec::Exact(*two)).collect();
+        let mut req = EquityRequest::new(players);
+        req.opts.seed = Some(PREFLOP_SAMPLING_SEED);
+        req.compute()
+    }
 }
 
 impl std::fmt::Display for DealEval {

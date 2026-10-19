@@ -42,26 +42,6 @@ use strum::IntoEnumIterator;
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
-    /// This is an example of my stupidity. I want to full the collection of `Cards` with blanks
-    /// so that I can tell what needs to be dealt, but it's a damned `IndexSet`. There will always
-    /// only be one.
-    /// ```
-    /// use pkcore::cards::Cards;
-    ///
-    /// let blanks = Cards::blanks(3);
-    ///
-    /// assert_eq!(blanks.len(), 1);
-    /// assert_eq!(blanks.to_string(), "__");
-    /// ```
-    #[must_use]
-    pub fn blanks(len: usize) -> Self {
-        let mut i: IndexSet<Card> = IndexSet::new();
-        for _ in 0..len {
-            i.insert(Card::BLANK);
-        }
-        Cards(i)
-    }
-
     /// ```
     /// use pkcore::cards::Cards;
     /// use pkcore::deck;
@@ -946,11 +926,15 @@ impl FromStr for Cards {
     }
 }
 
+/// Hashes the set of cards as a [`Bard`] mask, one bit per card, so order does
+/// not count. That matches the derived `PartialEq`, which `IndexSet` makes
+/// order-blind (`DEFECT_037`).
 impl Hash for Cards {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        for card in self {
-            card.hash(state);
-        }
+        self.iter()
+            .fold(Bard::default(), |bard, card| bard.fold_in(*card))
+            .as_u64()
+            .hash(state);
     }
 }
 
@@ -978,6 +962,12 @@ impl Pile for Cards {
         true
     }
 
+    /// Looks the card up in the `IndexSet` directly. The `Pile` default copies
+    /// every card into a `Vec` first (`DEFECT_039`).
+    fn contains(&self, card: &Card) -> bool {
+        self.0.contains(card)
+    }
+
     fn card_at(self, index: usize) -> Option<Card> {
         self.0.get_index(index).copied()
     }
@@ -990,10 +980,11 @@ impl Pile for Cards {
         Cards(self.0.iter().map(Card::clean).collect())
     }
 
-    /// `Cards` always filters out blank cards, and inherently enforces uniqueness, so this should
-    /// always be true.
+    /// The `IndexSet` keeps the cards unique, so this only checks for a blank.
+    /// `insert` refuses one, but the public field can still hold one
+    /// (`DEFECT_039`).
     fn is_dealt(&self) -> bool {
-        true
+        !self.contains_blank()
     }
 
     /// ```
@@ -1080,6 +1071,47 @@ mod cards_tests {
     use super::*;
     use crate::util::data::TestData;
     use rstest::rstest;
+    use std::hash::{DefaultHasher, Hasher};
+
+    fn hash_of(cards: &Cards) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        cards.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// DEFECT_037: `==` ignores order, so the hash must ignore it too.
+    #[test]
+    fn equal_cards_in_a_different_order_have_equal_hashes() {
+        let forward = Cards::from_str("A♠ K♠ Q♠").unwrap();
+        let backward = Cards::from_str("Q♠ K♠ A♠").unwrap();
+        assert_eq!(forward, backward);
+        assert_eq!(hash_of(&forward), hash_of(&backward));
+    }
+
+    /// DEFECT_039: `is_dealt` was hard-coded `true`.
+    #[test]
+    fn is_dealt__false_when_holding_a_blank() {
+        let with_blank = Cards(IndexSet::from([Card::ACE_SPADES, Card::BLANK]));
+        assert!(!with_blank.is_dealt());
+        assert!(Cards::from_str("A♠ K♠").unwrap().is_dealt());
+    }
+
+    /// DEFECT_039: `contains` copied the set into a `Vec` on every call, so
+    /// `deck_minus` copied it 52 times.
+    #[test]
+    fn contains__does_not_allocate() {
+        let deck = Cards::deck();
+        let (found, allocations) = crate::alloc_probe::count_allocs(|| deck.contains(&Card::TREY_CLUBS));
+        assert!(found);
+        assert_eq!(0, allocations);
+    }
+
+    #[test]
+    fn different_cards_have_different_hashes() {
+        let one = Cards::from_str("A♠ K♠ Q♠").unwrap();
+        let other = Cards::from_str("A♠ K♠ J♠").unwrap();
+        assert_ne!(hash_of(&one), hash_of(&other));
+    }
 
     #[test]
     fn bitand_is_intersection() {
@@ -1568,6 +1600,12 @@ mod cards_tests {
     #[test]
     fn from_str__invalid() {
         assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
+    }
+
+    /// DEFECT_035: run-together cards were read as their first card only.
+    #[test]
+    fn from_str__rejects_cards_without_spaces() {
+        assert!(Cards::from_str("AsKdQh").is_err());
     }
 
     #[test]

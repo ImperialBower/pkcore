@@ -86,6 +86,13 @@ Do not skip either step because the change "is small". A pure documentation
 edit that touches no code and no public API is the only exception, and it
 still gets a changelog line if it changes what a user is told.
 
+## Verifying a change
+
+The norm is `make lint` plus only the tests for the code you touched, for
+example `cargo test --features full --lib -- bot::draw_equity`, and any doc
+tests or integration tests for that code. Do not run `make ayce` or the whole
+suite unless asked; it takes too long for everyday work.
+
 ## Commands you would not guess
 
 Default features are the lean, pure kernel (0.15.0). Plain `cargo test` skips
@@ -94,10 +101,13 @@ the YAML, bot, rayon, JSON and CSV code; use `cargo test --features full` (what
 `cargo run --example`. These do not work as you would guess either:
 
 ```bash
+make lint           # the everyday gate: fmt + clippy with warnings denied
 make ayce           # the full local gate: fmt, clippy, test, docs, plus the
-                    # bare-kernel test and per-feature checks CI runs
+                    # bare-kernel test and per-feature checks CI runs.
+                    # Slow: run it only when asked or before a release
 make check-purity   # assert no rusqlite/zstd/termion/dotenvy leak into
-                    # --no-default-features (the domain-kernel gate)
+                    # --no-default-features (the domain-kernel gate), and no
+                    # std::fs calls in the lean builds (check-purity-fs)
 make perf-check     # fmt + clippy + test the standalone perf/ crate, which
                     # sits OUTSIDE the workspace and is not covered by `ayce`
 make perf-native    # measure the kernel, write docs/perf/results/

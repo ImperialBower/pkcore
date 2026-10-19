@@ -14,7 +14,7 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
-use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
+use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 #[cfg(feature = "parallel")]
 use rayon::iter::ParallelIterator;
@@ -45,7 +45,7 @@ impl StartingHands {
     #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_case_eval(&self, case: Five) -> Result<CaseEval, PKError> {
         let mut case_eval = CaseEval::default();
-        let map = bc_rank_hashmap()?;
+        let map = SevenFiveBCM::rank_map()?;
 
         for player in &self.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(*player, case) {
@@ -62,7 +62,7 @@ impl StartingHands {
     fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
-        let map = bc_rank_hashmap()?;
+        let map = SevenFiveBCM::rank_map()?;
 
         for player in twos.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(player, case) {

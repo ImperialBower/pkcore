@@ -201,8 +201,8 @@ fn main() {
     separator("8. compute_exploitability");
 
     // compute_exploitability runs a best-response pass: OOP plays greedily
-    // against the fixed IP equilibrium, and vice versa. The gap is the Nash
-    // distance.  0.0 = perfect Nash equilibrium.
+    // against the fixed IP equilibrium, and vice versa. Each side sees only its
+    // own hand. The gap is the Nash distance.  0.0 = perfect Nash equilibrium.
     let expl = solver.compute_exploitability(eq);
     println!("Nash gap (exploitability): {expl:.6} chips");
     println!("(Same as result.exploitability: {:.6})", result.exploitability);

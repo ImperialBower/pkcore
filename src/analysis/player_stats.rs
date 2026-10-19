@@ -123,43 +123,43 @@ impl PlayerStats {
     /// ```
     #[must_use]
     pub fn vpip(&self) -> Option<f64> {
-        ratio(self.hands_voluntarily_played, self.hands_dealt)
+        Self::ratio(self.hands_voluntarily_played, self.hands_dealt)
     }
 
     /// Preflop raise percentage. Returns `None` if no preflop opportunities.
     #[must_use]
     pub fn pfr(&self) -> Option<f64> {
-        ratio(self.pfr_count, self.pfr_opportunities)
+        Self::ratio(self.pfr_count, self.pfr_opportunities)
     }
 
     /// 3-bet percentage out of facing-an-open-raise spots.
     #[must_use]
     pub fn three_bet_pct(&self) -> Option<f64> {
-        ratio(self.three_bet_count, self.three_bet_opportunities)
+        Self::ratio(self.three_bet_count, self.three_bet_opportunities)
     }
 
     /// 4-bet percentage out of facing-a-3-bet spots.
     #[must_use]
     pub fn four_bet_pct(&self) -> Option<f64> {
-        ratio(self.four_bet_count, self.four_bet_opportunities)
+        Self::ratio(self.four_bet_count, self.four_bet_opportunities)
     }
 
     /// Folded to a 3-bet after open-raising, as a percentage of those spots.
     #[must_use]
     pub fn fold_to_three_bet_pct(&self) -> Option<f64> {
-        ratio(self.fold_to_three_bet_count, self.fold_to_three_bet_opportunities)
+        Self::ratio(self.fold_to_three_bet_count, self.fold_to_three_bet_opportunities)
     }
 
     /// Continuation-bet percentage (was preflop aggressor and bet on flop).
     #[must_use]
     pub fn cbet_pct(&self) -> Option<f64> {
-        ratio(self.cbet_count, self.cbet_opportunities)
+        Self::ratio(self.cbet_count, self.cbet_opportunities)
     }
 
     /// Fold-to-c-bet percentage (faced a c-bet, folded).
     #[must_use]
     pub fn fold_to_cbet_pct(&self) -> Option<f64> {
-        ratio(self.fold_to_cbet_count, self.fold_to_cbet_opportunities)
+        Self::ratio(self.fold_to_cbet_count, self.fold_to_cbet_opportunities)
     }
 
     /// Aggression factor: `(bets + raises) / calls` aggregated across
@@ -167,7 +167,7 @@ impl PlayerStats {
     /// Returns `None` if there were no postflop calls (denominator zero).
     #[must_use]
     pub fn aggression_factor(&self) -> Option<f64> {
-        let (bets, raises, calls) = postflop_aggression_components(&self.by_street);
+        let (bets, raises, calls) = Self::postflop_aggression_components(&self.by_street);
         if calls == 0 {
             return None;
         }
@@ -180,7 +180,7 @@ impl PlayerStats {
     /// postflop actions of those four kinds.
     #[must_use]
     pub fn aggression_freq(&self) -> Option<f64> {
-        let (bets, raises, calls) = postflop_aggression_components(&self.by_street);
+        let (bets, raises, calls) = Self::postflop_aggression_components(&self.by_street);
         let checks: usize = self.by_street[1..].iter().map(|c| c.checks).sum();
         let total = bets + raises + calls + checks;
         if total == 0 {
@@ -193,13 +193,13 @@ impl PlayerStats {
     /// Percentage of dealt hands where the player saw showdown.
     #[must_use]
     pub fn wtsd(&self) -> Option<f64> {
-        ratio(self.went_to_showdown, self.hands_dealt)
+        Self::ratio(self.went_to_showdown, self.hands_dealt)
     }
 
     /// Win rate at showdown — wins (or ties) over showdowns reached.
     #[must_use]
     pub fn w_at_sd(&self) -> Option<f64> {
-        ratio(self.won_at_showdown, self.went_to_showdown)
+        Self::ratio(self.won_at_showdown, self.went_to_showdown)
     }
 
     /// Sample-size confidence for this player's stats.
@@ -485,9 +485,9 @@ impl StatsRegistry {
             };
             let stats = self.players.entry(id).or_default();
 
-            increment(&mut stats.by_street[0], &action.action);
+            PlayerStats::increment(&mut stats.by_street[0], &action.action);
             if let Some(pos) = seat_to_pos.get(&seat) {
-                increment(&mut stats.by_position[*pos as usize - 1], &action.action);
+                PlayerStats::increment(&mut stats.by_position[*pos as usize - 1], &action.action);
             }
 
             // First voluntary action by this seat this preflop street defines
@@ -571,9 +571,9 @@ impl StatsRegistry {
             };
             let first_action = acted.insert(seat);
             let stats = self.players.entry(id).or_default();
-            increment(&mut stats.by_street[1], &action.action);
+            PlayerStats::increment(&mut stats.by_street[1], &action.action);
             if let Some(pos) = seat_to_pos.get(&seat) {
-                increment(&mut stats.by_position[*pos as usize - 1], &action.action);
+                PlayerStats::increment(&mut stats.by_position[*pos as usize - 1], &action.action);
             }
 
             // c-bet opportunity for the preflop aggressor: their first flop
@@ -649,9 +649,9 @@ impl StatsRegistry {
             };
             let first_action = acted.insert(seat);
             let stats = self.players.entry(id).or_default();
-            increment(&mut stats.by_street[street_idx], &action.action);
+            PlayerStats::increment(&mut stats.by_street[street_idx], &action.action);
             if let Some(pos) = seat_to_pos.get(&seat) {
-                increment(&mut stats.by_position[*pos as usize - 1], &action.action);
+                PlayerStats::increment(&mut stats.by_position[*pos as usize - 1], &action.action);
             }
 
             match action.action {
@@ -773,31 +773,34 @@ impl Drop for StatsRegistry {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-#[allow(clippy::cast_precision_loss)]
-fn ratio(numerator: u64, denominator: u64) -> Option<f64> {
-    if denominator == 0 {
-        None
-    } else {
-        Some(numerator as f64 / denominator as f64)
+impl PlayerStats {
+    // Stat counts are far below 2^52, so the `as f64` casts are exact.
+    #[allow(clippy::cast_precision_loss)]
+    fn ratio(numerator: u64, denominator: u64) -> Option<f64> {
+        if denominator == 0 {
+            None
+        } else {
+            Some(numerator as f64 / denominator as f64)
+        }
     }
-}
 
-fn postflop_aggression_components(by_street: &[ActionCounts; STREET_COUNT]) -> (usize, usize, usize) {
-    let bets: usize = by_street[1..].iter().map(|c| c.bets + c.all_ins).sum();
-    let raises: usize = by_street[1..].iter().map(|c| c.raises).sum();
-    let calls: usize = by_street[1..].iter().map(|c| c.calls).sum();
-    (bets, raises, calls)
-}
+    fn postflop_aggression_components(by_street: &[ActionCounts; STREET_COUNT]) -> (usize, usize, usize) {
+        let bets: usize = by_street[1..].iter().map(|c| c.bets + c.all_ins).sum();
+        let raises: usize = by_street[1..].iter().map(|c| c.raises).sum();
+        let calls: usize = by_street[1..].iter().map(|c| c.calls).sum();
+        (bets, raises, calls)
+    }
 
-fn increment(counts: &mut ActionCounts, action: &ActionType) {
-    match action {
-        ActionType::Fold => counts.folds += 1,
-        ActionType::Check => counts.checks += 1,
-        ActionType::Call => counts.calls += 1,
-        ActionType::Bet => counts.bets += 1,
-        ActionType::Raise => counts.raises += 1,
-        ActionType::AllIn => counts.all_ins += 1,
-        ActionType::Post => {} // forced bets not counted in voluntary stats
+    fn increment(counts: &mut ActionCounts, action: &ActionType) {
+        match action {
+            ActionType::Fold => counts.folds += 1,
+            ActionType::Check => counts.checks += 1,
+            ActionType::Call => counts.calls += 1,
+            ActionType::Bet => counts.bets += 1,
+            ActionType::Raise => counts.raises += 1,
+            ActionType::AllIn => counts.all_ins += 1,
+            ActionType::Post => {} // forced bets not counted in voluntary stats
+        }
     }
 }
 

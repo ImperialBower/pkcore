@@ -1,0 +1,37 @@
+# DEFECT_003 — heads-up side pot: the uncalled excess was not returned.
+# docs/defects/DEFECT_003_heads_up_side_pot.md — tests/split_pots.rs
+#
+# NL 50/100, heads-up. Seat 0 (button, small blind, acts first) has 1000 and
+# shoves. Seat 1 (big blind) has 200 and calls all-in. The short stack wins 400 (its 200 matched). The deep stack's other 800 was
+# never called and must come back to it.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_003_short_winner_excess_returned
+  game: holdem
+  description: "Heads-up: the short stack wins and the deep stack's uncalled excess comes back"
+table:
+  seats: 2
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: Deep, stack: 1000.0, hole_cards: "7♦ 2♣" }
+  - { seat: 1, name: Short, stack: 200.0, hole_cards: "A♠ A♥" }
+board: "K♠ K♣ 9♦ 8♠ 4♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: all_in, all_in: true }
+      - { seat: 1, action: all_in, all_in: true }
+  flop:
+    cards: "K♠ K♣ 9♦"
+    actions: []
+  turn:
+    card: "8♠"
+    actions: []
+  river:
+    card: "4♥"
+    actions: []
+
+final:
+  stacks: { 0: 800, 1: 400 }

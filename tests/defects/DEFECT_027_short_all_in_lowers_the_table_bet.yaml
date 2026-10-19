@@ -1,0 +1,59 @@
+# DEFECT_027 — a short all-in sent as `Raise` lowered the table bet.
+# docs/defects/DEFECT_027_short_all_in_lowers_the_table_bet.md
+#
+# NL 50/100. Seat 0 is the button and acts first, seat 1 posts the small
+# blind, seat 2 the big blind. A raises to 400. B has 300 and sends Raise(300),
+# an all-in for less. Before the fix the table bet dropped to 300, so C owed
+# 200 instead of 300 and could be offered a Check the table then rejected.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_027
+  game: holdem
+  description: "Short all-in sent as Raise must not lower table.bet"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: A, stack: 10000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: B, stack: 300.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: C, stack: 10000.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 400.0 }
+      - { seat: 1, action: raise, amount: 300.0, all_in: true }
+      - { seat: 2, action: call, amount: 400.0 }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+results:
+  - { seat: 0, outcome: win, net: 700.0 }
+  - { seat: 1, outcome: lose, net: -300.0 }
+  - { seat: 2, outcome: lose, net: -400.0 }
+
+expect:
+  # The moment the defect struck: right after B's short shove.
+  - after: { street: preflop, index: 1 }
+    bet: 400
+    raise_increment: 300
+    next_to_act: 2
+    to_call: { seat: 2, amount: 300 }
+    legal: { seat: 2, has: [call, fold], lacks: [check] }
+final:
+  consistent: true
+  stacks: { 0: 10700, 1: 0, 2: 9600 }

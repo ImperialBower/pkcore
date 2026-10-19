@@ -5,6 +5,315 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-10-17
+
+### Added
+
+- **`HandHistory::replay_with`** replays a hand like `replay` and calls a
+  closure after each recorded action with a `ReplayStep` (street, position in
+  that street's `actions` list, the action) and the `Table` as it stands. It
+  lets a caller check table state in the middle of a hand, which the final
+  `ReplayResult` cannot show. `replay` now calls it, so there is one replay
+  engine. New public types: `ReplayStep` and `ReplayStreet`.
+- **Defect hands.** `tests/defect_hands.rs` replays every
+  `tests/defects/DEFECT_*.yaml` file. Each file is a normal hand history, named
+  after the defect it reproduces, plus an `expect:` block (table state after a
+  given action) and a `final:` block (consistency and final stacks) that only
+  the runner reads. There are 19 files for 16 defects. The folder is read on
+  every run, so a new file needs no rebuild. `tests/defects/README.md` lists
+  which defects have a file, which do not and why, and which files were shown
+  to fail when their bug was put back.
+- **`RegretAccumulator::with_floor`, `floors` and `scale_signed`.** The CFR+
+  floor is now a switch, on by default. `scale_signed` multiplies positive and
+  negative regret by different factors, as DCFR needs.
+
+### Changed
+
+- **`full` now includes `pokerbench`.** The module was in no umbrella
+  feature, so `make lint`, `make ayce`, the docs build and the pedantic clippy
+  job never compiled it. It needs only `csv` and `json`, which `full` already
+  has.
+- **`full` now includes `bot-training`.** It was in no umbrella feature
+  either, so `make lint` and the clippy CI job never compiled `bot::training`,
+  and 16 pedantic clippy warnings built up there. They are fixed: the casts of
+  small counts are marked as exact, and two small cleanups. It needs no new
+  dependency, since `full` already has everything it turns on. Its one visible
+  effect in `full`: `ExploitConfig` now derives `Serialize` and `Deserialize`.
+  The extra CI run for it is removed, since the main jobs now cover it.
+- **`full` now includes `store`.** The SQLite HUP store and the zstd Binary
+  Card Map were in no umbrella feature either, so `make lint`, the pedantic
+  clippy job and the main test job never compiled them. Only the coverage job
+  and the docs.rs build did, through `--all-features`. It adds `rusqlite` and
+  `zstd` to a `full` build. The lean builds do not change, and
+  `make check-purity` still keeps both out of them. The `store` code needs no
+  data files to test: without `generated/bcm.zst` it returns
+  `Err(BcmUnavailable)`.
+- **The PokerBench parsing helpers live on `PokerBenchParser`.** The 18
+  crate-private functions in `pokerbench::parse` are now associated functions
+  of a crate-private unit struct, per the house rule of no free functions. No
+  public API changed.
+- **The `RuleBasedDecider` helpers live on `RuleBasedDecider`.** The 13
+  private free functions in `bot::decider` (equity, outs, bet sizing) only
+  served that decider, so they moved into an `impl RuleBasedDecider` block. No
+  public API changed.
+- **The `hand_history` helpers live on the types they serve.** The 8 private
+  free functions moved into `impl` blocks: the serde defaults and the replay
+  helpers onto `HandHistory`, `hand_has_position` onto `HandCollection`, and
+  `table_action_to_hand_action` onto `Streets`. The serde `default` paths now
+  read `"HandHistory::default_format_version"`. No public API changed.
+- **The preflop equity functions live on `PreflopEquity`.** A new unit
+  struct in `bot::preflop_equity` holds them, per the house rule of no free
+  functions. `hup_equity_vs_range` is now `PreflopEquity::hup_vs_range`, and
+  `preflop_equity` is now `PreflopEquity::compute`. The old names still work
+  for this release; see Deprecated.
+- **The exploit helpers live on the types they serve.** `adjust_profile` is
+  now `ExploitConfig::adjust_profile`, `scale_percentage` is now
+  `Percentage::scaled`, and `largest_active_opponent` is now
+  `TableSnapshot::largest_active_opponent`. The five private rule helpers are
+  private methods of `ExploitConfig`. The old names still work for this
+  release; see Deprecated.
+- **The draw equity functions live on `DrawEquity`.** A new unit struct in
+  `bot::draw_equity` holds `outs_against`, `outs_equity` and the five private
+  helpers. The function names did not change. The old free functions still
+  work for this release; see Deprecated.
+- **The range model functions live on `RangeModel`.** A new unit struct in
+  `bot::range_model` holds `villain_range`, `villain_specs`,
+  `villain_range_specs` and the private `widen_by_reads`; the names did not
+  change. `combos_from_weighted` is now `WeightedRange::to_combos`, since it
+  reads only the range. `MIN_HANDS_FOR_READ` stays at its old path. The old
+  free functions still work for this release; see Deprecated.
+- **The hand order functions live on `HandOrder`.** A new unit struct in
+  `bot::hand_order` holds them, with shorter names: `hand_ordering` is now
+  `HandOrder::ordering`, `range_of_width` is now `HandOrder::range_of_width`,
+  and `derive_hand_ordering` is now `HandOrder::derive`. The old names still
+  work for this release; see Deprecated.
+- **The training evaluator functions live on `Evaluator`.** A new unit
+  struct in `bot::training::evaluator` holds `default_field`, `evaluate` and
+  the three private session helpers; the names did not change. The old free
+  functions still work for this release; see Deprecated.
+- **The parameter encoding functions live on `Encoding`.** A new unit struct
+  in `bot::training::encoding` holds `encode`, `decode` and `ranges`; the
+  names did not change. `DIM`, `LO` and `HI` stay at their old paths. The old
+  free functions still work for this release; see Deprecated.
+- **The Binary Card Map loaders live on `SevenFiveBCM`.** That type already
+  writes the BCM file (`generate_bin`) and names its path (`get_filepath`), so
+  reading it back belongs there too. `load_bc_rank_map` is now
+  `SevenFiveBCM::load_rank_map`, and `bc_rank_hashmap` is now
+  `SevenFiveBCM::rank_map`. The `BC_RANK_HASHMAP` static stays where it is.
+  The old names still work for this release; see Deprecated.
+- **`cache_key` lives on `SolverCache`.** The key names the file the cache
+  reads and writes, so `analysis::gto::solver_cache::cache_key` is now
+  `SolverCache::cache_key`. The key value did not change, so cached solves
+  still hit. The old name still works for this release; see Deprecated.
+- **The distinct-matchups CSV reader lives on `Masked`.**
+  `util::csv::distinct_shus_from_csv_as_masked_vec` is now
+  `Masked::distinct_from_csv`, next to `Masked::distinct`. It still needs the
+  `csv` feature. Its docs no longer claim it panics: it never did, it logs and
+  returns an empty `Vec`. `DISTINCT_SHUS_CSV_PATH` stays in `util::csv`. The
+  old name still works for this release; see Deprecated.
+- **`score_action` lives on `ActionScore`.** It builds an `ActionScore`, so
+  `pokerbench::score_action` is now `ActionScore::score`. The scoring is
+  unchanged. The old name, and its `pokerbench::score_action` re-export, still
+  work for this release; see Deprecated.
+- **The embedded HUP chart lookup lives on `HupCache`.** A new unit struct in
+  `analysis::store::embedded::hup_cache` holds `lookup_odds`; the name did not
+  change. The `HUP_CACHE` static stays where it is. The old free function
+  still works for this release; see Deprecated.
+- **The TDA rule primitives live on `Tda`.** The 5 crate-private functions
+  in `casino::tda` (odd-chip order, chip split, seat distance, high card by
+  suit) are now associated functions of a crate-private unit struct. They
+  stay pure, so they are still tested without a table. No public API changed.
+- **The snapshot card helpers live on `TableState`.** The 5 private free
+  functions in `casino::table::snapshot` that turn cards into index strings
+  and back are now private associated functions of `TableState`, the only
+  type they serve. No public API changed.
+- **The `DealEval` helpers live on `DealEval`.** The 3 private free
+  functions in `play::stages::deal_eval` (the heads-up and multi-way reports,
+  and the win/lose/draw to equity step) only served `DealEval::new`, so they
+  moved into its `impl` block. No public API changed.
+- **The `player_stats` helpers live on `PlayerStats`.** The 3 private free
+  functions in `analysis::player_stats` (`ratio`, the postflop aggression
+  sums, and the per-action counter step) are now private associated functions
+  of `PlayerStats`, whose counters they read and fill. No public API changed.
+- **The PokerBench seat helpers live on `PokerBenchScenario`.** The 2 private
+  free functions in `pokerbench::scenario` (position to seat, and position to
+  short name) only served `canonical_seating`, so they moved into its `impl`
+  block. No public API changed.
+- **The last private free functions live on the types they serve.** This
+  closes the no-free-functions refactor. No public API changed:
+  - `KuhnStrategy::best_response_value` and `eval_deal_policy` (now `&self`
+    methods), in `games::kuhn`.
+  - `TestData::fixture_player`, in `util::data`.
+  - `PokerBenchAction::parse_chips` (crate-private), shared by the action
+    parser and the loaders.
+  - `StreetEquity::per_seat`, which was `street_equities_from_results`.
+  - `TableEquity::default_seat_equity_ref`.
+  - `ExploitTrainer::standard_normal`.
+  - The serde helpers `Card::deserialize_card_index`,
+    `Two::deserialize_two_index` and `EquityMode::default_samples`. Their
+    `#[serde(...)]` attributes now name them as `"Type::name"`. The wire
+    format did not change.
+- **Breaking: `Cards::blanks` is removed**
+  ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
+  A `Cards` is a set, so `blanks(n)` always made one blank. Use
+  `BoxedCards::blanks(n)`, which holds `n`.
+- **Breaking: `SolverCache` needs the `persistence` feature**
+  ([DEFECT_038](docs/defects/DEFECT_038_solver_cache_in_the_lean_build.md)).
+  It reads and writes files, but it was in the lean default build and the
+  prelude since `0.15.0`, against the rule that file access sits behind
+  `persistence`. Turn on `persistence` (or `full`) to keep using it.
+- **Breaking: the equity engine's functions live on `EquityEngine`.** The free
+  function `analysis::equity::compute` is now `EquityEngine::compute`, a unit
+  struct that holds no state. `EquityRequest::compute` is unchanged. The
+  engine's private helpers moved onto the same struct.
+- **Breaking: `CfrVariant::Discounted` has a third field, `gamma`**
+  ([DEFECT_030](docs/defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md)).
+  The default is `Discounted { alpha: 1.5, beta: 0.0, gamma: 2.0 }`. `beta`
+  now discounts negative regret, as in Brown & Sandholm (2019); it used to
+  discount the strategy sum. Only `CfrPlus` floors regret at zero now, so
+  `Vanilla` is vanilla CFR. The solver cache key includes `gamma`, so results
+  cached by an older version are a miss and are solved again.
+
+### Deprecated
+
+- **`bot::preflop_equity::hup_equity_vs_range` and
+  `bot::preflop_equity::preflop_equity`.** Use `PreflopEquity::hup_vs_range`
+  and `PreflopEquity::compute`. The old functions call the new ones and give
+  a compiler warning. They will be removed in the next minor release.
+- **`bot::exploit::adjust_profile`, `scale_percentage` and
+  `largest_active_opponent`.** Use `ExploitConfig::adjust_profile`,
+  `Percentage::scaled` and `TableSnapshot::largest_active_opponent`. Same
+  terms: the old functions call the new ones and will be removed in the next
+  minor release.
+- **`bot::draw_equity::outs_against` and `outs_equity`.** Use
+  `DrawEquity::outs_against` and `DrawEquity::outs_equity`. Same terms as
+  above.
+- **`bot::range_model::combos_from_weighted`, `villain_range`,
+  `villain_specs` and `villain_range_specs`.** Use `WeightedRange::to_combos`
+  and the same names on `RangeModel`. Same terms as above.
+- **`bot::hand_order::hand_ordering`, `range_of_width` and
+  `derive_hand_ordering`.** Use `HandOrder::ordering`,
+  `HandOrder::range_of_width` and `HandOrder::derive`. Same terms as above.
+- **`bot::training::evaluator::default_field` and `evaluate`.** Use
+  `Evaluator::default_field` and `Evaluator::evaluate`. Same terms as above.
+- **`bot::training::encoding::encode`, `decode` and `ranges`.** Use
+  `Encoding::encode`, `Encoding::decode` and `Encoding::ranges`. Same terms
+  as above.
+- **`analysis::store::bcm::binary_card_map::load_bc_rank_map` and
+  `bc_rank_hashmap`.** Use `SevenFiveBCM::load_rank_map` and
+  `SevenFiveBCM::rank_map`. Same terms as above.
+- **`analysis::gto::solver_cache::cache_key`.** Use `SolverCache::cache_key`.
+  Same terms as above.
+- **`util::csv::distinct_shus_from_csv_as_masked_vec`.** Use
+  `Masked::distinct_from_csv`. Same terms as above.
+- **`pokerbench::score_action`.** Use `ActionScore::score`. Same terms as
+  above.
+- **`analysis::store::embedded::hup_cache::lookup_odds`.** Use
+  `HupCache::lookup_odds`. Same terms as above.
+
+### Fixed
+
+- **`cargo clippy --no-default-features -- -D warnings` passes again.** The
+  `TableSnapshot` lifetime is only used with `player-stats`, so clippy flagged
+  it in the lean build. The lint is now allowed only when that feature is off.
+- **A fold in the GTO solver now pays half the pot before the bet**
+  ([DEFECT_029](docs/defects/DEFECT_029_solver_fold_pays_half_the_bet.md)).
+  The fold terminal held `pot + bet`, so the folder also paid half of a bet it
+  never called. The solver found the equilibrium of a different game, with
+  folds punished and bluffs paid too much. An uncalled bet goes back to the
+  bettor, so the fold terminal now holds `pot`.
+- **DCFR averages the strategy as the paper does**
+  ([DEFECT_030](docs/defects/DEFECT_030_dcfr_beta_discounts_the_strategy_sum.md)).
+  With the default `beta = 0`, the strategy sum was halved every iteration, so
+  the "average" strategy was in fact the last few iterations. The sum now gets
+  `(t / (t + 1))^gamma`, so iteration `s` has weight in proportion to
+  `s^gamma`. The discounts also act on finished iterations only; they were one
+  iteration early.
+- **Exploitability no longer lets the best response see the other hand**
+  ([DEFECT_031](docs/defects/DEFECT_031_clairvoyant_exploitability.md)).
+  `Solver::compute_exploitability` picked the best action for each pair of
+  hands, so the responder knew the opponent's cards. The number could not
+  reach zero, even at a true equilibrium. The best response now picks one
+  action per node for each of its own hands, against all opponent hands that
+  reach the node. On a hand-written equilibrium with a known answer it now
+  reports 0, where it used to report 50 chips.
+- **The `outs` setting no longer scores a made hand as a sure winner**
+  ([DEFECT_032](docs/defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md)).
+  `outs_against` counted every card that kept the hero ahead of the range's
+  median, without checking that the hero was behind. Bottom set got 47 outs,
+  which the rule of four turned into 100% equity, so a bot with `outs: on`
+  played any hand ahead of the median as the nuts. A hand already ahead now has
+  0 outs and keeps its made-strength score.
+- **Monte Carlo seeds 0 to 7 no longer give the same equity**
+  ([DEFECT_033](docs/defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)).
+  Sample `i` was seeded with `seed ^ i`, which for a seed below 8 only
+  reorders the same sample seeds. So seeds 0 to 7, including the default 0,
+  drew the same samples. Sample seeds now step by the 64-bit golden ratio.
+  Every seeded Monte Carlo result changes; exact enumeration does not.
+- **`Five::is_straight` is false for paired hands**
+  ([DEFECT_034](docs/defects/DEFECT_034_paired_hand_is_a_straight.md)).
+  It checked only that the lowest and highest ranks were four apart, so
+  `9 9 9 9 5` was a straight. It now also needs five different ranks.
+  `is_straight_flush` is fixed with it. Hand ranking used lookup tables and
+  was never affected.
+- **`Card::from_str` rejects text after the card**
+  ([DEFECT_035](docs/defects/DEFECT_035_card_parse_ignores_trailing_text.md)).
+  It read a rank and a suit and dropped the rest, so `"AsKd"` parsed as the
+  ace of spades and `Cards::from_str("AsKdQh")` as one card. Leftover
+  characters are now `PKError::InvalidCardIndex`. Surrounding spaces are
+  still trimmed.
+- **Equal `Eval`s now have equal hashes**
+  ([DEFECT_036](docs/defects/DEFECT_036_eval_hash_disagrees_with_eq.md)).
+  `==` compares only the hand rank, so two royal flushes are equal, but the
+  hash also used the five cards. A hash set or map keyed by `Eval` or
+  `CaseEval` could miss a key or hold it twice. The hash now uses the hand
+  rank only.
+- **Equal `Cards` now have equal hashes**
+  ([DEFECT_037](docs/defects/DEFECT_037_cards_hash_disagrees_with_eq.md)).
+  `==` ignores order, but the hash followed it, so `A♠ K♠` and `K♠ A♠` were
+  equal with different hashes. The hash now uses the `Bard` mask, one bit per
+  card, which is the same in any order.
+- **`Cards::is_dealt` checks for a blank, and `Cards::contains` no longer
+  copies the set**
+  ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
+  `is_dealt` always returned `true`. `contains` used the `Pile` default, which
+  copies every card into a `Vec`, so `Cards::deck_minus` copied the set 52
+  times. `contains` is now a direct set lookup with no allocation.
+
+- **A six-low now beats a seven-low in Razz**
+  ([DEFECT_026](docs/defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md)).
+  The rank value of a Razz hand is the position of its `CaliforniaHandRank`
+  variant, and the variants were declared lowest card first. Ace-to-five
+  lowball reads the highest card first. So `7 4 3 2 A` scored 3 and beat
+  `6 5 4 3 2` at 496, and 329 of 1,286 neighbouring unpaired lows were in the
+  wrong order. The paired hands also counted the ace high, which made a pair of
+  aces the worst pair instead of the best. The variants are now declared in
+  canonical order: wheel = 1, `K Q J T 9` = 1,287, `A A 4 3 2` = 1,288,
+  `K K K K Q` = 6,175. No names or signatures changed, but 6,171 of 6,175 Razz
+  rank values did, so a stored Razz value from an older version uses the old
+  ladder. A new test checks all 6,175 positions against an independent oracle
+  of the rule. [DECON-03](docs/deconstruct/DECON-03_Lowball_Ranking.md) found
+  the unpaired defect; its paired-band endpoints had copied the old code and are
+  corrected too.
+- **A short all-in sent as `Bet` or `Raise` no longer lowers the table bet**
+  ([DEFECT_027](docs/defects/DEFECT_027_short_all_in_lowers_the_table_bet.md)).
+  `Table::act_bet` and `Table::act_raise` set `table.bet` to the shove's amount
+  even when it was below the bet already standing. After A raised to 400, a
+  300-chip player who sent `Raise(300)` dropped the bet to 300. The next player
+  then owed 300, but the betting round still measured 400, so
+  `legal_actions` offered a `Check` that `act_check` rejected, and the hand
+  could not go on. A shove that exactly covered the stack with a full raise
+  also skipped the raise increment, so the next minimum re-raise was too small.
+  Both methods now use the same all-in rules as `act_all_in`: the bet never
+  goes down, and only a full raise re-opens the action and counts toward the
+  raise cap.
+- **A player who already acted can no longer shove over a short all-in**
+  ([DEFECT_028](docs/defects/DEFECT_028_gated_player_can_shove_over_a_short_all_in.md)).
+  TDA 2024 Rule 47-A lets that player only call or fold. The `DEFECT_010` fix
+  refused the `Raise`, but in No-Limit `act_all_in` still committed the whole
+  stack, a re-raise. A gated `AllIn` with more than the call behind is now a
+  call. A stack that cannot cover the call still goes all-in for less.
+
 ## [0.15.5] - 2026-10-12
 
 ### Security

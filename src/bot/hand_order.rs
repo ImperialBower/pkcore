@@ -9,7 +9,7 @@
 //! parsed on first use. Deriving them from the chart at runtime also worked,
 //! but it dragged `generated/hups.bin` — 15.8 MB — into every linked binary,
 //! which took a WASM consumer from 478 KB to 3.8 MB compressed for no change in
-//! behaviour. [`derive_hand_ordering`] is still the source of truth; it is now
+//! behaviour. [`HandOrder::derive`] is still the source of truth; it is now
 //! run by the generator and by the test that compares it to the table.
 
 use crate::analysis::gto::combo::Combo;
@@ -37,188 +37,245 @@ static ORDERING: LazyLock<Vec<(Combo, f64)>> = LazyLock::new(|| {
         .collect()
 });
 
-/// The 169 canonical starting-hand classes, strongest first.
-///
-/// Each entry pairs a [`Combo`] with its equity against a random hand, read
-/// from the embedded chart rather than sampled — precomputed by
-/// `examples/export_hand_order.rs`, parsed on first use.
-///
-/// # Domain
-///
-/// - **Role:** cohesive mechanism
-/// - **Invariants:**
-///   - classes are ordered strongest first
-///
-/// # Examples
-///
-/// ```
-/// use pkcore::analysis::gto::combo::Combo;
-/// use pkcore::bot::hand_order::hand_ordering;
-///
-/// let ordering = hand_ordering();
-/// assert_eq!(169, ordering.len());
-/// assert_eq!(Combo::COMBO_AA, ordering[0].0);
-/// ```
-#[must_use]
-pub fn hand_ordering() -> &'static [(Combo, f64)] {
-    &ORDERING
-}
-
-/// The strongest `fraction` of all starting hands, as a [`Combos`] range.
-///
-/// `fraction` is a share of the 1,326 distinct two-card hands, so `0.45` means
-/// "the hands a 45%-VPIP player would be holding". Classes are added
-/// strongest-first until the accumulated hand count reaches the target, which
-/// makes the result **nested**: a wider fraction always contains a narrower
-/// one. Returns `None` unless `fraction` lies in `(0.0, 1.0]`.
-///
-/// # Domain
-///
-/// - **Role:** cohesive mechanism
-/// - **Invariants:**
-///   - `None` unless `fraction` is in `(0.0, 1.0]`
-///   - a wider fraction contains every narrower one
-///
-/// # Examples
-///
-/// ```
-/// use pkcore::bot::hand_order::range_of_width;
-///
-/// let loose = range_of_width(0.45).unwrap();
-/// let tight = range_of_width(0.10).unwrap();
-/// let loose_set = loose.to_hash_set();
-/// assert!(tight.iter().all(|combo| loose_set.contains(combo)));
-///
-/// assert!(range_of_width(0.0).is_none());
-/// ```
-#[must_use]
-pub fn range_of_width(fraction: f64) -> Option<Combos> {
-    if !(fraction > 0.0 && fraction <= 1.0) {
-        return None;
-    }
-    #[allow(clippy::cast_precision_loss)]
-    let target = fraction * TOTAL_HANDS as f64;
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let target = target as usize;
-
-    let mut chosen = std::collections::HashSet::new();
-    let mut covered = 0_usize;
-    for (combo, _) in hand_ordering() {
-        if covered >= target {
-            break;
-        }
-        chosen.insert(*combo);
-        covered += hands_in_class(*combo);
-    }
-    if chosen.is_empty() {
-        return None;
-    }
-    Some(Combos::from(chosen))
-}
-
-/// The number of distinct two-card hands in a canonical class: 6 for a pair,
-/// 4 suited, 12 offsuit.
-fn hands_in_class(combo: Combo) -> usize {
-    use crate::analysis::gto::twos::Twos;
-    Twos::from(&Combos::from(vec![combo])).to_vec().len()
-}
-
 /// Total distinct two-card starting hands: `C(52, 2)`.
 const TOTAL_HANDS: usize = 1_326;
 
-/// Scores every canonical class against the full field of opposing hands,
-/// reading `generated/hups.bin` directly.
+/// The starting-hand ordering. A unit struct that groups this module's
+/// functions; it holds no state.
 ///
-/// This is the **generator** behind `hand_order_table::HAND_ORDER`, not the
-/// runtime path: it is called by `examples/export_hand_order.rs` and by the
-/// test that keeps the table honest. Nothing on the reads path calls it, which
-/// is what keeps the 15.8 MB chart out of a linked binary that only needs the
-/// 169 numbers.
+/// # Examples
 ///
-/// # Domain
+/// ```
+/// use pkcore::bot::hand_order::HandOrder;
 ///
-/// - **Role:** cohesive mechanism
-#[doc(hidden)]
-#[must_use]
-// `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.
-#[cfg(feature = "hup-charts")]
-pub fn derive_hand_ordering() -> Vec<(Combo, f64)> {
-    let field: Vec<Two> = Cards::deck()
-        .combinations(2)
-        .filter_map(|cards| Two::new(cards[0], cards[1]).ok())
-        .collect();
+/// assert_eq!(HandOrder, HandOrder::default());
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HandOrder;
 
-    // One representative hand per canonical class. Suit permutations inside a
-    // class are equivalent against a uniform field, so any representative does.
-    let mut representatives: HashMap<Combo, Two> = HashMap::new();
-    for hand in &field {
-        representatives.entry(Combo::from(*hand)).or_insert(*hand);
+impl HandOrder {
+    /// The 169 canonical starting-hand classes, strongest first.
+    ///
+    /// Each entry pairs a [`Combo`] with its equity against a random hand, read
+    /// from the embedded chart rather than sampled — precomputed by
+    /// `examples/export_hand_order.rs`, parsed on first use.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    /// - **Invariants:**
+    ///   - classes are ordered strongest first
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combo::Combo;
+    /// use pkcore::bot::hand_order::HandOrder;
+    ///
+    /// let ordering = HandOrder::ordering();
+    /// assert_eq!(169, ordering.len());
+    /// assert_eq!(Combo::COMBO_AA, ordering[0].0);
+    /// ```
+    #[must_use]
+    pub fn ordering() -> &'static [(Combo, f64)] {
+        &ORDERING
     }
 
-    let mut ordering: Vec<(Combo, f64)> = representatives
-        .into_iter()
-        .filter_map(|(combo, hand)| equity_vs_field(hand, &field).map(|equity| (combo, equity)))
-        .collect();
-    ordering.sort_by(|left, right| right.1.total_cmp(&left.1));
-    ordering
-}
-
-/// Exact equity for `hero` against every hand it can be dealt alongside.
-///
-/// Goes through [`HUPResult::lookup`] rather than keying
-/// [`HUP_CACHE`](crate::analysis::store::embedded::hup_cache::HUP_CACHE) directly.
-/// The chart is keyed by
-/// [`SortedHeadsUp`](crate::arrays::matchups::sorted_heads_up::SortedHeadsUp), whose idea of the "higher" hand is
-/// not a raw `as_u64()` comparison, so a hand-rolled key misses — silently, and
-/// selectively. `72o` found only 820 of its 1,225 matchups that way and scored
-/// `0.3845` instead of `0.3469`, because the skipped matchups were mostly the
-/// ones it loses. Returns `None` unless every eligible matchup resolves.
-#[cfg(feature = "hup-charts")]
-fn equity_vs_field(hero: Two, field: &[Two]) -> Option<f64> {
-    let hero_bard: Bard = hero.into();
-    let mut total = 0.0;
-    let mut counted = 0_u32;
-    let mut eligible = 0_u32;
-
-    for villain in field {
-        if shares_a_card(hero, *villain) {
-            continue;
-        }
-        eligible += 1;
-        let Ok(result) = HUPResult::lookup(&hero, villain) else {
-            continue;
-        };
-        // The chart reports from the higher hand's side; see the perspective
-        // note on `crate::bot::preflop_equity::hup_equity_vs_range`.
-        let odds = if result.higher == hero_bard {
-            result.odds
-        } else {
-            result.flip_mode().odds
-        };
-        let boards = odds.wins + odds.losses + odds.draws;
-        if boards == 0 {
-            continue;
+    /// The strongest `fraction` of all starting hands, as a [`Combos`] range.
+    ///
+    /// `fraction` is a share of the 1,326 distinct two-card hands, so `0.45` means
+    /// "the hands a 45%-VPIP player would be holding". Classes are added
+    /// strongest-first until the accumulated hand count reaches the target, which
+    /// makes the result **nested**: a wider fraction always contains a narrower
+    /// one. Returns `None` unless `fraction` lies in `(0.0, 1.0]`.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    /// - **Invariants:**
+    ///   - `None` unless `fraction` is in `(0.0, 1.0]`
+    ///   - a wider fraction contains every narrower one
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::hand_order::HandOrder;
+    ///
+    /// let loose = HandOrder::range_of_width(0.45).unwrap();
+    /// let tight = HandOrder::range_of_width(0.10).unwrap();
+    /// let loose_set = loose.to_hash_set();
+    /// assert!(tight.iter().all(|combo| loose_set.contains(combo)));
+    ///
+    /// assert!(HandOrder::range_of_width(0.0).is_none());
+    /// ```
+    #[must_use]
+    pub fn range_of_width(fraction: f64) -> Option<Combos> {
+        if !(fraction > 0.0 && fraction <= 1.0) {
+            return None;
         }
         #[allow(clippy::cast_precision_loss)]
-        {
-            total += (odds.wins as f64 + odds.draws as f64 / 2.0) / boards as f64;
+        let target = fraction * TOTAL_HANDS as f64;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let target = target as usize;
+
+        let mut chosen = std::collections::HashSet::new();
+        let mut covered = 0_usize;
+        for (combo, _) in Self::ordering() {
+            if covered >= target {
+                break;
+            }
+            chosen.insert(*combo);
+            covered += Self::hands_in_class(*combo);
         }
-        counted += 1;
+        if chosen.is_empty() {
+            return None;
+        }
+        Some(Combos::from(chosen))
     }
 
-    // A partial average is worse than no answer: it is silently biased.
-    if counted == 0 || counted != eligible {
-        None
-    } else {
-        Some(total / f64::from(counted))
+    /// The number of distinct two-card hands in a canonical class: 6 for a pair,
+    /// 4 suited, 12 offsuit.
+    fn hands_in_class(combo: Combo) -> usize {
+        use crate::analysis::gto::twos::Twos;
+        Twos::from(&Combos::from(vec![combo])).to_vec().len()
+    }
+
+    /// Scores every canonical class against the full field of opposing hands,
+    /// reading `generated/hups.bin` directly.
+    ///
+    /// This is the **generator** behind `hand_order_table::HAND_ORDER`, not the
+    /// runtime path: it is called by `examples/export_hand_order.rs` and by the
+    /// test that keeps the table honest. Nothing on the reads path calls it, which
+    /// is what keeps the 15.8 MB chart out of a linked binary that only needs the
+    /// 169 numbers.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    #[doc(hidden)]
+    #[must_use]
+    // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.
+    #[cfg(feature = "hup-charts")]
+    pub fn derive() -> Vec<(Combo, f64)> {
+        let field: Vec<Two> = Cards::deck()
+            .combinations(2)
+            .filter_map(|cards| Two::new(cards[0], cards[1]).ok())
+            .collect();
+
+        // One representative hand per canonical class. Suit permutations inside a
+        // class are equivalent against a uniform field, so any representative does.
+        let mut representatives: HashMap<Combo, Two> = HashMap::new();
+        for hand in &field {
+            representatives.entry(Combo::from(*hand)).or_insert(*hand);
+        }
+
+        let mut ordering: Vec<(Combo, f64)> = representatives
+            .into_iter()
+            .filter_map(|(combo, hand)| Self::equity_vs_field(hand, &field).map(|equity| (combo, equity)))
+            .collect();
+        ordering.sort_by(|left, right| right.1.total_cmp(&left.1));
+        ordering
+    }
+
+    /// Exact equity for `hero` against every hand it can be dealt alongside.
+    ///
+    /// Goes through [`HUPResult::lookup`] rather than keying
+    /// [`HUP_CACHE`](crate::analysis::store::embedded::hup_cache::HUP_CACHE) directly.
+    /// The chart is keyed by
+    /// [`SortedHeadsUp`](crate::arrays::matchups::sorted_heads_up::SortedHeadsUp), whose idea of the "higher" hand is
+    /// not a raw `as_u64()` comparison, so a hand-rolled key misses — silently, and
+    /// selectively. `72o` found only 820 of its 1,225 matchups that way and scored
+    /// `0.3845` instead of `0.3469`, because the skipped matchups were mostly the
+    /// ones it loses. Returns `None` unless every eligible matchup resolves.
+    #[cfg(feature = "hup-charts")]
+    fn equity_vs_field(hero: Two, field: &[Two]) -> Option<f64> {
+        let hero_bard: Bard = hero.into();
+        let mut total = 0.0;
+        let mut counted = 0_u32;
+        let mut eligible = 0_u32;
+
+        for villain in field {
+            if Self::shares_a_card(hero, *villain) {
+                continue;
+            }
+            eligible += 1;
+            let Ok(result) = HUPResult::lookup(&hero, villain) else {
+                continue;
+            };
+            // The chart reports from the higher hand's side; see the perspective
+            // note on `crate::bot::preflop_equity::PreflopEquity::hup_vs_range`.
+            let odds = if result.higher == hero_bard {
+                result.odds
+            } else {
+                result.flip_mode().odds
+            };
+            let boards = odds.wins + odds.losses + odds.draws;
+            if boards == 0 {
+                continue;
+            }
+            #[allow(clippy::cast_precision_loss)]
+            {
+                total += (odds.wins as f64 + odds.draws as f64 / 2.0) / boards as f64;
+            }
+            counted += 1;
+        }
+
+        // A partial average is worse than no answer: it is silently biased.
+        if counted == 0 || counted != eligible {
+            None
+        } else {
+            Some(total / f64::from(counted))
+        }
+    }
+
+    /// Returns `true` when the two hands cannot be dealt at the same time.
+    #[cfg(feature = "hup-charts")]
+    fn shares_a_card(hero: Two, villain: Two) -> bool {
+        let (first, second) = (hero.first(), hero.second());
+        villain.first() == first || villain.first() == second || villain.second() == first || villain.second() == second
     }
 }
 
-/// Returns `true` when the two hands cannot be dealt at the same time.
+/// Deprecated: use [`HandOrder::ordering`].
+///
+/// # Examples
+///
+/// ```
+/// # #![allow(deprecated)]
+/// use pkcore::bot::hand_order::hand_ordering;
+///
+/// assert_eq!(169, hand_ordering().len());
+/// ```
+#[deprecated(since = "0.16.0", note = "use `HandOrder::ordering`")]
+#[must_use]
+pub fn hand_ordering() -> &'static [(Combo, f64)] {
+    HandOrder::ordering()
+}
+
+/// Deprecated: use [`HandOrder::range_of_width`].
+///
+/// # Examples
+///
+/// ```
+/// # #![allow(deprecated)]
+/// use pkcore::bot::hand_order::range_of_width;
+///
+/// assert!(range_of_width(0.45).is_some());
+/// assert!(range_of_width(0.0).is_none());
+/// ```
+#[deprecated(since = "0.16.0", note = "use `HandOrder::range_of_width`")]
+#[must_use]
+pub fn range_of_width(fraction: f64) -> Option<Combos> {
+    HandOrder::range_of_width(fraction)
+}
+
+/// Deprecated: use [`HandOrder::derive`].
+#[doc(hidden)]
 #[cfg(feature = "hup-charts")]
-fn shares_a_card(hero: Two, villain: Two) -> bool {
-    let (first, second) = (hero.first(), hero.second());
-    villain.first() == first || villain.first() == second || villain.second() == first || villain.second() == second
+#[deprecated(since = "0.16.0", note = "use `HandOrder::derive`")]
+#[must_use]
+pub fn derive_hand_ordering() -> Vec<(Combo, f64)> {
+    HandOrder::derive()
 }
 
 #[cfg(test)]
@@ -235,14 +292,14 @@ mod bot__hand_order_tests {
     fn ordering_covers_every_canonical_starting_hand_class() {
         assert_eq!(
             169,
-            hand_ordering().len(),
+            HandOrder::ordering().len(),
             "13 pairs + 78 suited + 78 offsuit = 169 classes"
         );
     }
 
     #[test]
     fn ordering_runs_from_aces_down_to_three_deuce_offsuit() {
-        let ordering = hand_ordering();
+        let ordering = HandOrder::ordering();
         let best = ordering.first().expect("a non-empty ordering");
         let worst = ordering.last().expect("a non-empty ordering");
         assert_eq!(Combo::COMBO_AA, best.0, "aces are the best starting hand");
@@ -261,7 +318,7 @@ mod bot__hand_order_tests {
 
     #[test]
     fn ordering_is_sorted_by_descending_equity() {
-        let ordering = hand_ordering();
+        let ordering = HandOrder::ordering();
         assert!(
             ordering.windows(2).all(|pair| pair[0].1 >= pair[1].1),
             "the ordering must be strongest-first"
@@ -274,7 +331,7 @@ mod bot__hand_order_tests {
     /// catches it. `72o` read `0.3845` while the engine said `0.3461`.
     #[test]
     fn ordering_matches_independently_computed_equities() {
-        let by_notation: std::collections::HashMap<String, f64> = hand_ordering()
+        let by_notation: std::collections::HashMap<String, f64> = HandOrder::ordering()
             .iter()
             .map(|(combo, equity)| (combo.to_string(), *equity))
             .collect();
@@ -297,15 +354,15 @@ mod bot__hand_order_tests {
     fn every_class_scores_against_the_whole_field() {
         assert_eq!(
             169,
-            derive_hand_ordering().len(),
+            HandOrder::derive().len(),
             "a class dropping out means matchups went missing from the chart lookup"
         );
     }
 
     #[test]
     fn range_of_width_grows_with_the_fraction() {
-        let tight = range_of_width(0.10).expect("10% is a legal width");
-        let wide = range_of_width(0.45).expect("45% is a legal width");
+        let tight = HandOrder::range_of_width(0.10).expect("10% is a legal width");
+        let wide = HandOrder::range_of_width(0.45).expect("45% is a legal width");
         assert!(
             hands_in(&wide) > hands_in(&tight),
             "45% must cover more hands than 10%: {} vs {}",
@@ -316,8 +373,8 @@ mod bot__hand_order_tests {
 
     #[test]
     fn range_of_width_is_nested() {
-        let tight = range_of_width(0.10).expect("a range");
-        let wide = range_of_width(0.45).expect("a range");
+        let tight = HandOrder::range_of_width(0.10).expect("a range");
+        let wide = HandOrder::range_of_width(0.45).expect("a range");
         let wide_set = wide.to_hash_set();
         assert!(
             tight.iter().all(|combo| wide_set.contains(combo)),
@@ -327,7 +384,7 @@ mod bot__hand_order_tests {
 
     #[test]
     fn range_of_width_at_forty_five_percent_is_roughly_forty_five_percent() {
-        let range = range_of_width(0.45).expect("a range");
+        let range = HandOrder::range_of_width(0.45).expect("a range");
         let pct = hands_in(&range) as f64 / 1326.0;
         assert!(
             (pct - 0.45).abs() < 0.06,
@@ -340,12 +397,12 @@ mod bot__hand_order_tests {
     /// values from `generated/hups.bin` and demands an exact match, so the table
     /// cannot drift from the chart it was generated from. Living in a test is
     /// deliberate: the test binary may read the 15.8 MB chart, a WASM build
-    /// linking only `hand_ordering()` never does.
+    /// linking only `HandOrder::ordering()` never does.
     #[cfg(feature = "hup-charts")]
     #[test]
     fn table_matches_the_chart() {
-        let derived = derive_hand_ordering();
-        let table = hand_ordering();
+        let derived = HandOrder::derive();
+        let table = HandOrder::ordering();
         assert_eq!(derived.len(), table.len(), "the table must cover every derived class");
         for (from_chart, from_table) in derived.iter().zip(table) {
             assert_eq!(
@@ -358,8 +415,29 @@ mod bot__hand_order_tests {
 
     #[test]
     fn range_of_width_rejects_a_nonsense_fraction() {
-        assert!(range_of_width(0.0).is_none());
-        assert!(range_of_width(-1.0).is_none());
-        assert!(range_of_width(1.5).is_none());
+        assert!(HandOrder::range_of_width(0.0).is_none());
+        assert!(HandOrder::range_of_width(-1.0).is_none());
+        assert!(HandOrder::range_of_width(1.5).is_none());
+    }
+
+    #[test]
+    fn hand_order_is_a_stateless_unit_struct() {
+        assert_eq!(HandOrder, HandOrder::default());
+        assert_eq!("HandOrder", format!("{HandOrder:?}"));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_functions_match_the_methods() {
+        assert_eq!(HandOrder::ordering(), hand_ordering());
+        assert_eq!(HandOrder::range_of_width(0.45), range_of_width(0.45));
+        assert_eq!(HandOrder::range_of_width(0.0), range_of_width(0.0));
+    }
+
+    #[cfg(feature = "hup-charts")]
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_derive_hand_ordering_matches_derive() {
+        assert_eq!(HandOrder::derive(), derive_hand_ordering());
     }
 }

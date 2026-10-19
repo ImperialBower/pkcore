@@ -138,34 +138,6 @@ pub struct CanonicalSeating {
     pub seats: Vec<CanonicalSeat>,
 }
 
-/// Maps a PokerBench 6-max position to a 0-based seat using pkcore's
-/// button-relative convention (button at seat 0): BTN→0, SB→1, BB→2, then UTG→3,
-/// HJ→4, CO→5. Returns `None` for positions outside the 6-max PokerBench set.
-fn pb_seat(position: Position) -> Option<u8> {
-    Some(match position {
-        Position::BTN => 0,
-        Position::SB => 1,
-        Position::BB => 2,
-        Position::UTG => 3,
-        Position::HJ => 4,
-        Position::CO => 5,
-        _ => return None,
-    })
-}
-
-/// The short position code used to synthesize a seat's player name.
-fn pb_position_name(position: Position) -> &'static str {
-    match position {
-        Position::BTN => "BTN",
-        Position::SB => "SB",
-        Position::BB => "BB",
-        Position::UTG => "UTG",
-        Position::HJ => "HJ",
-        Position::CO => "CO",
-        _ => "?",
-    }
-}
-
 impl PokerBenchScenario {
     /// Canonical seating for this scenario.
     ///
@@ -207,20 +179,48 @@ impl PokerBenchScenario {
         let mut seats = Vec::with_capacity(self.stacks.len());
         let mut hero_seat = 0u8;
         for (position, chips) in &self.stacks {
-            if let Some(seat) = pb_seat(*position) {
+            if let Some(seat) = Self::pb_seat(*position) {
                 if *position == self.hero {
                     hero_seat = seat;
                 }
                 seats.push(CanonicalSeat {
                     seat,
                     position: *position,
-                    name: pb_position_name(*position).to_string(),
+                    name: Self::pb_position_name(*position).to_string(),
                     chips: *chips,
                 });
             }
         }
         seats.sort_by_key(|s| s.seat);
         CanonicalSeating { hero_seat, seats }
+    }
+
+    /// Maps a PokerBench 6-max position to a 0-based seat using pkcore's
+    /// button-relative convention (button at seat 0): BTN→0, SB→1, BB→2, then UTG→3,
+    /// HJ→4, CO→5. Returns `None` for positions outside the 6-max PokerBench set.
+    fn pb_seat(position: Position) -> Option<u8> {
+        Some(match position {
+            Position::BTN => 0,
+            Position::SB => 1,
+            Position::BB => 2,
+            Position::UTG => 3,
+            Position::HJ => 4,
+            Position::CO => 5,
+            _ => return None,
+        })
+    }
+
+    /// The short position code used to synthesize a seat's player name.
+    fn pb_position_name(position: Position) -> &'static str {
+        match position {
+            Position::BTN => "BTN",
+            Position::SB => "SB",
+            Position::BB => "BB",
+            Position::UTG => "UTG",
+            Position::HJ => "HJ",
+            Position::CO => "CO",
+            _ => "?",
+        }
     }
 }
 

@@ -17,8 +17,8 @@ use rand::SeedableRng;
 use rand::rngs::SmallRng;
 
 use crate::bot::exploit::ExploitConfig;
-use crate::bot::training::encoding::{self, DIM};
-use crate::bot::training::evaluator::{self, FieldEntry};
+use crate::bot::training::encoding::{DIM, Encoding};
+use crate::bot::training::evaluator::{Evaluator, FieldEntry};
 
 // ── TrainingConfig ────────────────────────────────────────────────────────────
 
@@ -186,7 +186,7 @@ impl ExploitTrainer {
     pub fn new(config: TrainingConfig) -> Self {
         Self {
             config,
-            field: evaluator::default_field(),
+            field: Evaluator::default_field(),
         }
     }
 
@@ -213,13 +213,19 @@ impl ExploitTrainer {
     /// and per-generation statistics.
     #[must_use]
     pub fn train(&self, baseline: &ExploitConfig) -> TrainingResult {
-        let ranges = encoding::ranges();
-        let mut best_params: [f64; DIM] = encoding::encode(baseline);
-        let mut best_fitness = self.fitness(&encoding::decode(&best_params));
+        let ranges = Encoding::ranges();
+        let mut best_params: [f64; DIM] = Encoding::encode(baseline);
+        let mut best_fitness = self.fitness(&Encoding::decode(&best_params));
 
         let mut sigma = self.config.initial_sigma_fraction;
         let lambda = self.config.lambda;
         // 1/5 success rule threshold: sigma increases when ≥ 1/5 of offspring improve.
+        // `lambda` is a small offspring count, so the casts are exact.
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         let success_threshold = ((lambda as f64 / 5.0).ceil() as usize).max(1);
 
         let mut rng = SmallRng::seed_from_u64(self.config.seed);
@@ -238,14 +244,14 @@ impl ExploitTrainer {
                 .map(|_| {
                     let mut candidate = best_params;
                     for i in 0..DIM {
-                        candidate[i] += sigma * ranges[i] * standard_normal(&mut rng);
+                        candidate[i] += sigma * ranges[i] * Self::standard_normal(&mut rng);
                     }
                     candidate
                 })
                 .collect();
 
             // Evaluate all candidates.
-            let scores: Vec<f64> = candidates.iter().map(|p| self.fitness(&encoding::decode(p))).collect();
+            let scores: Vec<f64> = candidates.iter().map(|p| self.fitness(&Encoding::decode(p))).collect();
 
             // Count offspring that improved over the current parent.
             let successes = scores.iter().filter(|&&s| s > best_fitness).count();
@@ -255,11 +261,10 @@ impl ExploitTrainer {
                 .iter()
                 .enumerate()
                 .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                && score > best_fitness
             {
-                if score > best_fitness {
-                    best_params = candidates[idx];
-                    best_fitness = score;
-                }
+                best_params = candidates[idx];
+                best_fitness = score;
             }
 
             // Adapt sigma: 1/5 success rule.
@@ -269,8 +274,9 @@ impl ExploitTrainer {
                 (sigma * 0.90_f64).max(self.config.sigma_tol)
             };
 
+            #[allow(clippy::cast_precision_loss)] // `scores.len()` is lambda, a small count.
             let mean_bb100 = scores.iter().sum::<f64>() / scores.len() as f64;
-            let generation_best = scores.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+            let generation_best = scores.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
             history.push(GenerationRecord {
                 generation,
@@ -281,7 +287,7 @@ impl ExploitTrainer {
         }
 
         TrainingResult {
-            best_config: encoding::decode(&best_params),
+            best_config: Encoding::decode(&best_params),
             best_fitness,
             generations_run: history.len(),
             history,
@@ -289,7 +295,7 @@ impl ExploitTrainer {
     }
 
     fn fitness(&self, config: &ExploitConfig) -> f64 {
-        evaluator::evaluate(
+        Evaluator::evaluate(
             config,
             &self.field,
             self.config.hands_per_eval,
@@ -299,11 +305,13 @@ impl ExploitTrainer {
     }
 }
 
-/// Box-Muller transform: generates a N(0,1) sample from two U(0,1) draws.
-fn standard_normal<R: rand::Rng>(rng: &mut R) -> f64 {
-    let u1 = (rng.random::<f64>()).max(f64::MIN_POSITIVE);
-    let u2: f64 = rng.random();
-    (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos()
+impl ExploitTrainer {
+    /// Box-Muller transform: generates a N(0,1) sample from two U(0,1) draws.
+    fn standard_normal<R: rand::Rng>(rng: &mut R) -> f64 {
+        let u1 = (rng.random::<f64>()).max(f64::MIN_POSITIVE);
+        let u2: f64 = rng.random();
+        (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos()
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -368,8 +376,8 @@ mod bot__training__trainer_tests {
         assert_eq!(a.generations_run, b.generations_run);
         assert_eq!(a.best_fitness, b.best_fitness, "seeded training must be reproducible");
         assert_eq!(
-            encoding::encode(&a.best_config),
-            encoding::encode(&b.best_config),
+            Encoding::encode(&a.best_config),
+            Encoding::encode(&b.best_config),
             "same seed must yield the same best_config"
         );
     }

@@ -1,0 +1,54 @@
+# DEFECT_023 — the minimum opening raise was 0 in No-Limit and Pot-Limit.
+# docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md
+#
+# `BettingStructure::min_raise_for_tier` returned 0 for an opening No-Limit
+# raise. The table did not call it on that path then, so no hand went wrong;
+# `Table::min_raise` now goes through it for every structure. NL 50/100,
+# heads-up. With no bet on the flop or turn, the smallest legal bet is the big
+# blind, 100.
+#
+# The rest of DEFECT_023 is about functions that panicked; that part is not a
+# hand.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_023
+  game: holdem
+  description: "The minimum opening bet after the flop is the big blind, never 0"
+table:
+  seats: 2
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: P0, stack: 10000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: P1, stack: 10000.0, hole_cards: "K♠ K♥" }
+board: "2♣ 7♦ 9♠ J♣ 3♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 100.0 }
+      - { seat: 1, action: check }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "3♥"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+
+expect:
+  - after: { street: flop, index: 0 }
+    min_raise_to: 100
+    raise_bounds: { seat: 0, range: [100, 9900] }
+  - after: { street: turn, index: 0 }
+    min_raise_to: 100
+final:
+  stacks: { 0: 10100, 1: 9900 }

@@ -22,7 +22,7 @@ use crate::casino::equity::seat_equity::SeatEquity;
 use crate::casino::equity::seatbit::Seatbit;
 use crate::casino::equity::table_equity::TableEquity;
 use crate::casino::game::ForcedBets;
-use crate::casino::tda;
+use crate::casino::tda::Tda;
 use crate::casino::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
@@ -2566,7 +2566,7 @@ impl Table {
     /// ```
     #[must_use]
     pub fn tda_odd_chip_order(&self, winners: &[u8]) -> Vec<u8> {
-        tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
+        Tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
             self.build_eval_for_seat(seat).hand
         })
     }
@@ -2574,7 +2574,7 @@ impl Table {
     /// Splits `total` among tied `winners`, awarding odd chips by TDA 2024
     /// Rule 20 (`DEFECT_011`). Returns `(seat, share)` pairs.
     fn tda_shares(&self, total: usize, winners: &[u8]) -> Vec<(u8, usize)> {
-        tda::pair_shares(
+        Tda::pair_shares(
             total,
             winners,
             self.game.family(),
@@ -4994,6 +4994,125 @@ mod casino__table_tests {
             200, table.raise_increment,
             "a sub-min all-in must not update the raise increment"
         );
+    }
+
+    // DEFECT_027 — a short all-in spelled `Raise` must not lower the table bet.
+    // NL 50/100: A raises to 400, B (300 chips) sends Raise(300). The bet stays
+    // 400; before the fix it dropped to 300 and C was offered a Check that
+    // `act_check` then rejected.
+    #[test]
+    fn short_all_in_sent_as_raise_does_not_lower_the_table_bet() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 300)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 400).unwrap();
+        let b = table.next_to_act();
+        table.act_raise(b, 300).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert_eq!(300, table.raise_increment);
+        let c = table.next_to_act();
+        assert!(
+            !table
+                .legal_actions(c)
+                .contains(&crate::casino::action::PlayerAction::Check)
+        );
+        table.act_call(c).expect("C calls the standing 400");
+    }
+
+    // DEFECT_027 — the same short all-in spelled `Bet`.
+    #[test]
+    fn short_all_in_sent_as_bet_does_not_lower_the_table_bet() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 300)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 400).unwrap();
+        let b = table.next_to_act();
+        table.act_bet(b, 300).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert_eq!(300, table.raise_increment);
+    }
+
+    // DEFECT_027 — a raise that exactly covers the stack is still a full raise.
+    // A raises to 300 (increment 200); B (900 chips) sends Raise(900), a full
+    // 600 raise. It must re-open the action exactly like `act_all_in` does.
+    #[test]
+    fn full_raise_that_covers_the_stack_sets_the_raise_increment() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 900)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_raise(b, 900).unwrap();
+
+        assert_eq!(900, table.bet);
+        assert_eq!(1500, table.min_raise_to());
+    }
+
+    // DEFECT_028 — TDA 47-A: a player who already acted may only call or fold
+    // a short all-in. A raises to 300, B shoves 400 (short), C calls. A's
+    // AllIn must become a call of the 100, not a 50,000 re-raise.
+    fn gated_after_a_short_all_in(a_stack: usize) -> Table {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), a_stack)),
+            Seat::new(Player::new_with_chips("B".to_string(), 400)),
+            Seat::new(Player::new_with_chips("C".to_string(), 50_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(0, 300).unwrap();
+        table.act_all_in(1).unwrap();
+        table.act_call(2).unwrap();
+        table
+    }
+
+    #[test]
+    fn gated_all_in_becomes_a_call() {
+        let mut table = gated_after_a_short_all_in(50_000);
+        assert!(table.is_reopen_gated(0));
+
+        let committed = table.act_all_in(0).unwrap();
+
+        assert_eq!(400, committed);
+        assert_eq!(400, table.bet);
+        assert_eq!(49_600, table.seats.get_seat(0).unwrap().player.chips);
+        assert!(!table.seats.get_seat(0).unwrap().is_all_in());
+        assert!(table.seats.is_betting_complete());
+    }
+
+    // The gate must not stop a stack that cannot cover the call from going
+    // all-in for less.
+    #[test]
+    fn gated_short_stack_still_goes_all_in_for_less() {
+        let mut table = gated_after_a_short_all_in(350);
+
+        table.act_all_in(0).unwrap();
+
+        assert_eq!(400, table.bet);
+        assert!(table.seats.get_seat(0).unwrap().is_all_in());
     }
 
     // P9j.2 — min_raise_to and the fixed-limit max_raise both go through

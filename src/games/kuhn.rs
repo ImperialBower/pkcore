@@ -962,7 +962,7 @@ impl KuhnCfr {
     #[must_use]
     pub fn exploitability(&self) -> f64 {
         let strategy = self.average_strategy();
-        best_response_value(&strategy, 0) + best_response_value(&strategy, 1)
+        strategy.best_response_value(0) + strategy.best_response_value(1)
     }
 
     /// Recursive vanilla CFR traversal.
@@ -1059,134 +1059,136 @@ impl Default for KuhnCfr {
     }
 }
 
-/// Computes the best-response value for `br_player` against `strategy`.
-///
-/// Enumerates all 2^6 = 64 pure policies for `br_player` (one binary decision
-/// per info set: 3 cards × 2 decision points). For each policy, the expected
-/// utility is computed over all 6 equally-likely deals, using the opponent's
-/// mixed strategy from `strategy`. The maximum over all policies is returned.
-///
-/// This correctly enforces the imperfect-information constraint: the BR player
-/// can only condition on their own card and the public history, not on the
-/// opponent's hidden card.
-fn best_response_value(strategy: &KuhnStrategy, br_player: usize) -> f64 {
-    let mut best = f64::NEG_INFINITY;
+impl KuhnStrategy {
+    /// Computes the best-response value for `br_player` against this strategy.
+    ///
+    /// Enumerates all 2^6 = 64 pure policies for `br_player` (one binary decision
+    /// per info set: 3 cards × 2 decision points). For each policy, the expected
+    /// utility is computed over all 6 equally-likely deals, using the opponent's
+    /// mixed strategy from `strategy`. The maximum over all policies is returned.
+    ///
+    /// This correctly enforces the imperfect-information constraint: the BR player
+    /// can only condition on their own card and the public history, not on the
+    /// opponent's hidden card.
+    fn best_response_value(&self, br_player: usize) -> f64 {
+        let mut best = f64::NEG_INFINITY;
 
-    // Enumerate all 2^6 = 64 pure policies.
-    //
-    // Bits 0-2: first decision for Jack/Queen/King
-    //   P0: true=Bet, false=Check  (at empty history)
-    //   P1: true=Bet, false=Check  (at [Check] history — after P0 checks)
-    //
-    // Bits 3-5: second decision for Jack/Queen/King
-    //   P0: true=Call, false=Fold  (at [Check, Bet] history)
-    //   P1: true=Call, false=Fold  (at [Bet] history — after P0 bets)
-    for bits in 0u32..64 {
-        let first = [bits & 1 != 0, (bits >> 1) & 1 != 0, (bits >> 2) & 1 != 0];
-        let second = [(bits >> 3) & 1 != 0, (bits >> 4) & 1 != 0, (bits >> 5) & 1 != 0];
+        // Enumerate all 2^6 = 64 pure policies.
+        //
+        // Bits 0-2: first decision for Jack/Queen/King
+        //   P0: true=Bet, false=Check  (at empty history)
+        //   P1: true=Bet, false=Check  (at [Check] history — after P0 checks)
+        //
+        // Bits 3-5: second decision for Jack/Queen/King
+        //   P0: true=Call, false=Fold  (at [Check, Bet] history)
+        //   P1: true=Call, false=Fold  (at [Bet] history — after P0 bets)
+        for bits in 0u32..64 {
+            let first = [bits & 1 != 0, (bits >> 1) & 1 != 0, (bits >> 2) & 1 != 0];
+            let second = [(bits >> 3) & 1 != 0, (bits >> 4) & 1 != 0, (bits >> 5) & 1 != 0];
 
-        let total: f64 = DEALS
-            .iter()
-            .map(|&(c0, c1)| eval_deal_policy(strategy, br_player, c0, c1, first, second))
-            .sum();
-        let avg = total / 6.0;
-        if avg > best {
-            best = avg;
+            let total: f64 = DEALS
+                .iter()
+                .map(|&(c0, c1)| self.eval_deal_policy(br_player, c0, c1, first, second))
+                .sum();
+            let avg = total / 6.0;
+            if avg > best {
+                best = avg;
+            }
         }
+
+        best
     }
 
-    best
-}
+    /// Returns `br_player`'s expected utility in a single deal `(c0, c1)` given a
+    /// pure policy described by `first` and `second` action arrays (indexed by
+    /// card: 0=Jack, 1=Queen, 2=King).
+    fn eval_deal_policy(
+        &self,
+        br_player: usize,
+        c0: KuhnCard,
+        c1: KuhnCard,
+        first: [bool; 3],
+        second: [bool; 3],
+    ) -> f64 {
+        let br_card = if br_player == 0 { c0 } else { c1 };
+        let ci = br_card as usize; // Jack=0, Queen=1, King=2
 
-/// Returns `br_player`'s expected utility in a single deal `(c0, c1)` given a
-/// pure policy described by `first` and `second` action arrays (indexed by
-/// card: 0=Jack, 1=Queen, 2=King).
-fn eval_deal_policy(
-    strategy: &KuhnStrategy,
-    br_player: usize,
-    c0: KuhnCard,
-    c1: KuhnCard,
-    first: [bool; 3],
-    second: [bool; 3],
-) -> f64 {
-    let br_card = if br_player == 0 { c0 } else { c1 };
-    let ci = br_card as usize; // Jack=0, Queen=1, King=2
+        // Helper: probability of action `act` in a strategy entry.
+        let prob_of = |probs: &[(KuhnAction, f64)], act: KuhnAction| -> f64 {
+            probs.iter().find(|(a, _)| *a == act).map_or(0.0, |(_, p)| *p)
+        };
 
-    // Helper: probability of action `act` in a strategy entry.
-    let prob_of = |probs: &[(KuhnAction, f64)], act: KuhnAction| -> f64 {
-        probs.iter().find(|(a, _)| *a == act).map_or(0.0, |(_, p)| *p)
-    };
+        if br_player == 0 {
+            let p0_wins = c0 > c1;
 
-    if br_player == 0 {
-        let p0_wins = c0 > c1;
+            if first[ci] {
+                // P0 bets.  P1 responds per strategy at info set c1[Bet].
+                let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Bet));
+                let probs1 = self.action_probs(&is1);
+                let p_call = prob_of(probs1, KuhnAction::Call);
 
-        if first[ci] {
-            // P0 bets.  P1 responds per strategy at info set c1[Bet].
-            let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Bet));
-            let probs1 = strategy.action_probs(&is1);
-            let p_call = prob_of(probs1, KuhnAction::Call);
-
-            // P1 folds → P0 wins pot=2 (+1); P1 calls → showdown pot=4
-            (1.0 - p_call) * 1.0 + p_call * if p0_wins { 2.0 } else { -2.0 }
-        } else {
-            // P0 checks.  P1 responds per strategy at info set c1[Check].
-            let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Check));
-            let probs1 = strategy.action_probs(&is1);
-            let p_bet = prob_of(probs1, KuhnAction::Bet);
-
-            // P1 checks → showdown pot=2
-            let ev_cc = if p0_wins { 1.0 } else { -1.0 };
-
-            // P1 bets → P0 responds with second[ci]
-            let ev_late = if second[ci] {
-                // P0 calls → showdown pot=4
-                if p0_wins { 2.0 } else { -2.0 }
+                // P1 folds → P0 wins pot=2 (+1); P1 calls → showdown pot=4
+                (1.0 - p_call) * 1.0 + p_call * if p0_wins { 2.0 } else { -2.0 }
             } else {
-                // P0 folds → −1
+                // P0 checks.  P1 responds per strategy at info set c1[Check].
+                let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Check));
+                let probs1 = self.action_probs(&is1);
+                let p_bet = prob_of(probs1, KuhnAction::Bet);
+
+                // P1 checks → showdown pot=2
+                let ev_cc = if p0_wins { 1.0 } else { -1.0 };
+
+                // P1 bets → P0 responds with second[ci]
+                let ev_late = if second[ci] {
+                    // P0 calls → showdown pot=4
+                    if p0_wins { 2.0 } else { -2.0 }
+                } else {
+                    // P0 folds → −1
+                    -1.0
+                };
+
+                (1.0 - p_bet) * ev_cc + p_bet * ev_late
+            }
+        } else {
+            // br_player == 1
+            let p1_wins = c1 > c0;
+
+            // P0 acts first per strategy at info set c0[].
+            let is0 = KuhnInfoSet::new(c0, KuhnHistory::new());
+            let probs0 = self.action_probs(&is0);
+            let p0_bet = prob_of(probs0, KuhnAction::Bet);
+
+            // ── Case: P0 checks ──
+            // P1 responds with first[ci] at info set c1[Check].
+            let ev_after_check = if first[ci] {
+                // P1 bets → P0 responds per strategy at info set c0[Check, Bet].
+                let is0_late = KuhnInfoSet::new(c0, KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet));
+                let probs0_late = self.action_probs(&is0_late);
+                let p0_call = prob_of(probs0_late, KuhnAction::Call);
+
+                // P0 folds → P1 wins pot=2 (+1); P0 calls → showdown pot=4
+                (1.0 - p0_call) * 1.0 + p0_call * if p1_wins { 2.0 } else { -2.0 }
+            } else {
+                // P1 checks → showdown pot=2
+                if p1_wins { 1.0 } else { -1.0 }
+            };
+
+            // ── Case: P0 bets ──
+            // P1 responds with second[ci] at info set c1[Bet].
+            let ev_after_bet = if second[ci] {
+                // P1 calls → showdown pot=4
+                if p1_wins { 2.0 } else { -2.0 }
+            } else {
+                // P1 folds → −1
                 -1.0
             };
 
-            (1.0 - p_bet) * ev_cc + p_bet * ev_late
+            (1.0 - p0_bet) * ev_after_check + p0_bet * ev_after_bet
         }
-    } else {
-        // br_player == 1
-        let p1_wins = c1 > c0;
-
-        // P0 acts first per strategy at info set c0[].
-        let is0 = KuhnInfoSet::new(c0, KuhnHistory::new());
-        let probs0 = strategy.action_probs(&is0);
-        let p0_bet = prob_of(probs0, KuhnAction::Bet);
-
-        // ── Case: P0 checks ──
-        // P1 responds with first[ci] at info set c1[Check].
-        let ev_after_check = if first[ci] {
-            // P1 bets → P0 responds per strategy at info set c0[Check, Bet].
-            let is0_late = KuhnInfoSet::new(c0, KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet));
-            let probs0_late = strategy.action_probs(&is0_late);
-            let p0_call = prob_of(probs0_late, KuhnAction::Call);
-
-            // P0 folds → P1 wins pot=2 (+1); P0 calls → showdown pot=4
-            (1.0 - p0_call) * 1.0 + p0_call * if p1_wins { 2.0 } else { -2.0 }
-        } else {
-            // P1 checks → showdown pot=2
-            if p1_wins { 1.0 } else { -1.0 }
-        };
-
-        // ── Case: P0 bets ──
-        // P1 responds with second[ci] at info set c1[Bet].
-        let ev_after_bet = if second[ci] {
-            // P1 calls → showdown pot=4
-            if p1_wins { 2.0 } else { -2.0 }
-        } else {
-            // P1 folds → −1
-            -1.0
-        };
-
-        (1.0 - p0_bet) * ev_after_check + p0_bet * ev_after_bet
     }
-}
 
-// ── Tests ────────────────────────────────────────────────────────────────────
+    // ── Tests ────────────────────────────────────────────────────────────────────
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -1733,7 +1735,7 @@ mod kuhn_tests {
         // The analytical Nash strategy must have exploitability ≈ 0.
         // This verifies best_response_value is computing correctly.
         let nash = KuhnStrategy::gto(1.0 / 3.0).unwrap();
-        let exploit = best_response_value(&nash, 0) + best_response_value(&nash, 1);
+        let exploit = nash.best_response_value(0) + nash.best_response_value(1);
         assert!(exploit.abs() < 0.001, "Nash exploitability: {exploit}");
     }
 

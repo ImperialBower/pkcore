@@ -22,7 +22,7 @@ use std::str::FromStr;
 ///   - exactly two card slots
 ///   - `new` rejects blanks and duplicates
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Two(#[serde(deserialize_with = "deserialize_two_index")] [Card; 2]);
+pub struct Two(#[serde(deserialize_with = "Two::deserialize_two_index")] [Card; 2]);
 
 impl Two {
     // TODO: Can we do this with a macro?
@@ -1684,15 +1684,17 @@ impl Serialize for Two {
     }
 }
 
-fn deserialize_two_index<'de, D>(deserializer: D) -> Result<[Card; 2], D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let buf = String::deserialize(deserializer)?;
+impl Two {
+    fn deserialize_two_index<'de, D>(deserializer: D) -> Result<[Card; 2], D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let buf = String::deserialize(deserializer)?;
 
-    match Two::from_str(buf.as_str()) {
-        Ok(two) => Ok([two.first(), two.second()]),
-        Err(_) => Ok([Card::BLANK, Card::BLANK]),
+        match Two::from_str(buf.as_str()) {
+            Ok(two) => Ok([two.first(), two.second()]),
+            Err(_) => Ok([Card::BLANK, Card::BLANK]),
+        }
     }
 }
 

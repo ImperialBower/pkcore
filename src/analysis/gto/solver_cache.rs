@@ -6,7 +6,7 @@
 //!
 //! # Cache Key
 //!
-//! [`cache_key`] produces a `u64` from every field of the config: hero range,
+//! [`SolverCache::cache_key`] produces a `u64` from every field of the config: hero range,
 //! villain range, board, bet sizings, effective stack, pot, and the convergence
 //! controls (max iterations, target exploitability, CFR variant). [`crate::analysis::gto::combos::Combos`] is backed by a
 //! `HashSet`, so its contents are sorted before hashing to guarantee the same
@@ -61,36 +61,15 @@ use std::path::PathBuf;
 
 // ── cache_key ─────────────────────────────────────────────────────────────────
 
-/// Computes a deterministic `u64` cache key for a [`SolverConfig`].
-///
-/// Key inputs (in hash order):
-/// - Hero range — sorted `Vec<Combo>` (removes `HashSet` non-determinism)
-/// - Villain range — sorted `Vec<Combo>`
-/// - Board cards — flop (3 cards), turn, river, in field order
-/// - Bet sizings — each street's sizes sorted independently
-/// - Effective stack
-/// - Pot
-/// - Max iterations
-/// - Target exploitability (hashed by IEEE-754 bit pattern)
-/// - CFR variant — a discriminant tag plus, for `Discounted`, the `alpha` and
-///   `beta` bit patterns
-///
-/// Every field of [`SolverConfig`] is hashed. A field that changes the solved
-/// result but not the key would let one config's entry be served for another —
-/// see [`DEFECT_016`].
-///
-/// [`DEFECT_016`]: https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_016_solver_cache_key_omissions.md
-///
-/// Uses [`DefaultHasher`] — stable within a build, suitable for a local disk
-/// cache. A key mismatch across builds is a cache miss, not a correctness
-/// error.
+/// Computes a deterministic `u64` cache key; see [`SolverCache::cache_key`].
 ///
 /// # Examples
 ///
 /// ```
+/// # #![allow(deprecated)]
 /// use std::str::FromStr;
 /// use pkcore::analysis::gto::combos::Combos;
-/// use pkcore::analysis::gto::solver_cache::cache_key;
+/// use pkcore::analysis::gto::solver_cache::{cache_key, SolverCache};
 /// use pkcore::analysis::gto::solver_config::SolverConfig;
 /// use pkcore::play::board::Board;
 ///
@@ -100,76 +79,12 @@ use std::path::PathBuf;
 ///     Board::from_str("Ah Kd 5c 2s 7h").unwrap_or_default(),
 ///     1_000, 200,
 /// );
-/// let k1 = cache_key(&config);
-/// let k2 = cache_key(&config);
-/// assert_eq!(k1, k2);
+/// assert_eq!(cache_key(&config), SolverCache::cache_key(&config));
 /// ```
+#[deprecated(since = "0.16.0", note = "use `SolverCache::cache_key`")]
 #[must_use]
 pub fn cache_key(config: &SolverConfig) -> u64 {
-    let mut hasher = DefaultHasher::new();
-
-    // Ranges — sort before hashing to neutralise HashSet iteration order.
-    let mut hero: Vec<_> = config.hero_range.iter().copied().collect();
-    hero.sort();
-    hero.hash(&mut hasher);
-
-    let mut villain: Vec<_> = config.villain_range.iter().copied().collect();
-    villain.sort();
-    villain.hash(&mut hasher);
-
-    // Board — hash in fixed field order (flop1, flop2, flop3, turn, river).
-    config.board.flop.first().hash(&mut hasher);
-    config.board.flop.second().hash(&mut hasher);
-    config.board.flop.third().hash(&mut hasher);
-    config.board.turn.hash(&mut hasher);
-    config.board.river.hash(&mut hasher);
-
-    // Bet sizings — sort each street so {half, pot} and {pot, half} are equal.
-    let mut flop_sizes = config.bet_sizings.flop.clone();
-    flop_sizes.sort();
-    flop_sizes.hash(&mut hasher);
-
-    let mut turn_sizes = config.bet_sizings.turn.clone();
-    turn_sizes.sort();
-    turn_sizes.hash(&mut hasher);
-
-    let mut river_sizes = config.bet_sizings.river.clone();
-    river_sizes.sort();
-    river_sizes.hash(&mut hasher);
-
-    config.effective_stack.hash(&mut hasher);
-    config.pot.hash(&mut hasher);
-
-    // Convergence controls. These do not describe the *spot*, but they do
-    // decide the `SolverResult` that comes back — iteration count, early-stop
-    // threshold, and update rule all move the equilibrium and the reported
-    // exploitability. Omitting them collides a long DCFR solve with a short
-    // vanilla one.
-    config.max_iterations.hash(&mut hasher);
-    config.target_exploitability.to_bits().hash(&mut hasher);
-    hash_cfr_variant(&config.cfr_variant, &mut hasher);
-
-    hasher.finish()
-}
-
-/// Feeds a [`CfrVariant`] into `hasher`.
-///
-/// `CfrVariant` cannot derive [`Hash`] because `Discounted` carries `f64`
-/// exponents, so this writes a discriminant tag first — keeping `Vanilla` and
-/// `CfrPlus` apart even though neither has a payload — then the IEEE-754 bit
-/// patterns of `alpha` and `beta`. Bit-pattern hashing means `-0.0` and `0.0`
-/// hash differently despite comparing equal; for a disk cache that is a miss
-/// and a re-solve, never a wrong answer.
-fn hash_cfr_variant(variant: &CfrVariant, hasher: &mut impl Hasher) {
-    match variant {
-        CfrVariant::Vanilla => 0_u8.hash(hasher),
-        CfrVariant::CfrPlus => 1_u8.hash(hasher),
-        CfrVariant::Discounted { alpha, beta } => {
-            2_u8.hash(hasher);
-            alpha.to_bits().hash(hasher);
-            beta.to_bits().hash(hasher);
-        }
-    }
+    SolverCache::cache_key(config)
 }
 
 // ── SolverCache ───────────────────────────────────────────────────────────────
@@ -349,11 +264,123 @@ impl SolverCache {
         Ok(())
     }
 
+    /// Computes a deterministic `u64` cache key for a [`SolverConfig`].
+    ///
+    /// Key inputs (in hash order):
+    /// - Hero range — sorted `Vec<Combo>` (removes `HashSet` non-determinism)
+    /// - Villain range — sorted `Vec<Combo>`
+    /// - Board cards — flop (3 cards), turn, river, in field order
+    /// - Bet sizings — each street's sizes sorted independently
+    /// - Effective stack
+    /// - Pot
+    /// - Max iterations
+    /// - Target exploitability (hashed by IEEE-754 bit pattern)
+    /// - CFR variant — a discriminant tag plus, for `Discounted`, the `alpha` and
+    ///   `beta` bit patterns
+    ///
+    /// Every field of [`SolverConfig`] is hashed. A field that changes the solved
+    /// result but not the key would let one config's entry be served for another —
+    /// see [`DEFECT_016`].
+    ///
+    /// [`DEFECT_016`]: https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_016_solver_cache_key_omissions.md
+    ///
+    /// Uses [`DefaultHasher`] — stable within a build, suitable for a local disk
+    /// cache. A key mismatch across builds is a cache miss, not a correctness
+    /// error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver_cache::SolverCache;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA,KK").unwrap_or_default(),
+    ///     Combos::from_str("QQ,JJ").unwrap_or_default(),
+    ///     Board::from_str("Ah Kd 5c 2s 7h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// );
+    /// let k1 = SolverCache::cache_key(&config);
+    /// let k2 = SolverCache::cache_key(&config);
+    /// assert_eq!(k1, k2);
+    /// ```
+    #[must_use]
+    pub fn cache_key(config: &SolverConfig) -> u64 {
+        let mut hasher = DefaultHasher::new();
+
+        // Ranges — sort before hashing to neutralise HashSet iteration order.
+        let mut hero: Vec<_> = config.hero_range.iter().copied().collect();
+        hero.sort();
+        hero.hash(&mut hasher);
+
+        let mut villain: Vec<_> = config.villain_range.iter().copied().collect();
+        villain.sort();
+        villain.hash(&mut hasher);
+
+        // Board — hash in fixed field order (flop1, flop2, flop3, turn, river).
+        config.board.flop.first().hash(&mut hasher);
+        config.board.flop.second().hash(&mut hasher);
+        config.board.flop.third().hash(&mut hasher);
+        config.board.turn.hash(&mut hasher);
+        config.board.river.hash(&mut hasher);
+
+        // Bet sizings — sort each street so {half, pot} and {pot, half} are equal.
+        let mut flop_sizes = config.bet_sizings.flop.clone();
+        flop_sizes.sort();
+        flop_sizes.hash(&mut hasher);
+
+        let mut turn_sizes = config.bet_sizings.turn.clone();
+        turn_sizes.sort();
+        turn_sizes.hash(&mut hasher);
+
+        let mut river_sizes = config.bet_sizings.river.clone();
+        river_sizes.sort();
+        river_sizes.hash(&mut hasher);
+
+        config.effective_stack.hash(&mut hasher);
+        config.pot.hash(&mut hasher);
+
+        // Convergence controls. These do not describe the *spot*, but they do
+        // decide the `SolverResult` that comes back — iteration count, early-stop
+        // threshold, and update rule all move the equilibrium and the reported
+        // exploitability. Omitting them collides a long DCFR solve with a short
+        // vanilla one.
+        config.max_iterations.hash(&mut hasher);
+        config.target_exploitability.to_bits().hash(&mut hasher);
+        Self::hash_cfr_variant(&config.cfr_variant, &mut hasher);
+
+        hasher.finish()
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    /// Feeds a [`CfrVariant`] into `hasher`.
+    ///
+    /// `CfrVariant` cannot derive [`Hash`] because `Discounted` carries `f64`
+    /// exponents, so this writes a discriminant tag first — keeping `Vanilla` and
+    /// `CfrPlus` apart even though neither has a payload — then the IEEE-754 bit
+    /// patterns of `alpha`, `beta` and `gamma`. Bit-pattern hashing means `-0.0` and `0.0`
+    /// hash differently despite comparing equal; for a disk cache that is a miss
+    /// and a re-solve, never a wrong answer.
+    fn hash_cfr_variant(variant: &CfrVariant, hasher: &mut impl Hasher) {
+        match variant {
+            CfrVariant::Vanilla => 0_u8.hash(hasher),
+            CfrVariant::CfrPlus => 1_u8.hash(hasher),
+            CfrVariant::Discounted { alpha, beta, gamma } => {
+                2_u8.hash(hasher);
+                alpha.to_bits().hash(hasher);
+                beta.to_bits().hash(hasher);
+                gamma.to_bits().hash(hasher);
+            }
+        }
+    }
 
     /// Returns the full path for the entry file of `config`.
     fn entry_path(&self, config: &SolverConfig) -> PathBuf {
-        self.dir.join(format!("{:016x}.bin", cache_key(config)))
+        self.dir.join(format!("{:016x}.bin", Self::cache_key(config)))
     }
 
     /// Iterates over all `.bin` file paths in the cache directory.
@@ -410,9 +437,16 @@ mod tests {
     // ── cache_key ─────────────────────────────────────────────────────────────
 
     #[test]
+    #[allow(deprecated)]
+    fn deprecated_cache_key_matches_the_method() {
+        let config = river_config();
+        assert_eq!(cache_key(&config), SolverCache::cache_key(&config));
+    }
+
+    #[test]
     fn test_cache_key_same_config_is_deterministic() {
         let config = river_config();
-        assert_eq!(cache_key(&config), cache_key(&config));
+        assert_eq!(SolverCache::cache_key(&config), SolverCache::cache_key(&config));
     }
 
     #[test]
@@ -425,7 +459,7 @@ mod tests {
             1_000,
             200,
         );
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
@@ -438,7 +472,7 @@ mod tests {
             1_000,
             200,
         );
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
@@ -451,14 +485,14 @@ mod tests {
             1_000,
             200,
         );
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn test_cache_key_different_sizings_differs() {
         let config1 = river_config();
         let config2 = river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::pot()]));
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
@@ -471,7 +505,7 @@ mod tests {
             2_000,
             200,
         );
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
@@ -484,7 +518,7 @@ mod tests {
             1_000,
             400,
         );
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     // The three convergence-control fields below are what `DEFECT_016` closed:
@@ -495,34 +529,46 @@ mod tests {
     fn cache_key_different_max_iterations_differs() {
         let config1 = river_config().with_max_iterations(3);
         let config2 = river_config().with_max_iterations(100_000);
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_different_cfr_variant_differs() {
         let config1 = river_config().with_cfr_variant(CfrVariant::Vanilla);
         let config2 = river_config().with_cfr_variant(CfrVariant::CfrPlus);
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_different_discount_exponents_differ() {
-        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
-        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 3.0, beta: 0.0 });
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 1.5,
+            beta: 0.0,
+            gamma: 2.0,
+        });
+        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 3.0,
+            beta: 0.0,
+            gamma: 2.0,
+        });
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_different_target_exploitability_differs() {
         let config1 = river_config().with_target_exploitability(0.1);
         let config2 = river_config().with_target_exploitability(0.000_1);
-        assert_ne!(cache_key(&config1), cache_key(&config2));
+        assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_same_cfr_variant_is_deterministic() {
-        let config = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
-        assert_eq!(cache_key(&config), cache_key(&config));
+        let config = river_config().with_cfr_variant(CfrVariant::Discounted {
+            alpha: 1.5,
+            beta: 0.0,
+            gamma: 2.0,
+        });
+        assert_eq!(SolverCache::cache_key(&config), SolverCache::cache_key(&config));
     }
 
     // ── SolverCache ───────────────────────────────────────────────────────────

@@ -1,0 +1,59 @@
+# DEFECT_022 — after a re-raise, the turn went to the wrong seat.
+# docs/defects/DEFECT_022_next_to_act_restarts_under_the_gun.md
+#
+# Pluribus corpus hand STATE:153. NL 50/100, six seats, button on seat 5. On
+# the flop seat 5 bets 275, seat 1 calls, and seat 3 raises to 1000. Seat 5
+# is next, clockwise of the raiser. The engine gave the turn to seat 1, which
+# moved every later action one seat over.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_022
+  game: holdem
+  source: "Pluribus STATE:153"
+  description: "After a re-raise, the next to act is the seat clockwise of the raiser"
+table:
+  seats: 6
+  button: 5
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: P0, stack: 10000.0, hole_cards: "9♦ A♥" }
+  - { seat: 1, name: P1, stack: 10000.0, hole_cards: "6♠ J♠" }
+  - { seat: 2, name: P2, stack: 10000.0, hole_cards: "J♥ 3♣" }
+  - { seat: 3, name: P3, stack: 10000.0, hole_cards: "7♥ 8♥" }
+  - { seat: 4, name: P4, stack: 10000.0, hole_cards: "T♦ 2♠" }
+  - { seat: 5, name: P5, stack: 10000.0, hole_cards: "J♣ Q♣" }
+board: "5♥ 8♠ Q♠ K♣"
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: fold }
+      - { seat: 3, action: raise, amount: 200.0 }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: call, amount: 200.0 }
+      - { seat: 0, action: fold }
+      - { seat: 1, action: call, amount: 200.0 }
+  flop:
+    cards: "5♥ 8♠ Q♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 3, action: check }
+      - { seat: 5, action: bet, amount: 275.0 }
+      - { seat: 1, action: call, amount: 275.0 }
+      - { seat: 3, action: raise, amount: 1000.0 }
+      - { seat: 5, action: fold }
+      - { seat: 1, action: call, amount: 1000.0 }
+  turn:
+    card: "K♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 3, action: bet, amount: 4000.0 }
+      - { seat: 1, action: fold }
+
+expect:
+  # The moment the defect struck: right after seat 3's re-raise.
+  - after: { street: flop, index: 4 }
+    bet: 1000
+    next_to_act: 5
+final:
+  stacks: { 0: 9950, 1: 8800, 2: 10000, 3: 11725, 4: 10000, 5: 9525 }

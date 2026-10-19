@@ -8,7 +8,7 @@
 //! ```
 
 use pkcore::bot::exploit::ExploitConfig;
-use pkcore::bot::training::evaluator::{default_field, evaluate};
+use pkcore::bot::training::evaluator::Evaluator;
 use pkcore::bot::training::{ExploitTrainer, TrainingConfig};
 
 /// Runs 200 generations of training and asserts that the resulting config
@@ -36,9 +36,9 @@ fn trained_config_outperforms_default_baseline() {
     assert!(result.best_fitness.is_finite(), "best_fitness must be finite");
 
     // Evaluate both configs at higher fidelity for a reliable comparison.
-    let field = default_field();
-    let baseline_score = evaluate(&ExploitConfig::default(), &field, 1_000, 5, 42);
-    let trained_score = evaluate(&result.best_config, &field, 1_000, 5, 42);
+    let field = Evaluator::default_field();
+    let baseline_score = Evaluator::evaluate(&ExploitConfig::default(), &field, 1_000, 5, 42);
+    let trained_score = Evaluator::evaluate(&result.best_config, &field, 1_000, 5, 42);
 
     assert!(
         trained_score >= baseline_score - 10.0,

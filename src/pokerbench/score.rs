@@ -3,7 +3,7 @@ use crate::pokerbench::scenario::PokerBenchScenario;
 
 /// A predicted action's score against the solver-optimal label.
 ///
-/// Produced by [`score_action`]. `ev_loss` is a hook for a future solver-equity
+/// Produced by [`ActionScore::score`]. `ev_loss` is a hook for a future solver-equity
 /// metric and is currently always `None`.
 ///
 /// # Domain
@@ -26,23 +26,73 @@ pub struct ActionScore {
     pub ev_loss: Option<f64>,
 }
 
-/// Scores a predicted [`PokerBenchAction`] against a scenario's optimal label.
-///
-/// `type_match` is exact-kind agreement. `size_error` is the pot-normalized chip
-/// distance, reported only when the optimal action carries a size; a size-less
-/// prediction against a sized optimal is treated as size `0` (so e.g. folding
-/// when the solver bets registers the full bet as the error). The pot is
-/// floored at the big blind (then `1`) to avoid division by zero.
-///
-/// # Domain
-///
-/// - **Role:** cohesive mechanism
-/// - **Invariants:**
-///   - size error divides by the pot, floored at the big blind, then 1
+impl ActionScore {
+    /// Scores a predicted [`PokerBenchAction`] against a scenario's optimal label.
+    ///
+    /// `type_match` is exact-kind agreement. `size_error` is the pot-normalized chip
+    /// distance, reported only when the optimal action carries a size; a size-less
+    /// prediction against a sized optimal is treated as size `0` (so e.g. folding
+    /// when the solver bets registers the full bet as the error). The pot is
+    /// floored at the big blind (then `1`) to avoid division by zero.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** cohesive mechanism
+    /// - **Invariants:**
+    ///   - size error divides by the pot, floored at the big blind, then 1
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::pokerbench::{ActionScore, PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
+    /// use pkcore::casino::position::Position;
+    ///
+    /// let scenario = PokerBenchScenario {
+    ///     instruction: String::new(),
+    ///     hero: Position::BB,
+    ///     board: vec![],
+    ///     hole: vec![],
+    ///     pot: 6,
+    ///     to_call: 2,
+    ///     big_blind: 1,
+    ///     stacks: vec![(Position::BTN, 100), (Position::BB, 100)],
+    ///     history: vec![],
+    ///     legal: vec![PokerBenchAction::Fold, PokerBenchAction::Call],
+    ///     optimal: PokerBenchAction::Call,
+    ///     split: PokerBenchSplit::Preflop,
+    /// };
+    /// let score = ActionScore::score(&scenario, PokerBenchAction::Call);
+    /// assert!(score.type_match);
+    /// assert_eq!(score.size_error, None); // optimal Call has no size
+    /// ```
+    #[must_use]
+    pub fn score(scenario: &PokerBenchScenario, predicted: PokerBenchAction) -> Self {
+        let optimal = scenario.optimal;
+        let type_match = predicted.same_kind(optimal);
+
+        let size_error = optimal.size().map(|opt| {
+            let pred = predicted.size().unwrap_or(0);
+            let denom = if scenario.pot == 0 {
+                scenario.big_blind.max(1)
+            } else {
+                scenario.pot
+            };
+            (f64::from(pred) - f64::from(opt)).abs() / f64::from(denom)
+        });
+
+        Self {
+            type_match,
+            size_error,
+            ev_loss: None,
+        }
+    }
+}
+
+/// Scores a predicted action; see [`ActionScore::score`].
 ///
 /// # Examples
 /// ```
-/// use pkcore::pokerbench::{score_action, PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
+/// # #![allow(deprecated)]
+/// use pkcore::pokerbench::{score_action, ActionScore, PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
 /// use pkcore::casino::position::Position;
 ///
 /// let scenario = PokerBenchScenario {
@@ -59,30 +109,15 @@ pub struct ActionScore {
 ///     optimal: PokerBenchAction::Call,
 ///     split: PokerBenchSplit::Preflop,
 /// };
-/// let score = score_action(&scenario, PokerBenchAction::Call);
-/// assert!(score.type_match);
-/// assert_eq!(score.size_error, None); // optimal Call has no size
+/// assert_eq!(
+///     score_action(&scenario, PokerBenchAction::Fold),
+///     ActionScore::score(&scenario, PokerBenchAction::Fold),
+/// );
 /// ```
+#[deprecated(since = "0.16.0", note = "use `ActionScore::score`")]
 #[must_use]
 pub fn score_action(scenario: &PokerBenchScenario, predicted: PokerBenchAction) -> ActionScore {
-    let optimal = scenario.optimal;
-    let type_match = predicted.same_kind(optimal);
-
-    let size_error = optimal.size().map(|opt| {
-        let pred = predicted.size().unwrap_or(0);
-        let denom = if scenario.pot == 0 {
-            scenario.big_blind.max(1)
-        } else {
-            scenario.pot
-        };
-        (f64::from(pred) - f64::from(opt)).abs() / f64::from(denom)
-    });
-
-    ActionScore {
-        type_match,
-        size_error,
-        ev_loss: None,
-    }
+    ActionScore::score(scenario, predicted)
 }
 
 #[cfg(test)]
@@ -110,33 +145,43 @@ mod pokerbench__tests {
     }
 
     #[test]
+    #[allow(deprecated)]
+    fn deprecated_score_action_matches_the_method() {
+        let s = scenario_with(PokerBenchAction::Bet(4), 6);
+        assert_eq!(
+            score_action(&s, PokerBenchAction::Check),
+            ActionScore::score(&s, PokerBenchAction::Check)
+        );
+    }
+
+    #[test]
     fn type_match_true_on_same_kind() {
         let s = scenario_with(PokerBenchAction::Call, 6);
-        assert!(score_action(&s, PokerBenchAction::Call).type_match);
+        assert!(ActionScore::score(&s, PokerBenchAction::Call).type_match);
     }
 
     #[test]
     fn type_match_false_on_different_kind() {
         let s = scenario_with(PokerBenchAction::Call, 6);
-        assert!(!score_action(&s, PokerBenchAction::Fold).type_match);
+        assert!(!ActionScore::score(&s, PokerBenchAction::Fold).type_match);
     }
 
     #[test]
     fn type_match_ignores_size() {
         let s = scenario_with(PokerBenchAction::Bet(18), 24);
-        assert!(score_action(&s, PokerBenchAction::Bet(20)).type_match);
+        assert!(ActionScore::score(&s, PokerBenchAction::Bet(20)).type_match);
     }
 
     #[test]
     fn size_error_none_for_sizeless_optimal() {
         let s = scenario_with(PokerBenchAction::Call, 6);
-        assert_eq!(score_action(&s, PokerBenchAction::Raise(10)).size_error, None);
+        assert_eq!(ActionScore::score(&s, PokerBenchAction::Raise(10)).size_error, None);
     }
 
     #[test]
     fn size_error_is_pot_normalized() {
         let s = scenario_with(PokerBenchAction::Bet(18), 24);
-        let score = score_action(&s, PokerBenchAction::Bet(12));
+        let score = ActionScore::score(&s, PokerBenchAction::Bet(12));
         // |12 - 18| / 24 = 0.25
         assert!((score.size_error.unwrap() - 0.25).abs() < 1e-9);
     }
@@ -144,7 +189,7 @@ mod pokerbench__tests {
     #[test]
     fn size_error_treats_sizeless_prediction_as_zero() {
         let s = scenario_with(PokerBenchAction::Bet(18), 24);
-        let score = score_action(&s, PokerBenchAction::Fold);
+        let score = ActionScore::score(&s, PokerBenchAction::Fold);
         // |0 - 18| / 24 = 0.75
         assert!((score.size_error.unwrap() - 0.75).abs() < 1e-9);
     }
@@ -152,7 +197,7 @@ mod pokerbench__tests {
     #[test]
     fn size_error_floors_pot_to_avoid_div_by_zero() {
         let s = scenario_with(PokerBenchAction::Bet(2), 0);
-        let score = score_action(&s, PokerBenchAction::Bet(0));
+        let score = ActionScore::score(&s, PokerBenchAction::Bet(0));
         // denom floored to big_blind (1): |0 - 2| / 1 = 2.0
         assert!((score.size_error.unwrap() - 2.0).abs() < 1e-9);
     }
@@ -160,6 +205,6 @@ mod pokerbench__tests {
     #[test]
     fn ev_loss_is_none_for_now() {
         let s = scenario_with(PokerBenchAction::Bet(18), 24);
-        assert_eq!(score_action(&s, PokerBenchAction::Bet(18)).ev_loss, None);
+        assert_eq!(ActionScore::score(&s, PokerBenchAction::Bet(18)).ev_loss, None);
     }
 }

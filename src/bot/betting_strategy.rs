@@ -83,6 +83,32 @@ impl Percentage {
     pub fn as_f64(self) -> f64 {
         f64::from(self.0) / 100.0
     }
+
+    /// Scales the percentage by `factor`, clamping the result to `[0, 100]`.
+    ///
+    /// # Domain
+    ///
+    /// - **Role:** value object
+    /// - **Invariants:**
+    ///   - result is clamped to 0..=100
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::Percentage;
+    ///
+    /// let p = Percentage::new(60).unwrap();
+    /// assert_eq!(p.scaled(0.5).value(), 30);
+    /// assert_eq!(p.scaled(10.0).value(), 100);
+    /// ```
+    #[must_use]
+    pub fn scaled(self, factor: f64) -> Self {
+        let scaled = (self.as_f64() * factor).clamp(0.0, 1.0);
+        // clamp guarantees 0.0..=1.0, so ×100 is 0.0..=100.0 — fits in u8.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let rounded = (scaled * 100.0).round() as u8;
+        Self::new(rounded).unwrap_or(self)
+    }
 }
 
 impl std::fmt::Display for Percentage {
@@ -484,6 +510,15 @@ impl BettingStrategy {
 #[allow(non_snake_case)]
 mod bot__betting_strategy_tests {
     use super::*;
+
+    #[test]
+    fn percentage_scaled_multiplies_and_clamps() {
+        let p = Percentage::new(60).unwrap();
+        assert_eq!(30, p.scaled(0.5).value());
+        assert_eq!(100, p.scaled(10.0).value());
+        assert_eq!(0, p.scaled(-1.0).value());
+        assert_eq!(p, p.scaled(1.0));
+    }
 
     #[test]
     fn betting_strategy_new_fields() {

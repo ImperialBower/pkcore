@@ -335,10 +335,13 @@ impl From<Seven> for Eval {
 }
 
 /// [Implementing Hash](https://doc.rust-lang.org/std/hash/trait.Hash.html#implementing-hash)
+///
+/// Hashes the `hand_rank` only, to match `PartialEq` and `Ord`: two royal
+/// flushes in different suits are equal, so they must hash the same
+/// (`DEFECT_036`).
 impl Hash for Eval {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hand_rank.hash(state);
-        self.hand.hash(state);
     }
 }
 
@@ -372,6 +375,21 @@ mod hand_rank__eval_tests {
     use crate::analysis::class::HandRankClass;
     use crate::analysis::name::HandRankName;
     use std::str::FromStr;
+
+    fn hash_of<T: Hash>(value: &T) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        value.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    /// DEFECT_036: equal evals must hash the same. Two royal flushes are equal.
+    #[test]
+    fn equal_evals_have_equal_hashes() {
+        let spades = Eval::from(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap());
+        let hearts = Eval::from(Five::from_str("A♥ K♥ Q♥ J♥ T♥").unwrap());
+        assert_eq!(spades, hearts);
+        assert_eq!(hash_of(&spades), hash_of(&hearts));
+    }
 
     #[test]
     fn from__five() {
@@ -541,6 +559,30 @@ mod razz_eval_tests {
     fn unknown_rank_errors() {
         let result = Eval::from_razz_rank(CaliforniaHandRank::Unknown, Five::default());
         assert!(matches!(result, Err(PKError::NoLow)));
+    }
+
+    // DEFECT_026: the ladder used to put 7-4-3-2-A at 3 and 6-5-4-3-2 at 496.
+    #[test]
+    fn six_low_beats_seven_low_at_showdown() {
+        let six_low = Seven::from_str("6♠ 5♥ 4♦ 3♣ 2♠ K♥ Q♦").unwrap();
+        let seven_low = Seven::from_str("7♠ 4♥ 3♦ 2♣ A♠ K♦ Q♣").unwrap();
+
+        let six_low = Eval::from_seven_razz(&six_low).unwrap();
+        let seven_low = Eval::from_seven_razz(&seven_low).unwrap();
+
+        assert!(six_low > seven_low, "6-low {six_low} should beat 7-low {seven_low}");
+    }
+
+    // DEFECT_026: aces are low, so a pair of aces is the best pair.
+    #[test]
+    fn pair_of_aces_beats_pair_of_kings_at_showdown() {
+        let aces = Seven::from_str("A♠ A♥ 4♦ 3♣ 2♠ A♦ A♣").unwrap();
+        let kings = Seven::from_str("K♠ K♥ 4♦ 3♣ 2♠ K♦ K♣").unwrap();
+
+        let aces = Eval::from_seven_razz(&aces).unwrap();
+        let kings = Eval::from_seven_razz(&kings).unwrap();
+
+        assert!(aces > kings, "pair of aces {aces} should beat pair of kings {kings}");
     }
 }
 

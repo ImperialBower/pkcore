@@ -1,0 +1,59 @@
+# DEFECT_009 — the substantial-action predicate was wrong (TDA 2024 Rule 36).
+# docs/defects/DEFECT_009_substantial_action_predicate.md — tests/tda_conformance.rs
+#
+# Substantial action is any 2 actions in turn with chips, or any 3 actions.
+# Posted blinds do not count, and the count starts again on each street.
+# NL 50/100, three players: seat 0 button, seat 1 small blind, seat 2 big blind.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_009
+  game: holdem
+  description: "Substantial action counts actions, ignores blinds, and resets each street"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+players:
+  - { seat: 0, name: P0, stack: 50000.0, hole_cards: "A♠ A♥" }
+  - { seat: 1, name: P1, stack: 50000.0, hole_cards: "K♠ K♥" }
+  - { seat: 2, name: P2, stack: 50000.0, hole_cards: "Q♠ Q♥" }
+board: "2♣ 7♦ 9♠ J♣"
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 100.0 }
+      - { seat: 1, action: call, amount: 100.0 }
+      - { seat: 2, action: check }
+  flop:
+    cards: "2♣ 7♦ 9♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 2, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "J♣"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 2, action: bet, amount: 200.0 }
+      - { seat: 0, action: fold }
+      - { seat: 1, action: fold }
+
+expect:
+  # One action with chips; the blinds do not count.
+  - after: { street: preflop, index: 0 }
+    substantial_action: false
+  # Two checks are not substantial.
+  - after: { street: flop, index: 1 }
+    substantial_action: false
+  # A third action is.
+  - after: { street: flop, index: 2 }
+    substantial_action: true
+  # A new street starts the count again.
+  - after: { street: turn, index: 0 }
+    substantial_action: false
+  # Check, then bet: two actions, one with chips.
+  - after: { street: turn, index: 1 }
+    substantial_action: true
+final:
+  stacks: { 0: 49900, 1: 49900, 2: 50200 }

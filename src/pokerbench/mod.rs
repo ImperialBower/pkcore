@@ -13,4 +13,7 @@ pub use error::PokerBenchError;
 pub use scenario::{
     CanonicalSeat, CanonicalSeating, PB_BIG_BLIND, PB_EFFECTIVE_STACK, PokerBenchScenario, PokerBenchSplit,
 };
-pub use score::{ActionScore, score_action};
+pub use score::ActionScore;
+// Deprecated in 0.16.0; kept so the short path still resolves for one release.
+#[allow(deprecated)]
+pub use score::score_action;

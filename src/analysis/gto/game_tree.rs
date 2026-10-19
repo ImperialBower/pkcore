@@ -326,7 +326,8 @@ pub struct ChanceNode {
 pub struct TerminalNode {
     /// How the hand ended.
     pub outcome: TerminalOutcome,
-    /// Total chips in the pot at the end of the hand.
+    /// Total chips in the pot at the end of the hand. An uncalled bet goes
+    /// back to the bettor, so a fold terminal holds the pot before that bet.
     pub pot: u64,
     /// The river card dealt at the chance node leading to this terminal.
     ///
@@ -799,9 +800,9 @@ impl GameTree {
         aggressor: Player,
         runout: Option<(&[Card], &[BetSize])>,
     ) -> NodeId {
-        let fold_pot = pot + bet_chips;
+        // DEFECT_029: the uncalled bet goes back, so the fold pot is `pot`.
         let call_pot = pot + 2 * bet_chips;
-        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, fold_pot, None);
+        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, pot, None);
         let call_id = Self::build_showdown_cont(nodes, call_pot, runout);
 
         let id = NodeId::new(nodes.len());
@@ -916,9 +917,8 @@ impl GameTree {
         aggressor: Player,
         card: Card,
     ) -> NodeId {
-        let fold_pot = pot + bet_chips;
         let call_pot = pot + 2 * bet_chips;
-        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, fold_pot, None);
+        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, pot, None);
         let call_id = Self::push_terminal(nodes, TerminalOutcome::Showdown, call_pot, Some(card));
 
         let id = NodeId::new(nodes.len());
@@ -1263,5 +1263,43 @@ mod tests {
                 assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
             }
         }
+    }
+
+    // ── DEFECT_029: a fold terminal holds the pot before the uncalled bet ────
+
+    /// Checks every `[Fold, Call]` node whose call child is a showdown terminal.
+    /// The facing node's pot is `pot + bet` and the call pot is `pot + 2·bet`,
+    /// so the pot before the bet is `2·facing − call`.
+    fn assert_fold_pots_exclude_the_uncalled_bet(tree: &GameTree) -> usize {
+        let mut checked = 0;
+        for i in 0..tree.len() {
+            let Some(Node::Action(facing)) = tree.get(NodeId::new(i)) else {
+                continue;
+            };
+            if facing.actions != vec![Action::Fold, Action::Call] {
+                continue;
+            }
+            let (Some(Node::Terminal(fold)), Some(Node::Terminal(call))) =
+                (tree.get(facing.children[0]), tree.get(facing.children[1]))
+            else {
+                continue;
+            };
+            assert_eq!(fold.pot, 2 * facing.pot - call.pot, "fold terminal under {facing:?}");
+            checked += 1;
+        }
+        checked
+    }
+
+    #[test]
+    fn river_fold_terminal_holds_the_pot_before_the_uncalled_bet() {
+        // pot 100, bet 50: the folder gives up 100, and the 50 goes back.
+        let tree = GameTree::build_river(&config_with_sizes(vec![BetSize::half_pot()]));
+        assert_eq!(assert_fold_pots_exclude_the_uncalled_bet(&tree), 2);
+    }
+
+    #[test]
+    fn turn_tree_river_fold_terminals_hold_the_pot_before_the_uncalled_bet() {
+        let tree = GameTree::build_turn(&turn_config());
+        assert!(assert_fold_pots_exclude_the_uncalled_bet(&tree) > 0);
     }
 }

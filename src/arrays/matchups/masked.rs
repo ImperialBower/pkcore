@@ -211,6 +211,40 @@ impl Masked {
         hups.iter().copied().map(Masked::from).collect()
     }
 
+    /// Reads the distinct masked heads-up matchups from
+    /// [`DISTINCT_SHUS_CSV_PATH`](crate::util::csv::DISTINCT_SHUS_CSV_PATH), in
+    /// reverse file order.
+    ///
+    /// The path is relative to the working directory. If the file cannot be
+    /// read, this logs an error and returns an empty `Vec`; it never panics.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::arrays::matchups::masked::Masked;
+    ///
+    /// // Empty when run outside the repository root.
+    /// let distinct = Masked::distinct_from_csv();
+    /// let _ = distinct.len();
+    /// ```
+    #[cfg(feature = "csv")]
+    #[must_use]
+    pub fn distinct_from_csv() -> Vec<Masked> {
+        use crate::util::csv::DISTINCT_SHUS_CSV_PATH;
+
+        match SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH) {
+            Ok(shus) => {
+                let mut distinct = Masked::parse_as_vectors(&shus);
+                distinct.reverse();
+                distinct
+            }
+            Err(_e) => {
+                log::error!("Unable to read {DISTINCT_SHUS_CSV_PATH}");
+                Vec::default()
+            }
+        }
+    }
+
     pub fn suit_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SuitMask> {
         unique.clone().into_iter().filter(f).map(|s| s.suit_mask).collect()
     }
@@ -571,6 +605,19 @@ impl Shifty for Masked {
 #[allow(non_snake_case)]
 mod arrays__matchups__masked_tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "csv")]
+    fn distinct_from_csv_reads_the_file_in_reverse() {
+        let shus = SortedHeadsUp::read_csv(crate::util::csv::DISTINCT_SHUS_CSV_PATH).unwrap();
+        let mut expected = Masked::parse_as_vectors(&shus);
+        expected.reverse();
+
+        let distinct = Masked::distinct_from_csv();
+
+        assert!(!distinct.is_empty());
+        assert_eq!(distinct, expected);
+    }
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
 

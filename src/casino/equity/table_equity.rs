@@ -13,9 +13,12 @@ use std::sync::OnceLock;
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TableEquity(Vec<SeatEquity>);
 
-fn default_seat_equity_ref() -> &'static SeatEquity {
-    static DEFAULT_SEAT_EQUITY: OnceLock<SeatEquity> = OnceLock::new();
-    DEFAULT_SEAT_EQUITY.get_or_init(SeatEquity::default)
+// The value the accessors fall back to when an entry is missing.
+impl TableEquity {
+    fn default_seat_equity_ref() -> &'static SeatEquity {
+        static DEFAULT_SEAT_EQUITY: OnceLock<SeatEquity> = OnceLock::new();
+        DEFAULT_SEAT_EQUITY.get_or_init(SeatEquity::default)
+    }
 }
 
 impl TableEquity {
@@ -177,7 +180,7 @@ impl TableEquity {
 
     #[must_use]
     pub fn first(&self) -> &SeatEquity {
-        self.0.first().unwrap_or(default_seat_equity_ref())
+        self.0.first().unwrap_or(Self::default_seat_equity_ref())
     }
 
     #[must_use]
@@ -225,7 +228,7 @@ impl TableEquity {
 
     #[must_use]
     pub fn second(&self) -> &SeatEquity {
-        self.0.get(1).unwrap_or(default_seat_equity_ref())
+        self.0.get(1).unwrap_or(Self::default_seat_equity_ref())
     }
 
     /// Returns the total chips won by the seat identified by `sb`, and the remaining

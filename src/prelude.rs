@@ -131,7 +131,7 @@ pub use crate::analysis::range_equity::RangeEquity;
 pub use crate::analysis::gto::game_tree::{GameTree, NodeId, TerminalNode};
 pub use crate::analysis::gto::regret::RegretAccumulator;
 pub use crate::analysis::gto::solver::{Solver, SolverResult};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
 pub use crate::analysis::gto::solver_cache::SolverCache;
 pub use crate::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
 pub use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};

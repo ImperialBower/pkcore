@@ -19,8 +19,10 @@
 //!
 //! # CFR+ Regret Floor
 //!
-//! [`RegretAccumulator::update`] applies the **CFR+ floor**: after adding the
-//! new regret delta, each entry is clamped to `max(0, value)`. This discards
+//! By default [`RegretAccumulator::update`] applies the **CFR+ floor**: after
+//! adding the new regret delta, each entry is clamped to `max(0, value)`. The
+//! solver turns it off for vanilla CFR and DCFR with
+//! [`RegretAccumulator::with_floor`]. This discards
 //! stale negative regret and accelerates convergence compared to vanilla CFR,
 //! at the cost of slightly slower convergence at nodes where the player is
 //! exactly indifferent between actions.
@@ -89,7 +91,10 @@ use std::collections::HashMap;
 /// assert!(!acc.is_empty());
 /// ```
 #[derive(Clone, Debug)]
-pub struct RegretAccumulator(HashMap<NodeId, HashMap<Two, Vec<f64>>>);
+pub struct RegretAccumulator {
+    regrets: HashMap<NodeId, HashMap<Two, Vec<f64>>>,
+    floor: bool,
+}
 
 impl RegretAccumulator {
     /// Constructs a zeroed accumulator covering every action node in `tree`.
@@ -136,11 +141,68 @@ impl RegretAccumulator {
             }
         }
 
-        Self(outer)
+        Self {
+            regrets: outer,
+            floor: true,
+        }
     }
 
-    /// Adds `regret_deltas` to the accumulated regrets for `(node, hand)` and
-    /// applies the **CFR+ floor** (`max(0, value)` after each update).
+    /// Turns the CFR+ floor on or off. It is on by default.
+    ///
+    /// With the floor off, [`update`](Self::update) keeps negative regret.
+    /// Vanilla CFR and DCFR need that; only CFR+ floors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::GameTree;
+    /// use pkcore::analysis::gto::regret::RegretAccumulator;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// let acc = RegretAccumulator::new(&tree, &oop, &ip).with_floor(false);
+    /// assert!(!acc.floors());
+    /// ```
+    #[must_use]
+    pub fn with_floor(mut self, floor: bool) -> Self {
+        self.floor = floor;
+        self
+    }
+
+    /// Returns `true` if [`update`](Self::update) clamps regret at zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::GameTree;
+    /// use pkcore::analysis::gto::regret::RegretAccumulator;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// assert!(RegretAccumulator::new(&tree, &oop, &ip).floors());
+    /// ```
+    #[must_use]
+    pub fn floors(&self) -> bool {
+        self.floor
+    }
+
+    /// Adds `regret_deltas` to the accumulated regrets for `(node, hand)` and,
+    /// unless [`with_floor(false)`](Self::with_floor) turned it off, applies
+    /// the **CFR+ floor** (`max(0, value)` after each update).
     ///
     /// `regret_deltas` must have the same length as the number of actions at
     /// `node`. If the `(node, hand)` pair is not tracked (e.g. the node is not
@@ -171,14 +233,16 @@ impl RegretAccumulator {
     /// assert!(acc.len() > 0);
     /// ```
     pub fn update(&mut self, node: NodeId, hand: Two, regret_deltas: &[f64]) {
-        if let Some(hand_map) = self.0.get_mut(&node)
+        if let Some(hand_map) = self.regrets.get_mut(&node)
             && let Some(regrets) = hand_map.get_mut(&hand)
         {
             for (acc, delta) in regrets.iter_mut().zip(regret_deltas.iter()) {
-                // CFR+ floor: clamp to ≥ 0 after accumulation so stale
-                // negative regret from early iterations cannot drag the
-                // strategy away from equilibrium.
-                *acc = f64::max(0.0, *acc + delta);
+                *acc += delta;
+                if self.floor {
+                    // CFR+ floor: stale negative regret cannot drag the
+                    // strategy away from equilibrium.
+                    *acc = f64::max(0.0, *acc);
+                }
             }
         }
     }
@@ -220,7 +284,7 @@ impl RegretAccumulator {
     /// ```
     #[must_use]
     pub fn current_strategy(&self, node: NodeId, hand: &Two) -> Option<ActionFrequencies> {
-        let regrets = self.0.get(&node)?.get(hand)?;
+        let regrets = self.regrets.get(&node)?.get(hand)?;
 
         let positive_sum: f64 = regrets.iter().map(|&r| f64::max(0.0, r)).sum();
 
@@ -272,15 +336,13 @@ impl RegretAccumulator {
     /// ```
     #[must_use]
     pub fn get_raw(&self, node: NodeId, hand: &Two) -> Option<&[f64]> {
-        Some(self.0.get(&node)?.get(hand)?.as_slice())
+        Some(self.regrets.get(&node)?.get(hand)?.as_slice())
     }
 
     /// Multiplies every accumulated regret by `factor`.
     ///
-    /// Used by DCFR's α-discounting step: before adding new regret deltas for
-    /// iteration `t`, existing regrets are scaled by `α_t = t^α / (t^α + 1)`.
-    /// As `t → ∞`, `α_t → 1.0` (no discounting at convergence), so early
-    /// chaotic regrets are suppressed without affecting the long-run behaviour.
+    /// DCFR discounts positive and negative regret apart; it uses
+    /// [`scale_signed`](Self::scale_signed).
     ///
     /// Calling with `factor = 1.0` is a no-op. Calling with `factor = 0.0`
     /// resets all regrets to zero.
@@ -306,10 +368,42 @@ impl RegretAccumulator {
     /// assert!(!acc.is_empty()); // structure preserved, values zeroed
     /// ```
     pub fn scale_all(&mut self, factor: f64) {
-        for hand_map in self.0.values_mut() {
+        for hand_map in self.regrets.values_mut() {
             for regrets in hand_map.values_mut() {
                 for r in regrets.iter_mut() {
                     *r *= factor;
+                }
+            }
+        }
+    }
+
+    /// Multiplies positive regret by `positive` and negative regret by
+    /// `negative`. DCFR discounts the two signs at different rates.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::GameTree;
+    /// use pkcore::analysis::gto::regret::RegretAccumulator;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// let mut acc = RegretAccumulator::new(&tree, &oop, &ip).with_floor(false);
+    /// acc.scale_signed(0.75, 0.5);
+    /// assert!(!acc.is_empty());
+    /// ```
+    pub fn scale_signed(&mut self, positive: f64, negative: f64) {
+        for hand_map in self.regrets.values_mut() {
+            for regrets in hand_map.values_mut() {
+                for regret in regrets.iter_mut() {
+                    *regret *= if *regret < 0.0 { negative } else { positive };
                 }
             }
         }
@@ -337,7 +431,7 @@ impl RegretAccumulator {
     /// ```
     #[must_use]
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.regrets.len()
     }
 
     /// Returns `true` if no action nodes are tracked.
@@ -362,7 +456,7 @@ impl RegretAccumulator {
     /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.regrets.is_empty()
     }
 }
 
@@ -396,7 +490,43 @@ mod tests {
 
     /// Grab the first hand tracked at `node`.
     fn first_hand(acc: &RegretAccumulator, node: NodeId) -> Two {
-        *acc.0[&node].keys().next().expect("node must have at least one hand")
+        *acc.regrets[&node]
+            .keys()
+            .next()
+            .expect("node must have at least one hand")
+    }
+
+    // ── DEFECT_030: the floor is a CFR+ choice, not a rule for all ──────────
+
+    #[test]
+    fn update_floors_negative_regret_by_default() {
+        let (mut acc, tree, _, _) = make_acc();
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        acc.update(node, hand, &[-1.0, 2.0]);
+        assert_eq!(&acc.get_raw(node, &hand).unwrap()[..2], &[0.0, 2.0]);
+    }
+
+    #[test]
+    fn with_floor_false_keeps_negative_regret() {
+        let (acc, tree, _, _) = make_acc();
+        let mut acc = acc.with_floor(false);
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        acc.update(node, hand, &[-1.0, 2.0]);
+        acc.update(node, hand, &[-1.0, 2.0]);
+        assert_eq!(&acc.get_raw(node, &hand).unwrap()[..2], &[-2.0, 4.0]);
+    }
+
+    #[test]
+    fn scale_signed_scales_positive_and_negative_regret_apart() {
+        let (acc, tree, _, _) = make_acc();
+        let mut acc = acc.with_floor(false);
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        acc.update(node, hand, &[-4.0, 4.0]);
+        acc.scale_signed(0.75, 0.5);
+        assert_eq!(&acc.get_raw(node, &hand).unwrap()[..2], &[-2.0, 3.0]);
     }
 
     #[test]

@@ -79,9 +79,9 @@ impl HUPResult {
     // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart.
     #[cfg(feature = "hup-charts")]
     pub fn lookup(from: &Two, to: &Two) -> Result<Self, PKError> {
-        use crate::analysis::store::embedded::hup_cache;
+        use crate::analysis::store::embedded::hup_cache::HupCache;
         let shu = SortedHeadsUp::new(*from, *to);
-        hup_cache::lookup_odds(shu.higher_as_bard().as_u64(), shu.lower_as_bard().as_u64())
+        HupCache::lookup_odds(shu.higher_as_bard().as_u64(), shu.lower_as_bard().as_u64())
             .map(|odds| Self {
                 higher: shu.higher_as_bard(),
                 lower: shu.lower_as_bard(),

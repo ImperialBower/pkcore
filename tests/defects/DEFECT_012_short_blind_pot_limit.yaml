@@ -1,0 +1,55 @@
+# DEFECT_012 — a short big blind changed the pot-limit maximum (TDA 2024 Rule 54).
+# docs/defects/DEFECT_012_short_blind_pot_limit.md — tests/tda_conformance.rs
+#
+# PLO 100/200. Seat 2, the big blind, has only 100 and posts it all-in.
+# Preflop the pot-limit maximum is still figured from a full 200 blind (54-B):
+# 700. On the flop the pot is the 500 actually in it, not more (54-C).
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_012
+  game: omaha
+  description: "A short big blind neither shrinks nor inflates the pot-limit maximum"
+table:
+  seats: 3
+  button: 0
+  stakes: { small_blind: 100.0, big_blind: 200.0 }
+  betting_structure: { kind: pot_limit }
+players:
+  - { seat: 0, name: Button, stack: 50000.0, hole_cards: "A♠ A♥ K♠ K♥" }
+  - { seat: 1, name: SmallBlind, stack: 50000.0, hole_cards: "Q♠ Q♥ J♠ J♥" }
+  - { seat: 2, name: ShortBigBlind, stack: 100.0, hole_cards: "9♣ 8♣ 7♥ 6♥" }
+board: "2♣ 3♦ A♦ K♦ 4♠"
+streets:
+  preflop:
+    actions:
+      - { seat: 1, action: post, amount: 100.0 }
+      - { seat: 2, action: post, amount: 100.0, all_in: true }
+      - { seat: 0, action: call, amount: 200.0 }
+      - { seat: 1, action: call, amount: 200.0 }
+  flop:
+    cards: "2♣ 3♦ A♦"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: "K♦"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: "4♠"
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+
+expect:
+  # After the blinds: seat 0 may raise to at most 700.
+  - after: { street: preflop, index: 1 }
+    bet: 200
+    raise_bounds: { seat: 0, range: [400, 700] }
+  # On the flop, after seat 1 checks: seat 0 may bet at most the 500 pot.
+  - after: { street: flop, index: 0 }
+    raise_bounds: { seat: 0, range: [200, 500] }
+final:
+  stacks: { 0: 50300, 1: 49800, 2: 0 }

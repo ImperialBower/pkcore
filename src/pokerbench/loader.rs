@@ -7,12 +7,9 @@
 //! [`seed_stacks`](crate::pokerbench::parse) usage and
 //! [`PB_BIG_BLIND`](crate::pokerbench::PB_BIG_BLIND).
 
-use crate::pokerbench::action::{PokerBenchAction, parse_chips};
+use crate::pokerbench::action::PokerBenchAction;
 use crate::pokerbench::error::PokerBenchError;
-use crate::pokerbench::parse::{
-    derive_to_call, extract_board, extract_holding, extract_position, extract_pot, parse_cards_concat, parse_history,
-    parse_legal, parse_position, resolve_postflop_hero, seed_stacks,
-};
+use crate::pokerbench::parse::PokerBenchParser;
 use crate::pokerbench::scenario::{PB_BIG_BLIND, PokerBenchScenario, PokerBenchSplit};
 use serde::Deserialize;
 use std::path::Path;
@@ -54,18 +51,18 @@ struct JsonItem {
 
 impl PreflopRow {
     fn into_scenario(self) -> Result<PokerBenchScenario, PokerBenchError> {
-        let history = parse_history(&self.prev_line);
+        let history = PokerBenchParser::parse_history(&self.prev_line);
         Ok(PokerBenchScenario {
             instruction: String::new(),
-            hero: parse_position(&self.hero_pos)?,
+            hero: PokerBenchParser::parse_position(&self.hero_pos)?,
             board: Vec::new(),
-            hole: parse_cards_concat(&self.hero_holding)?,
-            pot: parse_chips(&self.pot_size)?,
-            to_call: derive_to_call(&history),
+            hole: PokerBenchParser::parse_cards_concat(&self.hero_holding)?,
+            pot: PokerBenchAction::parse_chips(&self.pot_size)?,
+            to_call: PokerBenchParser::derive_to_call(&history),
             big_blind: PB_BIG_BLIND,
-            stacks: seed_stacks(),
+            stacks: PokerBenchParser::seed_stacks(),
             history,
-            legal: parse_legal(&self.available_moves),
+            legal: PokerBenchParser::parse_legal(&self.available_moves),
             optimal: PokerBenchAction::from_str(self.correct_decision.trim())?,
             split: PokerBenchSplit::Preflop,
         })
@@ -74,21 +71,21 @@ impl PreflopRow {
 
 impl PostflopRow {
     fn into_scenario(self) -> Result<PokerBenchScenario, PokerBenchError> {
-        let mut board = parse_cards_concat(&self.board_flop)?;
-        board.extend(parse_cards_concat(&self.board_turn)?);
-        board.extend(parse_cards_concat(&self.board_river)?);
-        let history = parse_history(&self.postflop_action);
+        let mut board = PokerBenchParser::parse_cards_concat(&self.board_flop)?;
+        board.extend(PokerBenchParser::parse_cards_concat(&self.board_turn)?);
+        board.extend(PokerBenchParser::parse_cards_concat(&self.board_river)?);
+        let history = PokerBenchParser::parse_history(&self.postflop_action);
         Ok(PokerBenchScenario {
             instruction: String::new(),
-            hero: resolve_postflop_hero(&self.preflop_action, &self.hero_position)?,
+            hero: PokerBenchParser::resolve_postflop_hero(&self.preflop_action, &self.hero_position)?,
             board,
-            hole: parse_cards_concat(&self.holding)?,
-            pot: parse_chips(&self.pot_size)?,
-            to_call: derive_to_call(&history),
+            hole: PokerBenchParser::parse_cards_concat(&self.holding)?,
+            pot: PokerBenchAction::parse_chips(&self.pot_size)?,
+            to_call: PokerBenchParser::derive_to_call(&history),
             big_blind: PB_BIG_BLIND,
-            stacks: seed_stacks(),
+            stacks: PokerBenchParser::seed_stacks(),
             history,
-            legal: parse_legal(&self.available_moves),
+            legal: PokerBenchParser::parse_legal(&self.available_moves),
             optimal: PokerBenchAction::from_str(self.correct_decision.trim())?,
             split: PokerBenchSplit::Postflop,
         })
@@ -97,15 +94,15 @@ impl PostflopRow {
 
 impl JsonItem {
     fn into_scenario(self, split: PokerBenchSplit) -> Result<PokerBenchScenario, PokerBenchError> {
-        let history = parse_history(&self.instruction);
+        let history = PokerBenchParser::parse_history(&self.instruction);
         Ok(PokerBenchScenario {
-            hero: extract_position(&self.instruction)?,
-            board: extract_board(&self.instruction),
-            hole: extract_holding(&self.instruction)?,
-            pot: extract_pot(&self.instruction)?,
-            to_call: derive_to_call(&history),
+            hero: PokerBenchParser::extract_position(&self.instruction)?,
+            board: PokerBenchParser::extract_board(&self.instruction),
+            hole: PokerBenchParser::extract_holding(&self.instruction)?,
+            pot: PokerBenchParser::extract_pot(&self.instruction)?,
+            to_call: PokerBenchParser::derive_to_call(&history),
             big_blind: PB_BIG_BLIND,
-            stacks: seed_stacks(),
+            stacks: PokerBenchParser::seed_stacks(),
             history,
             legal: Vec::new(),
             optimal: PokerBenchAction::from_str(self.output.trim())?,
@@ -212,7 +209,10 @@ mod pokerbench__tests {
         assert_eq!(scenarios.len(), 2);
         // hero_position "IP" in a BTN-vs-BB pot resolves to the in-position BTN.
         assert_eq!(scenarios[0].hero, Position::BTN);
-        assert_eq!(scenarios[0].board, parse_cards_concat("Th3s2d5d").unwrap());
+        assert_eq!(
+            scenarios[0].board,
+            PokerBenchParser::parse_cards_concat("Th3s2d5d").unwrap()
+        );
         assert_eq!(scenarios[0].optimal, PokerBenchAction::Check);
         // Second hand: HJ vs BB, hero IP -> HJ; capitalized "Bet 18" label.
         assert_eq!(scenarios[1].hero, Position::HJ);

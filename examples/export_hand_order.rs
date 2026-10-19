@@ -15,11 +15,11 @@
 //! fails if the checked-in file has drifted.
 
 use pkcore::analysis::gto::combo::Combo;
-use pkcore::bot::hand_order::derive_hand_ordering;
+use pkcore::bot::hand_order::HandOrder;
 use std::str::FromStr;
 
 fn main() {
-    let ordering = derive_hand_ordering();
+    let ordering = HandOrder::derive();
     assert_eq!(169, ordering.len(), "expected 169 canonical classes");
 
     println!("//! The precomputed starting-hand ordering (EPIC-39 Phase 3a).");
@@ -34,7 +34,7 @@ fn main() {
     println!("//! random opposing hand, strongest first, derived from `generated/hups.bin`.");
     println!("//! Shipping the 169 numbers rather than reading the 15.8 MB chart at runtime");
     println!("//! is what keeps that chart out of a linked binary — see");
-    println!("//! [`crate::bot::hand_order::derive_hand_ordering`].");
+    println!("//! [`crate::bot::hand_order::HandOrder::derive`].");
     println!();
     println!("/// The 169 canonical classes with their equity, strongest first.");
     println!("pub(crate) static HAND_ORDER: &[(&str, f64)] = &[");

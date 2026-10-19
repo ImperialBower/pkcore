@@ -1,22 +1,32 @@
 use crate::arrays::matchups::masked::Masked;
-use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 
 pub const DISTINCT_SHUS_CSV_PATH: &str = "data/csv/shus/distinct_masked_shus.csv";
 
-/// # Panics
+/// Reads the distinct masked matchups; see [`Masked::distinct_from_csv`].
 ///
-/// If the path isn't there
+/// # Examples
+///
+/// ```
+/// # #![allow(deprecated)]
+/// use pkcore::arrays::matchups::masked::Masked;
+/// use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
+///
+/// assert_eq!(distinct_shus_from_csv_as_masked_vec(), Masked::distinct_from_csv());
+/// ```
+#[deprecated(since = "0.16.0", note = "use `Masked::distinct_from_csv`")]
 #[must_use]
 pub fn distinct_shus_from_csv_as_masked_vec() -> Vec<Masked> {
-    match SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH) {
-        Ok(shus) => {
-            let mut distinct = Masked::parse_as_vectors(&shus);
-            distinct.reverse();
-            distinct
-        }
-        Err(_e) => {
-            log::error!("Unable to read {DISTINCT_SHUS_CSV_PATH}");
-            Vec::default()
-        }
+    Masked::distinct_from_csv()
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod util__csv_tests {
+    use super::*;
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_function_matches_the_method() {
+        assert_eq!(distinct_shus_from_csv_as_masked_vec(), Masked::distinct_from_csv());
     }
 }

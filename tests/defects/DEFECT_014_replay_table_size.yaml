@@ -1,0 +1,51 @@
+# DEFECT_014 — replay rebuilt the table with the wrong number of chairs.
+# docs/defects/DEFECT_014_replay_table_size.md — src/hand_history.rs
+#
+# A recorded dead-button hand. The small blind is owed by empty chair 7, past
+# both the button (6) and the last occupied seat. Replay must size the table
+# to hold chair 7; sizing it 7 chairs moved both blinds and every turn.
+# This is the `DEAD_BUTTON_HAND` fixture from src/hand_history.rs.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_014
+  game: holdem
+  timestamp: '0'
+  source: regression
+  description: "A dead small blind past the last occupied seat replays in order"
+table:
+  name: regression
+  seats: 5
+  button: 6
+  stakes: { small_blind: 50.0, big_blind: 100.0 }
+  betting_structure: { kind: no_limit }
+players:
+  - { seat: 0, name: gto, stack: 1393956.0, hole_cards: "6♣ 3♥" }
+  - { seat: 1, name: tight_passive, stack: 2992725.0, hole_cards: "A♥ 7♠" }
+  - { seat: 3, name: tight_aggressive, stack: 997174.0, hole_cards: "K♥ Q♠" }
+  - { seat: 4, name: loose_passive, stack: 1621474.0, hole_cards: "6♦ 5♦" }
+  - { seat: 6, name: abc, stack: 994671.0, hole_cards: "K♦ 9♠" }
+streets:
+  preflop:
+    actions:
+      - { seat: 7, action: post, amount: 0.0 }
+      - { seat: 0, action: post, amount: 100.0 }
+      - { seat: 1, action: fold }
+      - { seat: 3, action: raise, amount: 200.0 }
+      - { seat: 4, action: fold }
+      - { seat: 6, action: fold }
+      - { seat: 0, action: fold }
+    pot: 100.0
+results:
+  - { seat: 0, outcome: fold, net: -100.0 }
+  - { seat: 1, outcome: fold, net: 0.0 }
+  - { seat: 3, outcome: win, net: 100.0, pot_won: 300.0 }
+  - { seat: 4, outcome: fold, net: 0.0 }
+  - { seat: 6, outcome: fold, net: 0.0 }
+
+expect:
+  # Seat 1 is first to act: the seat after the big blind (seat 0).
+  - after: { street: preflop, index: 1 }
+    next_to_act: 1
+final:
+  consistent: true

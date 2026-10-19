@@ -18,25 +18,23 @@ use std::fmt;
 
 /// Selects the CFR update algorithm used by [`super::solver::Solver`].
 ///
-/// All variants share the same regret floor (`max(0, value)` applied in
-/// [`super::regret::RegretAccumulator::update`]). The variants differ only in
-/// how they weight strategy sums and discount accumulated regrets between
-/// iterations.
+/// Only `CfrPlus` floors regret at zero (`max(0, value)` in
+/// [`super::regret::RegretAccumulator::update`]). The variants also differ in
+/// how they weight strategy sums and discount stored regret between
+/// iterations. `t` is the number of finished iterations.
 ///
 /// # Domain
 ///
 /// - **Role:** value object
 ///
-/// # Convergence comparison (same iteration count)
+/// | Variant | Regret floor | Regret discount | Strategy sum discount | Strategy weight |
+/// |---------|--------------|-----------------|-----------------------|-----------------|
+/// | `Vanilla` | no | none | none | `1` |
+/// | `CfrPlus` | yes | none | none | `t + 1` |
+/// | `Discounted` | no | `t^α/(t^α+1)` if positive, `t^β/(t^β+1)` if negative | `(t/(t+1))^γ` | `1` |
 ///
-/// | Variant | Strategy weight | Regret discount | Typical speedup vs Vanilla |
-/// |---------|----------------|-----------------|---------------------------|
-/// | `Vanilla` | `1.0` | none | baseline |
-/// | `CfrPlus` | `t` (iteration) | none | 2–4× |
-/// | `Discounted { α=1.5, β=0 }` | `1.0` | `t^α / (t^α + 1)` | 3–10× |
-///
-/// The default is `Discounted { alpha: 1.5, beta: 0.0 }`, which matches the
-/// recommended parameters from Brown & Sandholm (2019) for poker solvers.
+/// The default is `Discounted { alpha: 1.5, beta: 0.0, gamma: 2.0 }`, the
+/// parameters Brown & Sandholm (2019) recommend.
 ///
 /// # Examples
 ///
@@ -60,29 +58,34 @@ pub enum CfrVariant {
     /// strategy weighting**: iteration `t`'s strategy contribution is
     /// multiplied by `t`, so chaotic early iterations are down-weighted.
     CfrPlus,
-    /// Discounted CFR (Brown & Sandholm 2019). Applies iteration-dependent
-    /// discount factors to both regrets and strategy sums:
+    /// Discounted CFR (Brown & Sandholm 2019). After each iteration `t`:
     ///
-    /// - Regrets: multiplied by `t^α / (t^α + 1)` before each update.
-    /// - Strategy sums: multiplied by `t^β / (t^β + 1)` before each update.
+    /// - Positive regret is multiplied by `t^α / (t^α + 1)`.
+    /// - Negative regret is multiplied by `t^β / (t^β + 1)`.
+    /// - The strategy sum is multiplied by `(t / (t + 1))^γ`, so iteration
+    ///   `s` ends up weighted in proportion to `s^γ`.
     ///
-    /// Recommended: `alpha = 1.5`, `beta = 0.0`.
+    /// Recommended: `alpha = 1.5`, `beta = 0.0`, `gamma = 2.0`.
     Discounted {
-        /// Regret discount exponent. Higher values discount early regrets more
-        /// aggressively. Recommended: `1.5`.
+        /// Positive regret discount exponent. Recommended: `1.5`.
         alpha: f64,
-        /// Strategy sum discount exponent. `0.0` gives a constant `0.5`
-        /// multiplicative factor each iteration, implementing linear
-        /// strategy weighting equivalently to `CfrPlus`. Recommended: `0.0`.
+        /// Negative regret discount exponent. `0.0` halves negative regret
+        /// every iteration. Recommended: `0.0`.
         beta: f64,
+        /// Strategy averaging exponent. Recommended: `2.0`.
+        gamma: f64,
     },
 }
 
 impl Default for CfrVariant {
-    /// Returns `Discounted { alpha: 1.5, beta: 0.0 }` — the recommended
-    /// DCFR parameters for poker solvers (Brown & Sandholm 2019).
+    /// Returns `Discounted { alpha: 1.5, beta: 0.0, gamma: 2.0 }` — the
+    /// recommended DCFR parameters (Brown & Sandholm 2019).
     fn default() -> Self {
-        Self::Discounted { alpha: 1.5, beta: 0.0 }
+        Self::Discounted {
+            alpha: 1.5,
+            beta: 0.0,
+            gamma: 2.0,
+        }
     }
 }
 
@@ -722,13 +725,27 @@ mod tests {
 
     #[test]
     fn test_cfr_variant_default_is_discounted() {
-        assert_eq!(CfrVariant::default(), CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        assert_eq!(
+            CfrVariant::default(),
+            CfrVariant::Discounted {
+                alpha: 1.5,
+                beta: 0.0,
+                gamma: 2.0
+            }
+        );
     }
 
     #[test]
     fn test_solver_config_default_variant_is_discounted() {
         let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100);
-        assert_eq!(config.cfr_variant, CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        assert_eq!(
+            config.cfr_variant,
+            CfrVariant::Discounted {
+                alpha: 1.5,
+                beta: 0.0,
+                gamma: 2.0
+            }
+        );
     }
 
     #[test]
@@ -748,7 +765,18 @@ mod tests {
     #[test]
     fn test_solver_config_with_cfr_variant_discounted_custom() {
         let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100)
-            .with_cfr_variant(CfrVariant::Discounted { alpha: 2.0, beta: 0.5 });
-        assert_eq!(config.cfr_variant, CfrVariant::Discounted { alpha: 2.0, beta: 0.5 });
+            .with_cfr_variant(CfrVariant::Discounted {
+                alpha: 2.0,
+                beta: 0.5,
+                gamma: 2.0,
+            });
+        assert_eq!(
+            config.cfr_variant,
+            CfrVariant::Discounted {
+                alpha: 2.0,
+                beta: 0.5,
+                gamma: 2.0
+            }
+        );
     }
 }

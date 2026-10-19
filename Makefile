@@ -1,4 +1,4 @@
-.PHONY: test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -6,7 +6,8 @@ default: ayce
 # Default features are the pure kernel since 0.15.0 (docs/KERNEL_PURITY_AUDIT.md
 # fix 1). Dev targets build and test with `full`, which restores everything that
 # used to be on by default — YAML, bots, rayon, JSON, CSV, file and console
-# helpers. test-kernel and check-purity are what cover the lean builds.
+# helpers — plus the SQLite/zstd `store` layer. test-kernel and check-purity
+# are what cover the lean builds.
 FULL := --features full
 
 # Display help information
@@ -25,6 +26,7 @@ help:
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
+	@echo "  make lint            - fmt + clippy with warnings denied (the everyday gate)"
 	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
@@ -52,6 +54,7 @@ help:
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
 	@echo "  make check-purity       - Fail on rusqlite/zstd/termion/dotenvy/serde_yaml_bw/rayon/clap/csv/serde_json in the default and --no-default-features builds; warn on the rest"
+	@echo "  make check-purity-fs    - Fail on std::fs calls in the default and --no-default-features builds (run by check-purity)"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -130,6 +133,12 @@ fmt:
 # Run clippy linter
 clippy:
 	cargo clippy $(FULL)
+
+# The everyday gate: format, then clippy with warnings as errors, as ayce does.
+# Pair it with only the tests for the code you touched; keep ayce for special
+# occasions.
+lint: export RUSTFLAGS := -Dwarnings
+lint: fmt clippy
 
 test-nightly:
 	cargo +nightly test --all-targets --all-features
@@ -322,7 +331,20 @@ PURITY_MATCH = (^|[^[:alnum:]_-])($(1)) v[0-9]
 
 # `$$mode` is left unquoted on purpose: empty, it expands to no argument at all,
 # which is the plain default build.
-check-purity:
+# No filesystem calls in the lean builds (DEFECT_038). Clippy checks only the
+# code each build compiles, with the extra config in .config/purity/.
+check-purity-fs:
+	@for mode in --no-default-features ""; do \
+		label=$${mode:-default features}; \
+		CLIPPY_CONF_DIR=.config/purity cargo clippy $$mode --lib --quiet -- \
+			-A clippy::all -A warnings \
+			-D clippy::disallowed_methods -D clippy::disallowed_types || { \
+			echo "::error::Purity gate failed ($$label): file IO outside \`persistence\` (see above)."; \
+			exit 1; }; \
+		echo "Purity gate passed ($$label): no std::fs calls."; \
+	done
+
+check-purity: check-purity-fs
 	@for mode in --no-default-features ""; do \
 		label=$${mode:-default features}; \
 		tree=$$(cargo tree $$mode -e no-dev) || exit 1; \

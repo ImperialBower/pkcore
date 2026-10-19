@@ -15,95 +15,57 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
-/// Loads the Binary Card Map from a zstd-compressed binary file of 18-byte
-/// records: 8 bytes bc (u64 LE) + 8 bytes best (u64 LE) + 2 bytes rank (u16 LE).
-///
-/// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
-/// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
-/// have all this stuff loaded for bear. We're not there yet.
-///
-/// This is the pure, testable core behind [`BC_RANK_HASHMAP`]: it takes an
-/// explicit `path` so callers (and tests) can exercise the missing-data branch
-/// deterministically, independent of the process-wide lazy cache.
+/// Loads the Binary Card Map from a file; see [`SevenFiveBCM::load_rank_map`].
 ///
 /// # Errors
 ///
-/// Returns [`PKError::BcmUnavailable`] if the file cannot be opened or the zstd
-/// stream cannot be decoded — most commonly because `generated/bcm.zst` is
-/// self-generated data absent from a published-crate install.
+/// Returns [`PKError::BcmUnavailable`] if the file cannot be opened or decoded.
 ///
 /// # Examples
 ///
 /// ```
+/// # #![allow(deprecated)]
 /// use pkcore::analysis::store::bcm::binary_card_map::load_bc_rank_map;
 /// use pkcore::prelude::PKError;
 ///
-/// // A path with no BCM file reports the absence instead of panicking.
 /// let result = load_bc_rank_map("nonexistent/bcm.zst");
 /// assert!(matches!(result, Err(PKError::BcmUnavailable)));
 /// ```
+#[deprecated(since = "0.16.0", note = "use `SevenFiveBCM::load_rank_map`")]
 pub fn load_bc_rank_map(path: &str) -> Result<HashMap<Bard, FiveBCM>, PKError> {
-    let file = File::open(path).map_err(|e| {
-        log::error!("BCM file unavailable at {path}: {e}");
-        PKError::BcmUnavailable
-    })?;
-    let decoder = zstd::stream::read::Decoder::new(file).map_err(|e| {
-        log::error!("BCM zstd decode failed for {path}: {e}");
-        PKError::BcmUnavailable
-    })?;
-    let mut reader = BufReader::new(decoder);
-
-    let mut m = HashMap::new();
-    let mut buf = [0u8; 18];
-    while reader.read_exact(&mut buf).is_ok() {
-        let (mut lo, mut hi) = ([0u8; 8], [0u8; 8]);
-        lo.copy_from_slice(&buf[0..8]);
-        hi.copy_from_slice(&buf[8..16]);
-        let bc = Bard::from(u64::from_le_bytes(lo));
-        let best = Bard::from(u64::from_le_bytes(hi));
-        let rank = u16::from_le_bytes([buf[16], buf[17]]);
-        m.insert(bc, FiveBCM::new(best, rank));
-    }
-    Ok(m)
+    SevenFiveBCM::load_rank_map(path)
 }
 
 /// Lazily-loaded Binary Card Map, or `None` when the backing data is absent.
 ///
 /// Loaded once on first access from [`SevenFiveBCM::get_filepath`]. Prefer the
-/// [`bc_rank_hashmap`] accessor, which surfaces a [`PKError::BcmUnavailable`]
+/// [`SevenFiveBCM::rank_map`] accessor, which surfaces a [`PKError::BcmUnavailable`]
 /// rather than exposing the `Option` directly. Absence is logged, never panicked.
 pub static BC_RANK_HASHMAP: std::sync::LazyLock<Option<HashMap<Bard, FiveBCM>>> =
-    std::sync::LazyLock::new(|| load_bc_rank_map(&SevenFiveBCM::get_filepath()).ok());
+    std::sync::LazyLock::new(|| SevenFiveBCM::load_rank_map(&SevenFiveBCM::get_filepath()).ok());
 
-/// Returns the process-wide Binary Card Map, loading it once on first call.
-///
-/// This is the honest entry point for BCM-backed APIs: on a published-crate
-/// install (where `generated/bcm.zst` is absent) it returns an error instead of
-/// panicking.
+/// Returns the process-wide Binary Card Map; see [`SevenFiveBCM::rank_map`].
 ///
 /// # Errors
 ///
-/// Returns [`PKError::BcmUnavailable`] if the BCM data file could not be loaded
-/// (see [`load_bc_rank_map`]).
+/// Returns [`PKError::BcmUnavailable`] if the BCM data file could not be loaded.
 ///
 /// # Examples
 ///
-/// `no_run`: the first call forces the `LazyLock` to decode the full ~403 MB
-/// `generated/bcm.zst` (all C(52,7) entries), which is far too slow for a test.
-/// The example is compiled for correctness but not executed.
+/// `no_run`: the first call decodes the full ~403 MB `generated/bcm.zst`.
 ///
 /// ```no_run
+/// # #![allow(deprecated)]
 /// use pkcore::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 ///
-/// // Returns the loaded map, or Err(BcmUnavailable) on a published-crate
-/// // install where the self-generated data file is absent — never panics.
 /// match bc_rank_hashmap() {
 ///     Ok(map) => { let _ = map.len(); }
 ///     Err(e) => { let _ = e; }
 /// }
 /// ```
+#[deprecated(since = "0.16.0", note = "use `SevenFiveBCM::rank_map`")]
 pub fn bc_rank_hashmap() -> Result<&'static HashMap<Bard, FiveBCM>, PKError> {
-    BC_RANK_HASHMAP.as_ref().ok_or(PKError::BcmUnavailable)
+    SevenFiveBCM::rank_map()
 }
 
 /// A best five-card hand, as a `Bard`, and its rank value.
@@ -233,6 +195,89 @@ impl SevenFiveBCM {
     pub fn get_csv_filepath() -> String {
         std::env::var("PKCORE_75BCM_CSV_PATH")
             .unwrap_or_else(|_| SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string())
+    }
+
+    /// Loads the Binary Card Map from a zstd-compressed binary file of 18-byte
+    /// records: 8 bytes bc (u64 LE) + 8 bytes best (u64 LE) + 2 bytes rank (u16 LE).
+    ///
+    /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
+    /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
+    /// have all this stuff loaded for bear. We're not there yet.
+    ///
+    /// This is the pure, testable core behind [`BC_RANK_HASHMAP`]: it takes an
+    /// explicit `path` so callers (and tests) can exercise the missing-data branch
+    /// deterministically, independent of the process-wide lazy cache.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError::BcmUnavailable`] if the file cannot be opened or the zstd
+    /// stream cannot be decoded — most commonly because `generated/bcm.zst` is
+    /// self-generated data absent from a published-crate install.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::store::bcm::binary_card_map::SevenFiveBCM;
+    /// use pkcore::prelude::PKError;
+    ///
+    /// // A path with no BCM file reports the absence instead of panicking.
+    /// let result = SevenFiveBCM::load_rank_map("nonexistent/bcm.zst");
+    /// assert!(matches!(result, Err(PKError::BcmUnavailable)));
+    /// ```
+    pub fn load_rank_map(path: &str) -> Result<HashMap<Bard, FiveBCM>, PKError> {
+        let file = File::open(path).map_err(|e| {
+            log::error!("BCM file unavailable at {path}: {e}");
+            PKError::BcmUnavailable
+        })?;
+        let decoder = zstd::stream::read::Decoder::new(file).map_err(|e| {
+            log::error!("BCM zstd decode failed for {path}: {e}");
+            PKError::BcmUnavailable
+        })?;
+        let mut reader = BufReader::new(decoder);
+
+        let mut m = HashMap::new();
+        let mut buf = [0u8; 18];
+        while reader.read_exact(&mut buf).is_ok() {
+            let (mut lo, mut hi) = ([0u8; 8], [0u8; 8]);
+            lo.copy_from_slice(&buf[0..8]);
+            hi.copy_from_slice(&buf[8..16]);
+            let bc = Bard::from(u64::from_le_bytes(lo));
+            let best = Bard::from(u64::from_le_bytes(hi));
+            let rank = u16::from_le_bytes([buf[16], buf[17]]);
+            m.insert(bc, FiveBCM::new(best, rank));
+        }
+        Ok(m)
+    }
+
+    /// Returns the process-wide Binary Card Map, loading it once on first call.
+    ///
+    /// This is the honest entry point for BCM-backed APIs: on a published-crate
+    /// install (where `generated/bcm.zst` is absent) it returns an error instead of
+    /// panicking.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError::BcmUnavailable`] if the BCM data file could not be loaded
+    /// (see [`SevenFiveBCM::load_rank_map`]).
+    ///
+    /// # Examples
+    ///
+    /// `no_run`: the first call forces the `LazyLock` to decode the full ~403 MB
+    /// `generated/bcm.zst` (all C(52,7) entries), which is far too slow for a test.
+    /// The example is compiled for correctness but not executed.
+    ///
+    /// ```no_run
+    /// use pkcore::analysis::store::bcm::binary_card_map::SevenFiveBCM;
+    ///
+    /// // Returns the loaded map, or Err(BcmUnavailable) on a published-crate
+    /// // install where the self-generated data file is absent — never panics.
+    /// match SevenFiveBCM::rank_map() {
+    ///     Ok(map) => { let _ = map.len(); }
+    ///     Err(e) => { let _ = e; }
+    /// }
+    /// ```
+    pub fn rank_map() -> Result<&'static HashMap<Bard, FiveBCM>, PKError> {
+        BC_RANK_HASHMAP.as_ref().ok_or(PKError::BcmUnavailable)
     }
 
     /// Generates a zstd-compressed binary BCM file at `path`.
@@ -444,18 +489,28 @@ mod analysis__store__bcm__binary_card_map_tests {
     /// missing-data branch deterministically, regardless of whether this machine
     /// has generated the real ~403 MB `generated/bcm.zst`.
     #[test]
-    fn load_bc_rank_map__missing_file_is_err() {
+    fn load_rank_map__missing_file_is_err() {
+        assert!(matches!(
+            SevenFiveBCM::load_rank_map("nonexistent/definitely-not-here.zst"),
+            Err(PKError::BcmUnavailable)
+        ));
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn deprecated_load_bc_rank_map_matches_the_method() {
         assert!(matches!(
             load_bc_rank_map("nonexistent/definitely-not-here.zst"),
             Err(PKError::BcmUnavailable)
         ));
     }
 
-    // NOTE: `bc_rank_hashmap()` is deliberately NOT unit-tested. Any access to
+    // NOTE: `SevenFiveBCM::rank_map()` (and its deprecated `bc_rank_hashmap()`
+    // wrapper) is deliberately NOT unit-tested. Any access to
     // the `BC_RANK_HASHMAP` static forces the `LazyLock` to decode the full
     // ~403 MB `generated/bcm.zst` on machines where it exists (400s+, past the
     // nextest timeout), and on CI where it is absent the accessor's `ok_or`
-    // wrapper is trivial. Coverage lives in `load_bc_rank_map__missing_file_is_err`
+    // wrapper is trivial. Coverage lives in `load_rank_map__missing_file_is_err`
     // (the pure, path-injectable core) instead; the accessor carries a `no_run`
     // doctest.
 

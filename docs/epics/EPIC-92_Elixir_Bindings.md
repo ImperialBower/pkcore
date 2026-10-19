@@ -10,11 +10,16 @@
 > This is a contract doc. The implementation lands in a new sibling repo,
 > `pkcore.ex`, the same split [EPIC-85](EPIC-85_Node_Bindings.md) used for
 > `pkcore.js`.
+>
+> **Revised 2026-10-16** against `ssc` @ `bc5ea27f` (pkcore `0.15.5`): added
+> plain-**Erlang** callers as a first-class target of the same NIF. See
+> [Erlang callers](#erlang-callers). No new repo, no second package.
 
 ## Summary
 
 - **Builds:** `pkcore.ex`, a Hex package that runs the real `pkcore` engine
-  inside an Elixir/OTP app through Rustler NIFs.
+  inside an Elixir/OTP app through Rustler NIFs, callable from Elixir and from
+  plain Erlang.
 - **Why:** the BEAM is the natural home for many concurrent tables, and today
   an Elixir app can only reach pkcore over the network or by porting the rules.
 - **Shape:** a thin, mechanical wrapper over the 22-class surface `pkcore.js`
@@ -22,7 +27,8 @@
   owns, and every long computation on a dirty scheduler.
 - **Proves it:** the shared parity fixtures (the 271 full-house hand, chip
   conservation, error shape) pass in ExUnit, plus a scheduler-health test that
-  shows a 5 s solve does not stall a 1 ms heartbeat process.
+  shows a 5 s solve does not stall a 1 ms heartbeat process. The same fixtures
+  pass again in EUnit, called from an Erlang module.
 - **Status:** Planned. Nothing is built. The repo does not exist.
 
 ---
@@ -75,9 +81,26 @@ put a value in a `ResourceArc`. `Table::snapshot`/`restore`
 (`src/casino/session.rs:693`, `:713`) from [EPIC-88](EPIC-88_Table_Snapshot.md)
 return postcard bytes, which map 1:1 to an Elixir binary.
 
+**Erlang is the same VM.** Rustler says it "provides functionality for both
+Erlang and Elixir, however Elixir is favored as of now"
+([rustler README](https://github.com/rusterlium/rustler)). An Elixir module is
+an Erlang module with a long name: `PkCore.Dealer` is the atom
+`'Elixir.PkCore.Dealer'`, and Erlang code calls it directly. `{:ok, v}` and
+`{:error, {:dealer, :not_your_turn}}` are the same terms as `{ok, V}` and
+`{error, {dealer, not_your_turn}}`. So every result shape this EPIC designs is
+already idiomatic Erlang. The one hard limit is the NIF library's module name:
+`rustler::init!("Elixir.PkCore.Native")` bakes it in, and the VM refuses to
+load that library from any other module (`erts/emulator/beam/erl_nif.c:4842`
+on OTP `master`: *"Library module name '%s' does not match calling module
+'%T'"*). An Erlang module named `pkcore_nif` therefore cannot load the Elixir
+NIF. [Erlang callers](#erlang-callers) handles this.
+
 **This EPIC does not:**
 
 - change pkcore. Every item in pkcore is a doc or skill edit.
+- ship an Erlang-first `rebar3` package with its own NIF loader. That is the
+  deferred `erlang` feature in [Erlang callers](#erlang-callers), and it only
+  becomes work if the `rebar_mix` route in Phase 6 fails on current OTP.
 - bind the GTO solver or Kuhn in v1, except the one stepping seam named in
   [Design](#long-work-and-the-schedulers). That matches EPIC-85 and EPIC-86.
 - ship a table *server*. It ships the engine plus one example `GenServer`.
@@ -102,6 +125,8 @@ return postcard bytes, which map 1:1 to an Elixir binary.
 | Example `PkCore.TableServer` GenServer | Planned |
 | Precompiled NIFs (`rustler_precompiled`) + Hex publish | Planned |
 | Parity gate against `pkcore.js/index.d.ts` | Planned |
+| Erlang caller path (`erlang/pkcore_erl_sample` rebar3 app, EUnit fixtures, `docs/erlang.md`) | Planned |
+| Erlang-native loader (`erlang` cargo feature → `init!("pkcore_nif")`, `rebar3_cargo`) | **Deferred** — only if `rebar_mix` fails |
 | GTO solver full surface, Kuhn | **Deferred** — follow-on EPIC |
 | pkcore-side doc edits (ROADMAP row, audit-release consumer row) | Planned |
 
@@ -120,6 +145,9 @@ return postcard bytes, which map 1:1 to an Elixir binary.
 - Ship **precompiled NIFs** so `mix deps.get` works without a Rust toolchain,
   the way pkcore.py ships wheels (`pkcore.py/.github/workflows/publish.yml:12-62`).
 - Track pkcore **version lock-step**, the rule in `pkcore.py/CLAUDE.md:3-7`.
+- Work from **plain Erlang** with no Elixir code written by the caller: a
+  `rebar3` project depends on the Hex package and calls `'Elixir.PkCore.*'`
+  modules. Prove it with EUnit, not with a sentence in the README.
 
 ## Scope
 
@@ -145,6 +173,18 @@ return postcard bytes, which map 1:1 to an Elixir binary.
   (`Cargo.toml:128`). That would ship in every precompiled NIF for no v1 use.
   `parallel` (rayon, `Cargo.toml:114`) stays off: a rayon pool inside a dirty
   NIF competes with the BEAM's own scheduler threads.
+- **Erlang callers.** Three rules, each pinned by an EUnit test in Phase 6:
+  1. Strings cross as **UTF-8 binaries** (`<<"A♠"/utf8>>`), never charlists.
+     Rustler decodes `String` from a binary only, so `"A♠"` (an Erlang list)
+     fails with `badarg`. That is the correct behaviour. Do not add a charlist
+     decoder.
+  2. Erlang code uses the **tuple-returning** functions, never the `!`
+     variants. A `!` variant raises an Elixir exception, which Erlang sees as
+     `error:#{'__struct__' := 'Elixir.ArgumentError', ...}`. Legal, but ugly.
+  3. Value structs arrive as **maps with a `'__struct__'` key**
+     (`#{'__struct__' := 'Elixir.PkCore.HandRank', value := 271, ...}`), the
+     normal Elixir struct encoding from `#[derive(NifStruct)]`. Erlang pattern
+     matches on the fields and ignores the key. No separate Erlang record type.
 
 ---
 
@@ -314,6 +354,74 @@ The `TableServer` example snapshots after each completed hand, not after each
 action, so a DB write is never in the per-action path. The trade-off (losing up
 to one hand on crash) is stated in the module doc, not left as a coin flip.
 
+### Erlang callers
+
+Two paths. The first is the plan. The second is the fallback, written down so
+the decision is not made twice.
+
+**Path A — call the Elixir modules (the plan).** The caller's `rebar.config`
+pulls the Hex package and the `rebar_mix` plugin, which builds Elixir
+dependencies with `mix` from inside `rebar3`
+([hex.pm/packages/rebar_mix](https://hex.pm/packages/rebar_mix), 0.5.1). Then
+every bound module is one call away:
+
+```erlang
+%% rebar.config (caller side)
+{deps, [{pkcore, "0.15.5"}]}.
+{plugins, [rebar_mix]}.
+{provider_hooks, [{post, [{compile, {mix, consolidate_protocols}}]}]}.
+```
+
+```erlang
+%% caller side
+{ok, Eval} = 'Elixir.PkCore.Eval':from_cards(<<"6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠"/utf8>>),
+#{'__struct__' := 'Elixir.PkCore.HandRank', value := 271} =
+    'Elixir.PkCore.Eval':hand_rank(Eval),
+{error, {dealer, not_your_turn}} = 'Elixir.PkCore.Dealer':act(Dealer, 3, fold).
+```
+
+`PkCore.TableServer` works the same way. An Erlang supervisor starts it with a
+plain child spec (`#{id => t1, start => {'Elixir.PkCore.TableServer',
+start_link, [Opts]}}`), and `GenServer.call/3` is `gen_server:call/3`.
+
+**Risk, stated.** `rebar_mix` last shipped in 2021. Phase 6 item **20** builds
+the sample app on the current OTP and Elixir in CI. If it compiles and the
+EUnit fixtures pass, Path A stands. If it does not, Path B leaves Deferred.
+
+**Path B — Erlang-native loader (Deferred).** Build the same crate a second
+time with a cargo feature that only changes the `init!` name, and add one
+Erlang module that loads it. No NIF body changes; the `#[rustler::nif]`
+functions are registered by `init!` whichever name it carries.
+
+```rust
+// native/pkcore_ex/src/lib.rs
+#[cfg(not(feature = "erlang"))]
+rustler::init!("Elixir.PkCore.Native");
+#[cfg(feature = "erlang")]
+rustler::init!("pkcore_nif");
+```
+
+```erlang
+%% src/pkcore_nif.erl — one stub per NIF, all flat, no per-type modules
+-module(pkcore_nif).
+-include("cargo.hrl").
+-on_load(init/0).
+-export([eval_from_cards/1, dealer_act/3]). % one export per NIF
+init() -> ?load_nif_from_crate(pkcore_ex, 0).
+eval_from_cards(_Cards) -> erlang:nif_error(nif_not_loaded).
+```
+
+`?load_nif_from_crate` comes from `rebar3_cargo`'s `cargo.hrl`
+(`ct/rebar3_cargo_SUITE_data/test_nif_app/src/cargo.hrl` on `master`): it
+joins `code:priv_dir(App)`, `"crates"`, the crate name twice, and calls
+`erlang:load_nif/2`. The plugin's `rebar.config` hooks are
+`{pre, [{compile, {cargo, build}}]}` and `{post, [{clean, {cargo, clean}},
+{eunit, {cargo, test}}]}` ([rebar3_cargo README](https://github.com/rusterlium/rebar3_cargo)).
+The README calls the plugin "still under construction" and Linux-tested, and
+`--target` handling is a todo, so it has no precompiled story. That is the
+second reason Path B is deferred: it would mean a Rust toolchain on every
+Erlang caller's machine, which Goal 5 forbids for Elixir callers.
+
 ### Repository layout
 
 New repo `pkcore.ex`, sibling to `pkcore.py` and `pkcore.js`:
@@ -326,6 +434,7 @@ pkcore.ex/
 │   ├── Cargo.toml              # crate pkcore_ex, cdylib, pkcore = "=0.15.x"
 │   └── src/                    # one .rs file per bound type
 ├── test/                       # ExUnit, parity fixtures
+├── erlang/pkcore_erl_sample/   # rebar3 app: depends on ../.., EUnit fixtures
 ├── checksum-Elixir.PkCore.Native.exs   # rustler_precompiled checksums
 └── .github/workflows/{ci,release}.yml
 ```
@@ -341,7 +450,8 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
 ### Phase 0 — Repo, toolchain, and pkcore-side claims
 
 - [ ] **0a.** Check `pkcore` on hex.pm. Record the chosen package name here.
-- [ ] **0b.** `mix new pkcore_ex --module PkCore`, add `{:rustler, "~> 0.36"}`,
+- [ ] **0b.** `mix new pkcore_ex --module PkCore`, add `{:rustler, "~> 0.38"}`
+  (0.38.0 is current on hex.pm as of 2026-10-16),
   `mix rustler.new` → `native/pkcore_ex`. Pin `pkcore` with
   `default-features = false, features = ["equity"]`.
 - [ ] **0c.** `PkCore.Native.pkcore_version/0`, plus a test that it equals the
@@ -405,6 +515,15 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
 - [ ] **18.** `mix docs` (ExDoc) with a doctest on every public function.
 - [ ] **19.** Add the EPIC-92 row to `ROADMAP.md`'s pkcore Epics table (done
   with this draft) and flip it when Phase 6 ships.
+- [ ] **20.** `erlang/pkcore_erl_sample`: a `rebar3` app with
+  `{deps, [{pkcore, "0.15.5"}]}` and a `_checkouts/pkcore` symlink to `../..`
+  so CI builds the working tree instead of Hex (`rebar3` reads `_checkouts/`
+  before `deps`), `rebar_mix` plugin, three EUnit tests (see [Test Plan](#test-plan)). CI job
+  `erlang` runs `rebar3 eunit` on the current OTP. If `rebar_mix` fails on
+  current OTP, record it here and un-defer Path B.
+- [ ] **21.** `docs/erlang.md` (ExDoc extra): the three Scope rules for Erlang
+  callers, the `rebar.config` snippet, and the supervisor child spec for
+  `TableServer`.
 
 ### Deferred (follow-on EPIC, not this one)
 
@@ -412,6 +531,8 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
   Kuhn. Same deferral as EPIC-85 and EPIC-86.
 - A `SolveJob`-shaped API, once EPIC-37 lands one in pkcore.
 - A Phoenix LiveView spectator example.
+- Path B, the Erlang-native `pkcore_nif` loader (`erlang` cargo feature +
+  `rebar3_cargo`). Un-defer only if item **20** fails.
 
 ---
 
@@ -437,6 +558,12 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
   same test once with the NIF deliberately on a normal scheduler and assert it
   *fails*, so the test proves it can see the problem.
 - `version_lock_step` — native version = `mix.exs` version.
+- `erl_full_house_fixture` (EUnit) — the 271 hand through
+  `'Elixir.PkCore.Eval'`, matched as a map with `value := 271`.
+- `erl_charlist_is_rejected` (EUnit) — `"A♠"` as an Erlang list is `badarg`;
+  `<<"A♠"/utf8>>` parses.
+- `erl_error_tuple_shape` (EUnit) — acting out of turn is exactly
+  `{error, {dealer, not_your_turn}}`, matched without any Elixir helper.
 
 ## Key Files (proposed, in the new `pkcore.ex` repo)
 
@@ -449,6 +576,9 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
 | `lib/pk_core/*.ex` | Elixir modules, `!` variants, typespecs |
 | `lib/pk_core/table_server.ex` | example `GenServer` with explicit backpressure |
 | `test/parity_test.exs` | 22-class parity gate vs `pkcore.js/index.d.ts` |
+| `erlang/pkcore_erl_sample/rebar.config` | `rebar_mix` plugin, Hex dep; `_checkouts/pkcore` → `../..` in CI |
+| `erlang/pkcore_erl_sample/test/pkcore_erl_SUITE.erl` | the three EUnit tests |
+| `docs/erlang.md` | ExDoc extra: calling from Erlang |
 
 ## Reuse (do NOT recreate)
 
@@ -460,6 +590,8 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
 - `src/casino/table.rs:3129,3154` and `src/casino/session.rs:693,713` — snapshot
   and restore. Do not invent an Elixir-side state format.
 - `src/analysis/gto/solver.rs:752` — `iterate()`, the only stepping seam.
+- `rebar3_cargo` `cargo.hrl` — the `?load_nif_from_crate` macro, if Path B is
+  ever un-deferred. Do not hand-write a `priv_dir` path.
 
 ## Compatibility
 
@@ -491,6 +623,8 @@ cargo test   --manifest-path native/pkcore_ex/Cargo.toml
 mix docs
 # Precompiled path, from a clean machine with no Rust toolchain:
 MIX_ENV=prod mix deps.get && mix compile
+# Erlang caller path
+cd erlang/pkcore_erl_sample && rebar3 eunit
 ```
 
 Exit criteria:
@@ -501,3 +635,5 @@ Exit criteria:
 3. `thousand_tables_conserve_chips` passes.
 4. A clean machine with no Rust installs and runs the package from Hex.
 5. pkcore's `audit-release` finds `pkcore.ex` with no manual path.
+6. `rebar3 eunit` in `erlang/pkcore_erl_sample` passes on the current OTP,
+   with no Elixir source in the sample app.

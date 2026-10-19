@@ -478,13 +478,25 @@ impl Table {
         // (all-in for less). Without this guard `seats.act_bet` mutated the seat
         // and then `set_raise_increment` rejected, stranding a live Bet with
         // `table.bet` still 0 and the seat no longer next to act.
-        if let Some(seat) = self.seats.get_seat(seat_number) {
-            let would_be_all_in = amount >= seat.player.total_chip_count();
-            if !would_be_all_in {
-                self.validate_raise(seat_number, amount)?;
-            }
+        let would_be_all_in = self
+            .seats
+            .get_seat(seat_number)
+            .is_some_and(|seat| amount >= seat.player.total_chip_count());
+        if !would_be_all_in {
+            self.validate_raise(seat_number, amount)?;
         }
+        let old_bet = self.bet;
         let remaining = self.seats.act_bet(seat_number, amount)?;
+        if would_be_all_in {
+            // DEFECT_027: a shove spelled `Bet` follows the all-in rules.
+            if self.record_all_in_wager(old_bet, amount) && old_bet > 0 {
+                self.raises_this_street = self.raises_this_street.saturating_add(1);
+            }
+            self.record_voluntary_action(seat_number, ChipCommitment::Chips);
+            self.log(TableAction::Bet(seat_number, amount));
+            self.log(TableAction::ActionTo(self.next_to_act()));
+            return Ok(remaining);
+        }
         // DEFECT_007: the increment is the delta over whatever already stood,
         // matching `act_raise`. Identical to `amount` on the intended path (an
         // opening bet, where `self.bet` is 0). It differs only when a caller
@@ -646,19 +658,30 @@ impl Table {
         // mutating surfaces cannot drift (audit P9b/P9j.1). All-in bypasses it
         // (a short stack can always shove for less; NoLimit's max_raise == stack,
         // so oversized amounts route through the all-in branch above anyway).
-        if let Some(seat) = self.seats.get_seat(seat_number) {
-            let would_be_all_in = amount >= seat.player.total_chip_count();
-            if !would_be_all_in {
-                self.validate_raise(seat_number, amount)?;
-            }
+        let would_be_all_in = self
+            .seats
+            .get_seat(seat_number)
+            .is_some_and(|seat| amount >= seat.player.total_chip_count());
+        if !would_be_all_in {
+            self.validate_raise(seat_number, amount)?;
         }
+        let old_bet = self.bet;
         let remaining = self.seats.act_raise(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount.saturating_sub(self.bet));
-        self.bet = amount;
+        // DEFECT_027: a shove spelled `Raise` follows the all-in rules, so a
+        // short one cannot lower the bet and a full one re-opens the action.
+        let counts_as_raise = if would_be_all_in {
+            self.record_all_in_wager(old_bet, amount)
+        } else {
+            self.set_raise_increment(seat_number, amount.saturating_sub(old_bet));
+            self.bet = amount;
+            true
+        };
         // EPIC-30 Phase 3: count this raise toward the per-street cap.
         // Saturating add so a misconfigured raise_cap can't panic via
         // overflow (the cap_reached guard above prevents this anyway).
-        self.raises_this_street = self.raises_this_street.saturating_add(1);
+        if counts_as_raise {
+            self.raises_this_street = self.raises_this_street.saturating_add(1);
+        }
         self.record_voluntary_action(seat_number, ChipCommitment::Chips);
         self.log(TableAction::Raise(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
@@ -714,6 +737,18 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
+        // DEFECT_028: TDA 47-A. A player who already acted and now faces only a
+        // short all-in may call or fold, so a shove that would raise is a call.
+        // A stack that cannot cover the call still goes all-in for less below.
+        if self.is_reopen_gated(seat_number) {
+            let behind = self.seats.get_seat(seat_number).map_or(0, |s| s.player.chips);
+            if behind > self.to_call(seat_number) {
+                self.act_call(seat_number)?;
+                // Chips committed, as on every other path (audit P9e).
+                return Ok(self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet));
+            }
+        }
+
         // Capped structures (Fixed-Limit, Pot-Limit) have no true "all-in raise"
         // for a deep stack: the most it can commit voluntarily is one legal
         // raise. Degrade a deep-stack shove to the largest legal action so the
@@ -749,15 +784,7 @@ impl Table {
 
         let old_bet = self.bet;
         let amount = self.seats.act_all_in(seat_number)?;
-        self.bet = self.bet.max(amount);
-
-        // A shove that is at least a full raise re-opens the betting: record the
-        // new increment so the next player's minimum re-raise is measured from it
-        // (audit P9f). A sub-min all-in does NOT re-open — leave the increment
-        // untouched so players who already acted may only call the extra (Part V).
-        let raise_delta = self.bet.saturating_sub(old_bet);
-        if raise_delta >= self.min_raise() {
-            self.raise_increment = raise_delta;
+        if self.record_all_in_wager(old_bet, amount) {
             self.raises_this_street = self.raises_this_street.saturating_add(1);
         }
 
@@ -765,6 +792,26 @@ impl Table {
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(amount)
+    }
+
+    /// Applies an all-in of `amount` (the seat's street total) against
+    /// `old_bet`, the bet that stood before it. Returns `true` when the shove
+    /// is a full raise.
+    ///
+    /// The bet never goes down: a short all-in leaves it alone. A shove that is
+    /// at least a full raise re-opens the betting and records the new increment
+    /// (audit P9f). A sub-min all-in does NOT re-open, so players who already
+    /// acted may only call the extra (Part V). Shared by every all-in path so a
+    /// shove spelled `Bet` or `Raise` behaves like [`Self::act_all_in`]
+    /// (`DEFECT_027`).
+    fn record_all_in_wager(&mut self, old_bet: usize, amount: usize) -> bool {
+        self.bet = self.bet.max(amount);
+        let raise_delta = self.bet.saturating_sub(old_bet);
+        let is_full_raise = raise_delta >= self.min_raise();
+        if is_full_raise {
+            self.raise_increment = raise_delta;
+        }
+        is_full_raise
     }
 
     /// Stores the raise increment (the delta over the previous bet) after a

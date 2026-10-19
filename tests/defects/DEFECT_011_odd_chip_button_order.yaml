@@ -1,0 +1,55 @@
+# DEFECT_011 — the odd chip went to the wrong seat (TDA 2024 Rule 20-A).
+# docs/defects/DEFECT_011_odd_chip_button_order.md — tests/tda_conformance.rs
+#
+# NL 25/50, eight seats, button on seat 7. Seats 2 and 5 limp, everyone else
+# folds, and both play the board (three aces, two kings). The 175 pot splits
+# 88 / 87, and the odd chip goes to the first seat left of the button: seat 2.
+pkcore_version: "0.16.0"
+format_version: 1
+hand:
+  id: DEFECT_011
+  game: holdem
+  description: "In a split pot the odd chip goes to the first seat left of the button"
+table:
+  seats: 8
+  button: 7
+  stakes: { small_blind: 25.0, big_blind: 50.0 }
+players:
+  - { seat: 0, name: P0, stack: 5000.0, hole_cards: "2♠ 3♠" }
+  - { seat: 1, name: P1, stack: 5000.0, hole_cards: "4♠ 5♠" }
+  - { seat: 2, name: P2, stack: 5000.0, hole_cards: "7♦ 8♦" }
+  - { seat: 3, name: P3, stack: 5000.0, hole_cards: "6♠ 7♠" }
+  - { seat: 4, name: P4, stack: 5000.0, hole_cards: "8♠ 9♠" }
+  - { seat: 5, name: P5, stack: 5000.0, hole_cards: "9♣ T♣" }
+  - { seat: 6, name: P6, stack: 5000.0, hole_cards: "T♠ J♠" }
+  - { seat: 7, name: P7, stack: 5000.0, hole_cards: "Q♠ J♥" }
+board: "A♠ A♥ A♦ K♠ K♥"
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: call, amount: 50.0 }
+      - { seat: 3, action: fold }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: call, amount: 50.0 }
+      - { seat: 6, action: fold }
+      - { seat: 7, action: fold }
+      - { seat: 0, action: fold }
+      - { seat: 1, action: fold }
+  flop:
+    cards: "A♠ A♥ A♦"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 5, action: check }
+  turn:
+    card: "K♠"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 5, action: check }
+  river:
+    card: "K♥"
+    actions:
+      - { seat: 2, action: check }
+      - { seat: 5, action: check }
+
+final:
+  stacks: { 0: 4975, 1: 4950, 2: 5038, 3: 5000, 4: 5000, 5: 5037, 6: 5000, 7: 5000 }

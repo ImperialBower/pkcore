@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.15.5"
+version = "0.16.0"
 rust-version = "1.99.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -68,6 +68,9 @@ full = [
     "persistence",
     "terminal",
     "entropy",
+    "pokerbench",
+    "bot-training",
+    "store",
 ]
 ## OS nondeterminism — randomness and the wall clock (0.15.0,
 ## docs/KERNEL_PURITY_AUDIT.md fix 8). On by default. It backs the
@@ -81,7 +84,8 @@ full = [
 ## check-purity` fails on `getrandom` there).
 entropy = ["rand/os_rng", "rand/thread_rng", "uuid/v4", "dep:getrandom_v3"]
 ## Filesystem convenience wrappers over the pure serializers:
-## `SolverResult::save`/`load` (+ `_binary`, `_json`), `BotProfile::to_file`/
+## `SolverResult::save`/`load` (+ `_binary`, `_json`), the `SolverCache` disk
+## cache, `BotProfile::to_file`/
 ## `from_file`, `HandCollection::save`, `Pluribus::read_in_log`. Each has a
 ## pure twin that works on bytes or strings and is always available.
 persistence = []
@@ -136,7 +140,7 @@ bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 ## anyway. See EPIC-39 corrigendum 16.
 hup-charts = []
 
-## Enables the HuggingFace `pokerbench` module.
+## Enables the HuggingFace `pokerbench` module. In `full` since 0.16.0.
 pokerbench = ["csv", "json"]
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
 ## 5-card hand enumeration read from a self-generated file).
@@ -345,6 +349,10 @@ required-features = ["hand-histories", "bot-profiles"]
 # (D8-1..D8-4): `cargo test --test tda_conformance -- --include-ignored`.
 [[test]]
 name = "tda_conformance"
+
+[[test]]
+name = "defect_hands"
+required-features = ["hand-histories", "bot-profiles"]
 
 [[test]]
 name = "pkarena0_session"

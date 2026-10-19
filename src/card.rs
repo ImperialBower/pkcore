@@ -34,7 +34,7 @@ use std::str::FromStr;
 ///   - a valid CKC number or blank
 ///   - blank is `0`
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Card(#[serde(deserialize_with = "deserialize_card_index")] u32);
+pub struct Card(#[serde(deserialize_with = "Card::deserialize_card_index")] u32);
 // #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 // pub struct PokerCard(#[serde(deserialize_with = "deserialize_card_index")] u32);
 //
@@ -59,7 +59,7 @@ impl Card {
 
     pub(crate) const BLANK_NUMBER: u32 = 0;
     /// The string form of [`Card::BLANK`]: what it `Display`s as, and the one
-    /// index `deserialize_card_index` accepts that `Card::from_str` rejects.
+    /// index `Card::deserialize_card_index` accepts that `Card::from_str` rejects.
     pub const BLANK_INDEX: &'static str = "__";
     //endregion
 
@@ -329,6 +329,10 @@ impl FromStr for Card {
                 suit
             }
         };
+        // DEFECT_035: "AsKd" is two cards, not the ace of spades.
+        if chars.next().is_some() {
+            return Err(PKError::InvalidCardIndex);
+        }
         Ok(Card::new(rank, suit))
     }
 }
@@ -386,38 +390,40 @@ impl Serialize for Card {
     }
 }
 
-/// Parses the string form written by [`impl Serialize for Card`](Card#impl-Serialize-for-Card).
-///
-/// Two behaviours, both load-bearing and both discovered the hard way
-/// (EPIC-88 Phase 0):
-///
-/// 1. **`"__"` is [`Card::BLANK`]**, handled explicitly. `Card::BLANK` *writes*
-///    itself as `"__"` but [`Card::from_str`] refuses to *read* that back — a
-///    blank rank is an error there by design, because
-///    [`Cards::from_str`](crate::cards::Cards) must reject piles containing
-///    blanks. Until 0.11.0 the round-trip survived only by accident: parsing
-///    failed, and the fallback below turned the failure into `Card(0)`, which
-///    is `BLANK`. That accident matters — a mid-hand table is full of blanks
-///    (`BoxedCards::blanks`), so a snapshot that cannot carry one is useless.
-///
-/// 2. **Anything else that fails to parse is an error.** Until 0.11.0 it
-///    returned `Ok(0)`, so a corrupt or truncated payload deserialized into a
-///    structurally valid board full of blanks rather than failing.
-///    [`Table::restore`](crate::casino::table::Table::restore) cannot be built
-///    on a codec with no way to say no.
-fn deserialize_card_index<'de, D>(deserializer: D) -> Result<u32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let buf = String::deserialize(deserializer)?;
+impl Card {
+    /// Parses the string form written by [`impl Serialize for Card`](Card#impl-Serialize-for-Card).
+    ///
+    /// Two behaviours, both load-bearing and both discovered the hard way
+    /// (EPIC-88 Phase 0):
+    ///
+    /// 1. **`"__"` is [`Card::BLANK`]**, handled explicitly. `Card::BLANK` *writes*
+    ///    itself as `"__"` but [`Card::from_str`] refuses to *read* that back — a
+    ///    blank rank is an error there by design, because
+    ///    [`Cards::from_str`](crate::cards::Cards) must reject piles containing
+    ///    blanks. Until 0.11.0 the round-trip survived only by accident: parsing
+    ///    failed, and the fallback below turned the failure into `Card(0)`, which
+    ///    is `BLANK`. That accident matters — a mid-hand table is full of blanks
+    ///    (`BoxedCards::blanks`), so a snapshot that cannot carry one is useless.
+    ///
+    /// 2. **Anything else that fails to parse is an error.** Until 0.11.0 it
+    ///    returned `Ok(0)`, so a corrupt or truncated payload deserialized into a
+    ///    structurally valid board full of blanks rather than failing.
+    ///    [`Table::restore`](crate::casino::table::Table::restore) cannot be built
+    ///    on a codec with no way to say no.
+    fn deserialize_card_index<'de, D>(deserializer: D) -> Result<u32, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let buf = String::deserialize(deserializer)?;
 
-    if buf.trim() == Card::BLANK_INDEX {
-        return Ok(Card::BLANK_NUMBER);
+        if buf.trim() == Card::BLANK_INDEX {
+            return Ok(Card::BLANK_NUMBER);
+        }
+
+        Card::from_str(buf.as_str())
+            .map(|card| card.as_u32())
+            .map_err(|_| serde::de::Error::custom(format!("invalid card index: {buf:?}")))
     }
-
-    Card::from_str(buf.as_str())
-        .map(|card| card.as_u32())
-        .map_err(|_| serde::de::Error::custom(format!("invalid card index: {buf:?}")))
 }
 
 impl SuitShift for Card {
@@ -823,6 +829,14 @@ mod card_tests {
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
         assert_eq!(PKError::InvalidCardIndex, Card::from_str("  ").unwrap_err());
         assert_eq!(PKError::InvalidCardIndex, Card::from_str("QQ").unwrap_err());
+    }
+
+    /// DEFECT_035: text left after the rank and suit is an error, not ignored.
+    #[test]
+    fn from_str__rejects_trailing_characters() {
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("AsKd").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("AsX").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("As Kd").unwrap_err());
     }
 
     #[test]
