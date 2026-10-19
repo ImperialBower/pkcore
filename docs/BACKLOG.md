@@ -260,7 +260,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/analysis/gto/solver_cache.rs`~~ — **done 2026-10-18**, onto `SolverCache`; old name deprecated | 2 | `cache_key` |
 | `src/util/data.rs` | 1 | — |
 | ~~`src/util/csv.rs`~~ — **done 2026-10-19**, onto `Masked`; old name deprecated | 1 | `distinct_shus_from_csv_as_masked_vec` |
-| `src/pokerbench/score.rs` | 1 | `score_action` |
+| ~~`src/pokerbench/score.rs`~~ — **done 2026-10-19**, onto `ActionScore`; old name deprecated | 1 | `score_action` |
 | `src/pokerbench/action.rs` | 1 | — |
 | `src/play/game.rs` | 1 | — |
 | `src/casino/equity/table_equity.rs` | 1 | — |

@@ -111,6 +111,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `csv` feature. Its docs no longer claim it panics: it never did, it logs and
   returns an empty `Vec`. `DISTINCT_SHUS_CSV_PATH` stays in `util::csv`. The
   old name still works for this release; see Deprecated.
+- **`score_action` lives on `ActionScore`.** It builds an `ActionScore`, so
+  `pokerbench::score_action` is now `ActionScore::score`. The scoring is
+  unchanged. The old name, and its `pokerbench::score_action` re-export, still
+  work for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -164,6 +168,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Same terms as above.
 - **`util::csv::distinct_shus_from_csv_as_masked_vec`.** Use
   `Masked::distinct_from_csv`. Same terms as above.
+- **`pokerbench::score_action`.** Use `ActionScore::score`. Same terms as
+  above.
 
 ### Fixed
 

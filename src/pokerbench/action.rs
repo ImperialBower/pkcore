@@ -49,7 +49,7 @@ impl PokerBenchAction {
     /// Returns `Some` for [`Bet`](PokerBenchAction::Bet) and
     /// [`Raise`](PokerBenchAction::Raise); `None` for the size-less actions
     /// (`Fold`/`Check`/`Call`/`AllIn`). Used by the size-error metric in
-    /// [`score_action`](crate::pokerbench::score_action).
+    /// [`ActionScore::score`](crate::pokerbench::ActionScore::score).
     ///
     /// # Examples
     /// ```
@@ -70,7 +70,7 @@ impl PokerBenchAction {
     ///
     /// `Bet(18)` and `Bet(20)` are the same kind; `Bet(18)` and `Raise(18)` are
     /// not. This is the action-accuracy comparison used by
-    /// [`score_action`](crate::pokerbench::score_action).
+    /// [`ActionScore::score`](crate::pokerbench::ActionScore::score).
     ///
     /// # Examples
     /// ```
