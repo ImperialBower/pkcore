@@ -251,7 +251,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/casino/tda.rs`~~ — **done 2026-10-19**, `Tda` | 5 | — |
 | ~~`src/casino/table/snapshot.rs`~~ — **done 2026-10-19**, onto `TableState` | 5 | — |
 | ~~`src/bot/training/evaluator.rs`~~ — **done 2026-10-18**, `Evaluator`; old names deprecated | 5 | `default_field`, `evaluate` |
-| `src/play/stages/deal_eval.rs` | 3 | — |
+| ~~`src/play/stages/deal_eval.rs`~~ — **done 2026-10-19**, onto `DealEval` | 3 | — |
 | ~~`src/bot/training/encoding.rs`~~ — **done 2026-10-18**, `Encoding`; old names deprecated | 3 | `encode`, `decode`, `ranges` |
 | `src/analysis/player_stats.rs` | 3 | — |
 | `src/pokerbench/scenario.rs` | 2 | — |

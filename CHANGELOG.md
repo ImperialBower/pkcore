@@ -127,6 +127,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   functions in `casino::table::snapshot` that turn cards into index strings
   and back are now private associated functions of `TableState`, the only
   type they serve. No public API changed.
+- **The `DealEval` helpers live on `DealEval`.** The 3 private free
+  functions in `play::stages::deal_eval` (the heads-up and multi-way reports,
+  and the win/lose/draw to equity step) only served `DealEval::new`, so they
+  moved into its `impl` block. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
