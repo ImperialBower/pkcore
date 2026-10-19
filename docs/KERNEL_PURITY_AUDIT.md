@@ -115,7 +115,8 @@ These compile into a bare `cargo add pkcore` **and** into
 - **`src/util/mod.rs:2,89` — `Util::read_lines<P: AsRef<Path>>`.** A path in a
   public signature plus `File::open`. Two callers in-repo.
   *Minimal fix:* delete, or take `&str` and let the caller read the file. ~30 min.
-- **`src/util/csv.rs:4,10` — `distinct_shus_from_csv_as_masked_vec()`.** A
+- **`src/util/csv.rs:4,10` — `distinct_shus_from_csv_as_masked_vec()`** (now
+  `Masked::distinct_from_csv`, 0.16.0; the hidden read is unchanged). A
   pure-looking, argument-free `pub fn` that reads
   `data/csv/shus/distinct_masked_shus.csv` relative to the CWD and logs an error
   into an empty `Vec` when it is not there. This is the shape the previous audit

@@ -1,7 +1,6 @@
 use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
-use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;
 use rand::prelude::IndexedRandom;
 use rusqlite::Connection;
@@ -9,7 +8,7 @@ use rusqlite::Connection;
 /// `cargo run --features store,terminal --example audit`
 fn main() {
     env_logger::init();
-    let distinct = distinct_shus_from_csv_as_masked_vec();
+    let distinct = Masked::distinct_from_csv();
 
     let conn = Connection::open("generated/hups.db").unwrap();
     loop {

@@ -105,6 +105,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reads and writes, so `analysis::gto::solver_cache::cache_key` is now
   `SolverCache::cache_key`. The key value did not change, so cached solves
   still hit. The old name still works for this release; see Deprecated.
+- **The distinct-matchups CSV reader lives on `Masked`.**
+  `util::csv::distinct_shus_from_csv_as_masked_vec` is now
+  `Masked::distinct_from_csv`, next to `Masked::distinct`. It still needs the
+  `csv` feature. Its docs no longer claim it panics: it never did, it logs and
+  returns an empty `Vec`. `DISTINCT_SHUS_CSV_PATH` stays in `util::csv`. The
+  old name still works for this release; see Deprecated.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
@@ -156,6 +162,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SevenFiveBCM::rank_map`. Same terms as above.
 - **`analysis::gto::solver_cache::cache_key`.** Use `SolverCache::cache_key`.
   Same terms as above.
+- **`util::csv::distinct_shus_from_csv_as_masked_vec`.** Use
+  `Masked::distinct_from_csv`. Same terms as above.
 
 ### Fixed
 
