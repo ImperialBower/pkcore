@@ -131,6 +131,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   functions in `play::stages::deal_eval` (the heads-up and multi-way reports,
   and the win/lose/draw to equity step) only served `DealEval::new`, so they
   moved into its `impl` block. No public API changed.
+- **The `player_stats` helpers live on `PlayerStats`.** The 3 private free
+  functions in `analysis::player_stats` (`ratio`, the postflop aggression
+  sums, and the per-action counter step) are now private associated functions
+  of `PlayerStats`, whose counters they read and fill. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use

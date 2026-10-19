@@ -253,7 +253,7 @@ change and needs a CHANGELOG entry. Do one file per change.
 | ~~`src/bot/training/evaluator.rs`~~ — **done 2026-10-18**, `Evaluator`; old names deprecated | 5 | `default_field`, `evaluate` |
 | ~~`src/play/stages/deal_eval.rs`~~ — **done 2026-10-19**, onto `DealEval` | 3 | — |
 | ~~`src/bot/training/encoding.rs`~~ — **done 2026-10-18**, `Encoding`; old names deprecated | 3 | `encode`, `decode`, `ranges` |
-| `src/analysis/player_stats.rs` | 3 | — |
+| ~~`src/analysis/player_stats.rs`~~ — **done 2026-10-19**, onto `PlayerStats` | 3 | — |
 | `src/pokerbench/scenario.rs` | 2 | — |
 | `src/games/kuhn.rs` | 2 | — |
 | ~~`src/analysis/store/bcm/binary_card_map.rs`~~ — **done 2026-10-18**, onto `SevenFiveBCM`; old names deprecated | 2 | `load_bc_rank_map`, `bc_rank_hashmap` |
