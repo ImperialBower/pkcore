@@ -167,50 +167,53 @@ pub struct TableState {
     pub event_log: Vec<TableAction>,
 }
 
-fn pile_to_strings(cards: &Cards) -> Vec<String> {
-    cards.iter().map(Card::to_string).collect()
-}
-
-fn strings_to_pile(raw: &[String]) -> Result<Cards, PKError> {
-    let mut cards = Cards::default();
-    for index in raw {
-        cards.insert(card_from_index(index)?);
+// Card <-> index-string conversions used by the snapshot round trip.
+impl TableState {
+    fn pile_to_strings(cards: &Cards) -> Vec<String> {
+        cards.iter().map(Card::to_string).collect()
     }
-    Ok(cards)
-}
 
-/// Parses one card index, accepting the blank sentinel that
-/// [`Card::from_str`] rejects by design.
-fn card_from_index(index: &str) -> Result<Card, PKError> {
-    if index.trim() == Card::BLANK_INDEX {
-        return Ok(Card::BLANK);
-    }
-    Card::from_str(index)
-}
-
-fn boxed_to_slots(boxed: &BoxedCards) -> Vec<Option<String>> {
-    boxed
-        .as_slice()
-        .iter()
-        .map(|card| {
-            if *card == Card::BLANK {
-                None
-            } else {
-                Some(card.to_string())
-            }
-        })
-        .collect()
-}
-
-fn slots_to_boxed(slots: &[Option<String>]) -> Result<BoxedCards, PKError> {
-    let mut cards: Vec<Card> = Vec::with_capacity(slots.len());
-    for slot in slots {
-        match slot {
-            None => cards.push(Card::BLANK),
-            Some(index) => cards.push(card_from_index(index)?),
+    fn strings_to_pile(raw: &[String]) -> Result<Cards, PKError> {
+        let mut cards = Cards::default();
+        for index in raw {
+            cards.insert(Self::card_from_index(index)?);
         }
+        Ok(cards)
     }
-    Ok(BoxedCards::from(cards))
+
+    /// Parses one card index, accepting the blank sentinel that
+    /// [`Card::from_str`] rejects by design.
+    fn card_from_index(index: &str) -> Result<Card, PKError> {
+        if index.trim() == Card::BLANK_INDEX {
+            return Ok(Card::BLANK);
+        }
+        Card::from_str(index)
+    }
+
+    fn boxed_to_slots(boxed: &BoxedCards) -> Vec<Option<String>> {
+        boxed
+            .as_slice()
+            .iter()
+            .map(|card| {
+                if *card == Card::BLANK {
+                    None
+                } else {
+                    Some(card.to_string())
+                }
+            })
+            .collect()
+    }
+
+    fn slots_to_boxed(slots: &[Option<String>]) -> Result<BoxedCards, PKError> {
+        let mut cards: Vec<Card> = Vec::with_capacity(slots.len());
+        for slot in slots {
+            match slot {
+                None => cards.push(Card::BLANK),
+                Some(index) => cards.push(Self::card_from_index(index)?),
+            }
+        }
+        Ok(BoxedCards::from(cards))
+    }
 }
 
 impl From<&Table> for TableState {
@@ -228,7 +231,7 @@ impl From<&Table> for TableState {
                 chips_in_play: seat.player.chips_in_play,
                 withdrawn: seat.player.withdrawn,
                 state: seat.player.state,
-                cards: boxed_to_slots(&seat.cards),
+                cards: Self::boxed_to_slots(&seat.cards),
                 hand: seat
                     .hand
                     .iter()
@@ -244,7 +247,7 @@ impl From<&Table> for TableState {
         let mut dealt: Vec<(u8, Vec<Option<String>>)> = table
             .dealt_hole_cards
             .iter()
-            .map(|(seat, boxed)| (*seat, boxed_to_slots(boxed)))
+            .map(|(seat, boxed)| (*seat, Self::boxed_to_slots(boxed)))
             .collect();
         dealt.sort_by_key(|(seat, _)| *seat);
 
@@ -257,9 +260,9 @@ impl From<&Table> for TableState {
             phase: table.phase,
             forced: table.forced,
             button: table.button,
-            deck: pile_to_strings(&table.deck),
-            board: pile_to_strings(&table.board),
-            muck: pile_to_strings(&table.muck),
+            deck: Self::pile_to_strings(&table.deck),
+            board: Self::pile_to_strings(&table.board),
+            muck: Self::pile_to_strings(&table.muck),
             pot: table.pot,
             bet: table.bet,
             raise_increment: table.raise_increment,
@@ -315,10 +318,10 @@ impl TryFrom<&TableState> for Table {
             let mut hand = SeatHand::new(seat_state.hand_seat);
             for (card_index, is_up) in &seat_state.hand {
                 let visibility = if *is_up { Visibility::Up } else { Visibility::Down };
-                hand.push(card_from_index(card_index)?, visibility);
+                hand.push(TableState::card_from_index(card_index)?, visibility);
             }
 
-            let mut seat = Seat::new_with_cards(player, slots_to_boxed(&seat_state.cards)?);
+            let mut seat = Seat::new_with_cards(player, TableState::slots_to_boxed(&seat_state.cards)?);
             seat.hand = hand;
             seat.bet_level_when_last_acted = seat_state.bet_level_when_last_acted;
             seats.push(seat);
@@ -326,7 +329,7 @@ impl TryFrom<&TableState> for Table {
 
         let mut dealt_hole_cards = std::collections::HashMap::new();
         for (seat, slots) in &state.dealt_hole_cards {
-            dealt_hole_cards.insert(*seat, slots_to_boxed(slots)?);
+            dealt_hole_cards.insert(*seat, TableState::slots_to_boxed(slots)?);
         }
 
         Ok(Table {
@@ -337,9 +340,9 @@ impl TryFrom<&TableState> for Table {
             phase: state.phase,
             seats: Seats::new(seats),
             button: state.button,
-            deck: strings_to_pile(&state.deck)?,
-            board: strings_to_pile(&state.board)?,
-            muck: strings_to_pile(&state.muck)?,
+            deck: TableState::strings_to_pile(&state.deck)?,
+            board: TableState::strings_to_pile(&state.board)?,
+            muck: TableState::strings_to_pile(&state.muck)?,
             pot: state.pot,
             bet: state.bet,
             raise_increment: state.raise_increment,

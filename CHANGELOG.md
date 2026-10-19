@@ -123,6 +123,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in `casino::tda` (odd-chip order, chip split, seat distance, high card by
   suit) are now associated functions of a crate-private unit struct. They
   stay pure, so they are still tested without a table. No public API changed.
+- **The snapshot card helpers live on `TableState`.** The 5 private free
+  functions in `casino::table::snapshot` that turn cards into index strings
+  and back are now private associated functions of `TableState`, the only
+  type they serve. No public API changed.
 - **Breaking: `Cards::blanks` is removed**
   ([DEFECT_039](docs/defects/DEFECT_039_cards_is_dealt_and_contains.md)).
   A `Cards` is a set, so `blanks(n)` always made one blank. Use
