@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.17.0] - 2026-10-19
 
+### Added
+
+- **`HandHistory::validate`, `Finding` and `Rule`** (`hand-histories`). A hand
+  history is a claim; `validate` checks it and returns every disagreement, not
+  the first, each a `Finding` naming the YAML path at fault (`board`,
+  `players[1].hole_cards`, `streets.preflop.actions[3].seat`) and the `Rule` it
+  broke. Two rules so far. **Cards**: every card string parses, no card appears
+  twice across the hole cards and board, the board is 3 to 5 cards and agrees
+  with the streets. **Seats**: seats are unique and inside `table.seats`, the
+  button is inside the table, every action is by a listed seat that has not
+  folded; a gap between seats is fine, and so are a dead button (on an empty
+  chair) and a zero `post` by an empty chair (the dead small blind). Stud, stud hi-lo and razz return one
+  `Rule::Unsupported` finding. Absent optional fields are not findings. The
+  order, legality, amount, pot, result and money rules follow in this EPIC.
+  `tests/defects/validate/` holds hands that are wrong on purpose, starting with
+  `data/hands/the_hand.yaml` as it stood (DEFECT_040). See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+
 ### Changed
 
 - **Replay moved from `bot-profiles` to `hand-histories`.** `HandHistory::replay`,

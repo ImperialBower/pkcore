@@ -74,6 +74,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
 
+mod check;
+pub use check::{Finding, Rule};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Format version constant
 // ─────────────────────────────────────────────────────────────────────────────
