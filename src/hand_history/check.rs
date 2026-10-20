@@ -490,9 +490,11 @@ mod passes {
 #[allow(non_snake_case)]
 mod hand_history__check_tests {
     use super::*;
+    #[cfg(feature = "hand-histories")]
     use crate::hand_history::HandHistory;
 
     /// The two-player hand from the `replay_with` doc test.
+    #[cfg(feature = "hand-histories")]
     const CLEAN: &str = r"
 hand: { id: ex, game: holdem }
 table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
@@ -506,15 +508,18 @@ streets:
       - { seat: 1, action: fold }
 ";
 
+    #[cfg(feature = "hand-histories")]
     fn hand(yaml: &str) -> HandHistory {
         HandHistory::from_yaml(yaml).unwrap()
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__clean_heads_up_hand_has_no_findings() {
         assert_eq!(Vec::<Finding>::new(), hand(CLEAN).validate());
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__duplicate_card_is_a_cards_finding() {
         let yaml = r"
@@ -532,6 +537,7 @@ board: 'A♠ 7♣ 2♥'
         assert!(findings[0].message.contains("A♠"), "{}", findings[0].message);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__duplicate_between_two_hole_cards_names_the_later_player() {
         let yaml = r"
@@ -546,6 +552,7 @@ players:
         assert_eq!("players[1].hole_cards", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__unparseable_card_is_a_cards_finding() {
         let yaml = r"
@@ -561,6 +568,7 @@ players:
         assert_eq!("players[0].hole_cards", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__board_that_disagrees_with_the_streets_is_a_cards_finding() {
         let yaml = r"
@@ -585,6 +593,7 @@ streets:
         );
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__board_that_matches_the_streets_is_clean() {
         let yaml = r"
@@ -602,6 +611,7 @@ streets:
         assert_eq!(Vec::<Finding>::new(), hand(yaml).validate());
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__board_of_two_cards_is_a_cards_finding() {
         let yaml = r"
@@ -618,6 +628,7 @@ board: '9♣ 6♦'
         assert_eq!("board", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__acting_seat_not_in_players_is_a_seats_finding() {
         let yaml = r"
@@ -638,6 +649,7 @@ streets:
         assert_eq!("streets.preflop.actions[1].seat", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__acting_after_folding_is_a_seats_finding() {
         let yaml = r"
@@ -664,6 +676,7 @@ streets:
         assert!(findings[0].message.contains("folded"), "{}", findings[0].message);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__seat_equal_to_table_seats_is_off_by_one() {
         let yaml = r"
@@ -680,6 +693,7 @@ players:
         assert!(findings[0].message.contains("0-based"), "{}", findings[0].message);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__duplicate_seat_is_a_seats_finding() {
         let yaml = r"
@@ -695,6 +709,7 @@ players:
         assert_eq!("players[1].seat", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__button_outside_the_table_is_a_seats_finding() {
         let yaml = r"
@@ -711,6 +726,7 @@ players:
         assert!(findings[0].message.contains("0-based"), "{}", findings[0].message);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__dead_button_on_an_empty_chair_is_not_a_finding() {
         let yaml = r"
@@ -727,6 +743,7 @@ players:
         );
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__zero_or_amountless_post_by_an_unlisted_seat_is_not_a_finding() {
         let yaml = r"
@@ -747,6 +764,7 @@ streets:
         assert_eq!(Vec::<Finding>::new(), findings);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__positive_post_by_an_unlisted_seat_is_a_seats_finding() {
         let yaml = r"
@@ -767,6 +785,7 @@ streets:
         assert_eq!("streets.preflop.actions[0].seat", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__zero_post_by_an_unlisted_seat_is_not_a_free_pass_for_other_actions() {
         let yaml = r"
@@ -786,6 +805,7 @@ streets:
         assert_eq!("streets.preflop.actions[1].seat", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__seat_gap_is_not_a_finding() {
         let yaml = r"
@@ -807,6 +827,7 @@ streets:
         );
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__stud_is_unsupported() {
         let yaml = r"
@@ -822,6 +843,7 @@ players:
         assert_eq!("hand.game", findings[0].path);
     }
 
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__razz_and_stud_hi_lo_are_unsupported() {
         for game in ["razz", "stud_hi_lo"] {
