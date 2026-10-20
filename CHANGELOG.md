@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `raise` and `all_in`, the total the player has bet on the street after the
   action. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
+### Fixed
+
+- **Replay now posts the ante in Hold'em** (`DEFECT_040`). `HandHistory::replay`
+  and `replay_with` built a no-limit Hold'em table with blinds only, so a hand
+  recorded with `stakes.ante` replayed 200 chips light per player (a six-handed
+  `400/800/200` hand showed a pot of 8,200 where 9,400 was dealt). Stud already
+  posted its ante. Pot-limit Omaha and fixed-limit Hold'em tables are built as
+  before. The table construction moved to one private builder, `replay_table`,
+  so later checks and a step-by-step replay start from the same table. See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+
 ## [0.16.0] - 2026-10-17
 
 ### Added

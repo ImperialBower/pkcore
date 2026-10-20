@@ -585,57 +585,26 @@ impl HandHistory {
         self.replay_with(|_, _| {})
     }
 
-    /// Replays this hand like [`Self::replay`], and calls `observe` after each
-    /// recorded action with the [`ReplayStep`] and the table as it stands.
+    /// Builds the table a replay starts from: seats placed, forced bets posted
+    /// (blinds and ante), hole cards injected, and, for stud and razz, card
+    /// visibility restored and the bring-in posted. It is the table as it stands
+    /// before the first recorded action.
     ///
-    /// Every entry in a street's `actions` list is observed, posts included, so
-    /// [`ReplayStep::index`] is the entry's position in that list. Use it to
-    /// check table state in the middle of a hand, which the final
-    /// [`ReplayResult`] cannot show.
+    /// [`Self::replay_with`] plays the recorded actions on it. The Hold'em
+    /// branch posts the recorded ante (`DEFECT_040`).
     ///
     /// # Errors
     ///
-    /// The same as [`Self::replay`]. Actions observed before the error were
-    /// applied; the failing action is not observed.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "hand-histories")]
-    /// # {
-    /// use pkcore::hand_history::{HandHistory, ReplayStreet};
-    ///
-    /// let hand = HandHistory::from_yaml(r"
-    /// hand: { id: ex, game: holdem }
-    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
-    /// players:
-    ///   - { seat: 0, name: A, stack: 1000.0 }
-    ///   - { seat: 1, name: B, stack: 1000.0 }
-    /// streets:
-    ///   preflop:
-    ///     actions:
-    ///       - { seat: 0, action: raise, amount: 300.0 }
-    ///       - { seat: 1, action: fold }
-    /// ").unwrap();
-    ///
-    /// let mut bets = Vec::new();
-    /// hand.replay_with(|step, table| bets.push((step.street, step.index, table.bet)))
-    ///     .unwrap();
-    /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
-    /// # }
-    /// ```
+    /// Returns [`PKError`] if the table cannot be dealt (a stud hand with too
+    /// many chairs), a forced bet cannot be posted, or a hole card string does
+    /// not parse.
     #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
-        clippy::cast_possible_truncation,
-        clippy::too_many_lines
+        clippy::cast_possible_truncation
     )]
-    pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
-    where
-        F: FnMut(&ReplayStep<'_>, &Table),
-    {
-        // ── Build table ──────────────────────────────────────────────────────
+    pub(crate) fn replay_table(&self) -> Result<Table, PKError> {
         let sb = self.table.stakes.small_blind as usize;
         let bb = self.table.stakes.big_blind as usize;
         let button = self.table.button.unwrap_or(0);
@@ -729,13 +698,17 @@ impl HandHistory {
         } else if self.hand.game == HandVariant::Omaha {
             Table::plo_from_seats_with_id(seats, (sb, bb), table_id)
         } else {
-            match self.table.betting_structure {
-                crate::games::betting_structure::BettingStructure::FixedLimit {
-                    small_bet,
-                    big_bet,
-                    raise_cap,
-                } => Table::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, table_id),
-                _ => Table::nlh_from_seats_with_id(seats, ForcedBets::new(sb, bb), table_id),
+            // `DEFECT_040`: the recorded ante is posted, as stud's always was.
+            let ante = self.table.stakes.ante.map_or(0, |amount| amount as usize);
+            if let crate::games::betting_structure::BettingStructure::FixedLimit {
+                small_bet,
+                big_bet,
+                raise_cap,
+            } = self.table.betting_structure
+            {
+                Table::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, table_id)
+            } else {
+                Table::nlh_from_seats_with_id(seats, ForcedBets::new_with_ante(sb, bb, ante), table_id)
             }
         };
         table.button = button;
@@ -786,6 +759,61 @@ impl HandHistory {
             // post bring-in here before betting actions are replayed.
             table.act_bring_in()?;
         }
+
+        Ok(table)
+    }
+
+    /// Replays this hand like [`Self::replay`], and calls `observe` after each
+    /// recorded action with the [`ReplayStep`] and the table as it stands.
+    ///
+    /// Every entry in a street's `actions` list is observed, posts included, so
+    /// [`ReplayStep::index`] is the entry's position in that list. Use it to
+    /// check table state in the middle of a hand, which the final
+    /// [`ReplayResult`] cannot show.
+    ///
+    /// # Errors
+    ///
+    /// The same as [`Self::replay`]. Actions observed before the error were
+    /// applied; the failing action is not observed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::{HandHistory, ReplayStreet};
+    ///
+    /// let hand = HandHistory::from_yaml(r"
+    /// hand: { id: ex, game: holdem }
+    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0 }
+    ///   - { seat: 1, name: B, stack: 1000.0 }
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: raise, amount: 300.0 }
+    ///       - { seat: 1, action: fold }
+    /// ").unwrap();
+    ///
+    /// let mut bets = Vec::new();
+    /// hand.replay_with(|step, table| bets.push((step.street, step.index, table.bet)))
+    ///     .unwrap();
+    /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
+    /// # }
+    /// ```
+    #[cfg(feature = "hand-histories")]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::too_many_lines
+    )]
+    pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
+    where
+        F: FnMut(&ReplayStep<'_>, &Table),
+    {
+        let mut table = self.replay_table()?;
 
         // ── Street replay helper ─────────────────────────────────────────────
         let mut replay_actions = |table: &mut Table, street: ReplayStreet, actions: &[Action]| -> Result<(), PKError> {
@@ -4353,6 +4381,55 @@ streets:
             ],
             seen
         );
+    }
+
+    /// `DEFECT_040`: a 6-handed `400/800/200` hand, seats 3 and 0 play to the
+    /// flop. The ante is 6 x 200 = 1,200, the blinds 1,200, the two players
+    /// 3,500 each, so 9,400 in all: 8,200 if the ante is ignored.
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__honours_ante() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: ante-1, game: holdem }
+table:
+  seats: 6
+  button: 0
+  stakes: { small_blind: 400.0, big_blind: 800.0, ante: 200.0 }
+players:
+  - { seat: 0, name: A, stack: 100000.0 }
+  - { seat: 1, name: B, stack: 100000.0 }
+  - { seat: 2, name: C, stack: 100000.0 }
+  - { seat: 3, name: D, stack: 100000.0 }
+  - { seat: 4, name: E, stack: 100000.0 }
+  - { seat: 5, name: F, stack: 100000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 3, action: raise, amount: 3500.0 }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: fold }
+      - { seat: 0, action: call, amount: 3500.0 }
+      - { seat: 1, action: fold }
+      - { seat: 2, action: fold }
+  flop:
+    cards: 7♠ Q♦ 8♣
+    actions:
+      - { seat: 3, action: bet, amount: 1000.0 }
+      - { seat: 0, action: fold }
+",
+        )
+        .expect("fixture parses");
+
+        let mut last = None;
+        hand.replay_with(|step, table| {
+            if step.street == ReplayStreet::Preflop {
+                last = Some(table.effective_pot());
+            }
+        })
+        .expect("replay succeeds");
+
+        assert_eq!(Some(9_400), last);
     }
 
     #[test]
