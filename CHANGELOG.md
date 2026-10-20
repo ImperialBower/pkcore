@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-10-19
+
+### Changed
+
+- **Replay moved from `bot-profiles` to `hand-histories`.** `HandHistory::replay`,
+  `replay_with`, `HandCollection::replay_all` and `ReplayResult` now need only
+  `hand-histories`; a build with `bot-profiles` and without `hand-histories` loses
+  `replay` (EPIC-93).
+- **Hand-history seats are documented as 0-based** (they always were): the
+  `seat` and `button` fields on the format types now say so, and `Action::amount`
+  states what it records: for `call`, the chips the action adds; for `bet`,
+  `raise` and `all_in`, the total the player has bet on the street after the
+  action. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+
 ## [0.16.0] - 2026-10-17
 
 ### Added

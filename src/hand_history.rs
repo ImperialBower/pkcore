@@ -58,15 +58,15 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::casino::action::PlayerAction;
 use crate::casino::action::TableAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::position::Position;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::casino::table::{Player, Seat, Seats, Table};
 use crate::casino::winnings::Winnings;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
@@ -577,7 +577,7 @@ impl HandHistory {
     /// assert!(result.is_ok());
     /// assert!(result.unwrap().is_consistent);
     /// ```
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     pub fn replay(&self) -> Result<ReplayResult, PKError> {
         self.replay_with(|_, _| {})
     }
@@ -621,7 +621,7 @@ impl HandHistory {
     /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
     /// # }
     /// ```
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
@@ -915,7 +915,7 @@ impl HandHistory {
 
     /// The id a replayed player gets: the one the record carries, or, for a legacy
     /// record without one, a UUID v5 of the player's name.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn replay_player_id(entry: &PlayerEntry) -> Uuid {
         entry
             .player_id
@@ -937,7 +937,7 @@ impl HandHistory {
     /// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
     /// game engine.  Returns `None` for `Post` entries (handled by
     /// `act_forced_bets`).
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         match action.action {
@@ -957,7 +957,7 @@ impl HandHistory {
     /// fractional blinds), but represent whole-chip counts in practice.  The casts
     /// here are intentional: stacks fit in `usize` and net values are bounded by the
     /// starting stack.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,
@@ -1625,7 +1625,8 @@ pub struct TableInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub seats: Option<u8>,
 
-    /// Seat number of the dealer button (1-indexed).
+    /// Seat number of the dealer button (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub button: Option<u8>,
 
@@ -1706,7 +1707,7 @@ pub struct Stakes {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PlayerEntry {
-    /// Seat number (1-indexed).
+    /// Seat number (**0-based**, the engine's seat index; see `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Player name or alias.
@@ -2568,7 +2569,8 @@ pub struct AgentFidelity {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Action {
-    /// Seat number of the acting player (1-indexed).
+    /// Seat number of the acting player (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Stable per-player identity stamped from `TableAction::PlayerSeated`.
@@ -2582,7 +2584,9 @@ pub struct Action {
     /// The action taken.
     pub action: ActionType,
 
-    /// Amount wagered (for `bet`, `raise`, `call`). Omit for `check`/`fold`.
+    /// For `call`, the chips this action adds. For `bet`, `raise` and `all_in`, the
+    /// total this player has bet on the street after the action. Omit for
+    /// `check`/`fold`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub amount: Option<f64>,
 
@@ -2669,7 +2673,8 @@ pub enum ActionType {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ResultEntry {
-    /// Seat number of this player (1-indexed).
+    /// Seat number of this player (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Best 5-card hand string (e.g., `"6♠ 6♥ 6♦ 5♥ 5♠"`).
@@ -2874,7 +2879,7 @@ impl AnalysisContext {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Namespace for the UUID v5 ids [`HandHistory::replay`] derives.
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 const REPLAY_ID_NAMESPACE: Uuid = Uuid::from_u128(0x9b7e_2a41_c3d5_4f68_8e19_a0b2_c4d6_e8f0);
 
 /// The betting round a [`ReplayStep`] belongs to.
@@ -2969,7 +2974,7 @@ impl HandCollection {
     /// let results = collection.replay_all();
     /// assert!(results.is_empty());
     /// ```
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     pub fn replay_all(&self) -> Vec<Result<ReplayResult, PKError>> {
         self.hands.iter().map(HandHistory::replay).collect()
     }
@@ -2984,7 +2989,7 @@ impl HandCollection {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn id_entry(name: &str, player_id: Option<Uuid>) -> PlayerEntry {
         PlayerEntry {
             seat: 1,
@@ -2998,14 +3003,14 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_player_id__uses_the_recorded_id() {
         let id = Uuid::from_u128(9);
         assert_eq!(id, HandHistory::replay_player_id(&id_entry("Alice", Some(id))));
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_player_id__without_a_recorded_id_derives_one_from_the_name() {
         assert_eq!(
@@ -3025,7 +3030,7 @@ mod tests {
     /// therefore dead, and recorded as a zero post. `seats: 5` is the
     /// old-style player count these records used to carry, kept here so the
     /// tests exercise a pre-`with_table_size` record.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     const DEAD_BUTTON_HAND: &str = r"
 - format_version: 1
   hand:
@@ -3956,7 +3961,7 @@ hands:
     // HandHistory::replay
     // ─────────────────────────────────────────────────────────────────────────
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn test_hand_history_replay_preflop_fold() {
         // A 2-player hand where seat 0 folds preflop after posting SB.
@@ -4082,7 +4087,7 @@ hands:
         assert!(r.is_consistent);
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
@@ -4101,7 +4106,7 @@ hands:
     /// "out of order" because `Seats::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_flop_check_then_bet_then_fold() {
         let hh = HandHistory {
@@ -4295,7 +4300,7 @@ hands:
         assert_eq!(vec!["preflop", "flop", "turn", "river"], names);
     }
 
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn check_bet_fold_hand() -> HandHistory {
         HandHistory::from_yaml(
             r"
@@ -4325,7 +4330,7 @@ streets:
     }
 
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn replay_with__observes_every_recorded_action_in_order() {
         let mut seen = Vec::new();
         check_bet_fold_hand()
@@ -4348,14 +4353,14 @@ streets:
     }
 
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn replay_with__returns_the_same_result_as_replay() {
         let hand = check_bet_fold_hand();
         assert_eq!(hand.replay(), hand.replay_with(|_, _| {}));
     }
 
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn replay_flop_check_then_bet_then_fold_from_yaml() {
         let yaml = r#"
 pkcore_version: "0.0.43"
@@ -5088,8 +5093,8 @@ hands:
     /// replay-consistent hand used to prove replay ignores agent metadata.
     ///
     /// Gated with its sole consumer ([`replay_ignores_agent_fidelity`]) so it is
-    /// not dead code when `bot-profiles` (and thus `replay`) is disabled.
-    #[cfg(feature = "bot-profiles")]
+    /// not dead code when `hand-histories` (and thus `replay`) is disabled.
+    #[cfg(feature = "hand-histories")]
     fn af_replayable_preflop_fold() -> HandHistory {
         HandHistory {
             pkcore_version: None,
@@ -5156,7 +5161,7 @@ hands:
         }
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_ignores_agent_fidelity() {
         let mut hh = af_replayable_preflop_fold();
@@ -5178,7 +5183,7 @@ hands:
     /// 7-seat table and derived the small blind at `(6 + 1) % 7 == 0` instead
     /// of seat 7. Every blind and therefore every seat's turn shifted, and the
     /// first recorded voluntary action came back as out of order.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn dead_small_blind_past_the_last_occupied_seat_replays_in_order() {
         let yaml = DEAD_BUTTON_HAND;
@@ -5278,7 +5283,7 @@ hands:
     /// old player-count value of 5. Both must replay to the same result — the
     /// recorded size is a lower bound that agrees with the inference, not a
     /// second source of truth that can disagree with it.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn a_recorded_chair_count_replays_the_same_as_an_inferred_one() {
         let with_recorded_size = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 8");
@@ -5305,7 +5310,7 @@ hands:
     /// Seats 8 and 9 are empty and never appear in the action, so the big
     /// blind's walk from the dead small blind at seat 7 lands on seat 0 either
     /// way.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn trailing_empty_chairs_do_not_move_the_blinds() {
         let ten_seats = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 10");
