@@ -209,5 +209,6 @@ jobs:
       # Two production WASM apps (pkgto-web, pkkuhn-web) depend on pkcore
       # building for wasm32; nothing else in CI checked it (audit VI.4). The
       # store/terminal deps are target-gated off on wasm, so `--lib` is the
-      # meaningful surface. Runs under the global RUSTFLAGS=-Dwarnings.
-      - run: cargo check --target wasm32-unknown-unknown --lib
+      # meaningful surface, plus the feature sets the wasm apps (pkarena0-web,
+      # bowery) build with. Runs under the global RUSTFLAGS=-Dwarnings.
+      - run: make check-wasm
