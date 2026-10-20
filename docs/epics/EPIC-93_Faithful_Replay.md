@@ -212,9 +212,16 @@ history must list everyone dealt in. Antes are posted by every listed seat.
    `tests/defects/`. The doc changes, not the code (0d). This is recorded as
    technical debt (`docs/TECHNICAL_DEBT.md`, "Hand-history seats are
    0-based"), because hands typed from a broadcast count from 1.
-2. **The record of The Hand.** No copy in the repo is authoritative for the
-   seats, stacks, stakes or action (DEFECT_040 § Summary). Someone must settle
-   it from the broadcast before 4c.
+2. **The record of The Hand.** The seats, cards and full action are in the
+   repo: `TestData::the_hand_seats` (`src/util/data.rs:292-303`) and
+   `examples/the_hand.rs:107-245` (DEFECT_040 § Summary). **Decided 19
+   October 2026: the broadcast's stakes and stacks.** That is $300/$600 with a
+   $100 ante, and Hansen at 287,100, derived from the $575,700 pot (DEFECT_040
+   § The broadcast's numbers). The unpublished stacks are labelled estimates
+   in the file: Negreanu 387,100, and the six who fold 100,000 each. They are
+   to be replaced when someone reads them off the episode, and 4c is not
+   blocked on that. The ante makes The Hand the first fixture to
+   exercise Phase 2a.
 
 Why a `Vec`, not `Result<(), Finding>`: DEFECT_040 has seven problems. An
 author fixing them one build at a time is the slow loop this EPIC exists to
