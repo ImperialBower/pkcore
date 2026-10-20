@@ -518,7 +518,13 @@ impl HandHistory {
     /// # Errors
     ///
     /// Returns [`PKError`] if table construction, card injection, action
-    /// application, or hand-end processing fails.
+    /// application, or hand-end processing fails, and
+    /// [`PKError::ReplayAmountMismatch`] when a `call`, `bet`, `raise` or
+    /// `all_in` records an amount the engine disagrees with (a call records the
+    /// chips it adds or the caller's street total after it; the others the
+    /// seat's street total after the action), or an amount that is not a whole
+    /// number of chips (`recorded` is then rounded down).
+    /// The mismatch is reported before the action is applied.
     ///
     /// # Examples
     ///
@@ -773,8 +779,10 @@ impl HandHistory {
     ///
     /// # Errors
     ///
-    /// The same as [`Self::replay`]. Actions observed before the error were
-    /// applied; the failing action is not observed.
+    /// The same as [`Self::replay`], including
+    /// [`PKError::ReplayAmountMismatch`] for a recorded amount the engine
+    /// disagrees with or that is not a whole number of chips. Actions observed
+    /// before the error were applied; the failing action is not observed.
     ///
     /// # Examples
     ///
@@ -803,95 +811,110 @@ impl HandHistory {
     /// # }
     /// ```
     #[cfg(feature = "hand-histories")]
-    #[allow(
-        clippy::cast_precision_loss,
-        clippy::cast_sign_loss,
-        clippy::cast_possible_truncation,
-        clippy::too_many_lines
-    )]
     pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
     where
         F: FnMut(&ReplayStep<'_>, &Table),
     {
         let mut table = self.replay_table()?;
-
-        // ── Street replay helper ─────────────────────────────────────────────
-        let mut replay_actions = |table: &mut Table, street: ReplayStreet, actions: &[Action]| -> Result<(), PKError> {
+        self.play_streets(&mut table, |table, street, actions| {
             for (index, action) in actions.iter().enumerate() {
                 if let Some(pa) = Self::action_to_player_action(action) {
+                    // An out-of-turn action is left to `apply_action`, which
+                    // reports it as out of order.
+                    if action.seat == table.next_to_act()
+                        && let Some(mismatch) = check::amount_mismatch(table, action)
+                    {
+                        return Err(PKError::ReplayAmountMismatch {
+                            seat: action.seat,
+                            recorded: mismatch.recorded,
+                            engine: mismatch.engine,
+                        });
+                    }
                     table.apply_action(action.seat, pa)?;
                 }
                 observe(&ReplayStep { street, index, action }, table);
             }
-            Ok(())
-        };
+            Ok(true)
+        })?;
+        Self::build_replay_result(table, &self.players, self.results.as_deref())
+    }
+
+    /// Plays the recorded streets on `table`, a table from
+    /// [`Self::replay_table`]: calls `street` with each street's actions in
+    /// order, and between streets gathers the bets and deals the street's
+    /// cards. It stops early when the hand is over (one player left) or when
+    /// `street` returns `Ok(false)`.
+    ///
+    /// The one street sequence that [`Self::replay_with`] and
+    /// [`Self::validate`] both walk.
+    ///
+    /// # Errors
+    ///
+    /// Whatever `street` returns, and [`PKError`] when a street's cards do not
+    /// parse or the bets cannot be gathered.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn play_streets<F>(&self, table: &mut Table, mut street: F) -> Result<(), PKError>
+    where
+        F: FnMut(&mut Table, ReplayStreet, &[Action]) -> Result<bool, PKError>,
+    {
+        let streets = self.streets.as_ref();
 
         // ── Preflop ──────────────────────────────────────────────────────────
-        if let Some(ref streets) = self.streets
-            && let Some(ref pre) = streets.preflop
+        if let Some(pre) = streets.and_then(|streets| streets.preflop.as_ref())
+            && !street(table, ReplayStreet::Preflop, &pre.actions)?
         {
-            replay_actions(&mut table, ReplayStreet::Preflop, &pre.actions)?;
+            return Ok(());
         }
-
         if table.is_game_over() {
-            return Self::build_replay_result(table, &self.players, self.results.as_deref());
+            return Ok(());
         }
-
         table.bring_it_in()?;
 
         // ── Flop ─────────────────────────────────────────────────────────────
-        if let Some(ref streets) = self.streets
-            && let Some(ref flop) = streets.flop
-        {
-            table.board = Cards::from_str(&flop.cards)?;
-            table.phase = GamePhase::DealFlop;
-            // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
-            // run-out streets (frozen bring_it_in didn't exist yet). Reset
-            // non-all-in players to YetToAct only when there are actions to
-            // apply; an empty list means the current frozen behavior applies,
-            // and the frozen state must be preserved so the next bring_it_in()
-            // sees is_betting_complete() == true.
-            if !flop.actions.is_empty() {
-                table.seats.reset_non_allin_to_yet_to_act();
-            }
-            replay_actions(&mut table, ReplayStreet::Flop, &flop.actions)?;
-
-            if table.is_game_over() {
-                return Self::build_replay_result(table, &self.players, self.results.as_deref());
-            }
-
-            table.bring_it_in()?;
-
-            // ── Turn ─────────────────────────────────────────────────────
-            if let Some(ref turn) = streets.turn {
-                let card = Card::from_str(&turn.card)?;
-                table.board.insert(card);
-                table.phase = GamePhase::DealTurn;
-                if !turn.actions.is_empty() {
-                    table.seats.reset_non_allin_to_yet_to_act();
-                }
-                replay_actions(&mut table, ReplayStreet::Turn, &turn.actions)?;
-
-                if table.is_game_over() {
-                    return Self::build_replay_result(table, &self.players, self.results.as_deref());
-                }
-
-                table.bring_it_in()?;
-
-                // ── River ─────────────────────────────────────────────────
-                if let Some(ref river) = streets.river {
-                    let card = Card::from_str(&river.card)?;
-                    table.board.insert(card);
-                    table.phase = GamePhase::DealRiver;
-                    if !river.actions.is_empty() {
-                        table.seats.reset_non_allin_to_yet_to_act();
-                    }
-                    replay_actions(&mut table, ReplayStreet::River, &river.actions)?;
-                }
-            }
+        let Some(flop) = streets.and_then(|streets| streets.flop.as_ref()) else {
+            return Ok(());
+        };
+        table.board = Cards::from_str(&flop.cards)?;
+        table.phase = GamePhase::DealFlop;
+        // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
+        // run-out streets (frozen bring_it_in didn't exist yet). Reset
+        // non-all-in players to YetToAct only when there are actions to
+        // apply; an empty list means the current frozen behavior applies,
+        // and the frozen state must be preserved so the next bring_it_in()
+        // sees is_betting_complete() == true.
+        if !flop.actions.is_empty() {
+            table.seats.reset_non_allin_to_yet_to_act();
         }
+        if !street(table, ReplayStreet::Flop, &flop.actions)? || table.is_game_over() {
+            return Ok(());
+        }
+        table.bring_it_in()?;
 
-        Self::build_replay_result(table, &self.players, self.results.as_deref())
+        // ── Turn ─────────────────────────────────────────────────────────────
+        let Some(turn) = streets.and_then(|streets| streets.turn.as_ref()) else {
+            return Ok(());
+        };
+        table.board.insert(Card::from_str(&turn.card)?);
+        table.phase = GamePhase::DealTurn;
+        if !turn.actions.is_empty() {
+            table.seats.reset_non_allin_to_yet_to_act();
+        }
+        if !street(table, ReplayStreet::Turn, &turn.actions)? || table.is_game_over() {
+            return Ok(());
+        }
+        table.bring_it_in()?;
+
+        // ── River ────────────────────────────────────────────────────────────
+        let Some(river) = streets.and_then(|streets| streets.river.as_ref()) else {
+            return Ok(());
+        };
+        table.board.insert(Card::from_str(&river.card)?);
+        table.phase = GamePhase::DealRiver;
+        if !river.actions.is_empty() {
+            table.seats.reset_non_allin_to_yet_to_act();
+        }
+        street(table, ReplayStreet::River, &river.actions)?;
+        Ok(())
     }
 
     /// Convert the [`board`] string field to a pkcore [`Board`].
@@ -2615,9 +2638,9 @@ pub struct Action {
     /// The action taken.
     pub action: ActionType,
 
-    /// For `call`, the chips this action adds. For `bet`, `raise` and `all_in`, the
-    /// total this player has bet on the street after the action. Omit for
-    /// `check`/`fold`.
+    /// For `call`, the chips this action adds, or the caller's street total after
+    /// it — both are accepted. For `bet`, `raise` and `all_in`, the total this
+    /// player has bet on the street after the action. Omit for `check`/`fold`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub amount: Option<f64>,
 
@@ -4430,6 +4453,113 @@ streets:
         .expect("replay succeeds");
 
         assert_eq!(Some(9_400), last);
+    }
+
+    /// EPIC-93: seat 1 has 49,200 behind after the big blind and records a call
+    /// of 100,000. The engine can only call 49,200, so replay refuses the hand.
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_unaffordable_call() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: short, game: holdem }
+table: { stakes: { small_blind: 400.0, big_blind: 800.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000000.0 }
+  - { seat: 1, name: B, stack: 50000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 100000.0 }
+      - { seat: 1, action: call, amount: 100000.0 }
+",
+        )
+        .expect("fixture parses");
+
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 1,
+                recorded: 100_000,
+                engine: 49_200,
+            }),
+            hand.replay()
+        );
+    }
+
+    /// EPIC-93: chips are whole, so a non-integral amount is refused even when
+    /// its whole part agrees with the engine (the small blind completing 50).
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_a_non_integral_amount() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: half, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 50.5 }
+      - { seat: 1, action: check }
+",
+        )
+        .expect("fixture parses");
+
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 0,
+                recorded: 50,
+                engine: 50,
+            }),
+            hand.replay()
+        );
+    }
+
+    /// A call recorded as the chips it adds (18,000) or as the caller's street
+    /// total (26,000) is accepted; one that matches neither is not. (The hand
+    /// stops on the flop, so an accepted replay ends in `ActionIsntFinished`:
+    /// only the amount check is under test.)
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_a_call_matching_neither_reading() {
+        let yaml = |call: &str| {
+            format!(
+                "
+hand: {{ id: calltotal, game: holdem }}
+table: {{ stakes: {{ small_blind: 400.0, big_blind: 800.0 }} }}
+players:
+  - {{ seat: 0, name: A, stack: 1000000.0 }}
+  - {{ seat: 1, name: B, stack: 1000000.0 }}
+streets:
+  preflop:
+    actions:
+      - {{ seat: 0, action: call, amount: 400.0 }}
+      - {{ seat: 1, action: check }}
+  flop:
+    cards: '9♣ 6♦ 5♥'
+    actions:
+      - {{ seat: 1, action: bet, amount: 8000.0 }}
+      - {{ seat: 0, action: raise, amount: 26000.0 }}
+      - {{ seat: 1, action: call, amount: {call} }}
+"
+            )
+        };
+        for accepted in ["18000.0", "26000.0"] {
+            let hand = HandHistory::from_yaml(&yaml(accepted)).expect("fixture parses");
+            assert_eq!(Err(PKError::ActionIsntFinished), hand.replay(), "call {accepted}");
+        }
+
+        let neither = HandHistory::from_yaml(&yaml("20000.0")).expect("fixture parses");
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 1,
+                recorded: 20_000,
+                engine: 18_000,
+            }),
+            neither.replay()
+        );
     }
 
     #[test]

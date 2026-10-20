@@ -24,8 +24,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/defects/validate/` holds hands that are wrong on purpose, starting with
   `data/hands/the_hand.yaml` as it stood (DEFECT_040). See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`validate` walks the hand through the engine: the Order, Legality and
+  Amount rules** (`hand-histories`). **Order**: each action is by the engine's
+  next seat to act; an action out of turn cannot be applied, so the walk stops
+  there (not reported again where the Seats rule already blamed the seat).
+  **Legality**: a bet or raise below the minimum and not all in, a bet or raise
+  larger than the stack, a bet or raise when no raise is open, and a check
+  facing a bet; each is repaired (to the minimum, an all-in, a call, or a check)
+  and the walk goes on, and the first repair adds one finding, "pots, nets and
+  amounts after this point are not checked": from there only the whole-chips
+  check runs on amounts. **Amount**: a
+  recorded amount is a whole number of chips and is the engine's. A `call` may
+  record the chips it adds or the caller's street total after it (both are
+  accepted; one matching neither is a finding), and a `bet`, `raise` or
+  `all_in` records the seat's street total after it. A call larger than the
+  stack can put in, not marked `all_in`, names both numbers ("calls 100000 with
+  49200 behind"). A seat that acts without being listed is
+  seated with the largest listed stack so the walk can continue past the Seats
+  finding. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`PKError::ReplayAmountMismatch { seat, recorded, engine }`**, the error
+  `replay` returns for a recorded amount the engine disagrees with.
 
 ### Changed
+
+- **`replay()` and `replay_with()` reject recorded amounts the engine
+  disagrees with.** Before applying a `call`, `bet`, `raise` or `all_in` they
+  compare its `amount` with the engine's, using the same comparison as
+  `validate`, and return `PKError::ReplayAmountMismatch` on a difference. A
+  call may record the chips it adds or the caller's street total; a history
+  replay accepted only because the amount was ignored (a call matching neither
+  reading, a call larger than the stack, an amount that is not a whole number
+  of chips) now fails. Histories
+  written by `HandHistory::from_table_state` record amounts the engine's way
+  and replay as before. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
 - **Replay moved from `bot-profiles` to `hand-histories`.** `HandHistory::replay`,
   `replay_with`, `HandCollection::replay_all` and `ReplayResult` now need only
@@ -33,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `replay` (EPIC-93).
 - **Hand-history seats are documented as 0-based** (they always were): the
   `seat` and `button` fields on the format types now say so, and `Action::amount`
-  states what it records: for `call`, the chips the action adds; for `bet`,
+  states what it records: for `call`, the chips the action adds or the
+  caller's street total after it (both are accepted); for `bet`,
   `raise` and `all_in`, the total the player has bet on the street after the
   action. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 

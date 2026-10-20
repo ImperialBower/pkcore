@@ -678,6 +678,19 @@ pub enum PKError {
     /// instead of a panic. Contrast with a `todo!()` body — this variant is the
     /// non-panicking replacement for one.
     NotImplemented,
+    /// EPIC-93: a replayed action records an amount the engine disagrees with.
+    ///
+    /// `seat` is the acting seat, `recorded` the amount in the hand history
+    /// (rounded down to whole chips) and `engine` the amount the engine would
+    /// move: for a call, the chips it adds (a call recorded as either that or
+    /// the caller's street total is accepted); for a bet, raise or all-in, the
+    /// total the seat has bet on the street after it. Returned by
+    /// `HandHistory::replay` before the action is applied.
+    ReplayAmountMismatch {
+        seat: u8,
+        recorded: usize,
+        engine: usize,
+    },
 }
 
 impl Display for PKError {
@@ -746,6 +759,9 @@ impl Display for PKError {
             PKError::TooManyPlayers => "Too many players for this game's deck",
             PKError::InconsistentWins => "Wins record is inconsistent: tie counts differ between players",
             PKError::NotImplemented => "Operation not yet implemented",
+            PKError::ReplayAmountMismatch { seat, recorded, engine } => {
+                &*format!("Replay amount mismatch: seat {seat} records {recorded}, the engine's amount is {engine}")
+            }
         };
         write!(f, "{msg}")
     }
@@ -1552,6 +1568,19 @@ mod lib_tests {
         assert_eq!(
             "Invalid frequency: must be in [0.0, 1.0]",
             PKError::InvalidFrequency.to_string()
+        );
+    }
+
+    #[test]
+    fn pkerror_display_replay_amount_mismatch() {
+        let error = PKError::ReplayAmountMismatch {
+            seat: 4,
+            recorded: 26_000,
+            engine: 18_000,
+        };
+        assert_eq!(
+            "Replay amount mismatch: seat 4 records 26000, the engine's amount is 18000",
+            error.to_string()
         );
     }
 }
