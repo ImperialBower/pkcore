@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] - 2026-10-21
+
+### Changed
+
+- **GitHub Release pages open with a scannable summary.** The release body
+  used to be the CHANGELOG section pasted in whole, so a release like 0.17.0
+  read as pages of prose. `scripts/release_notes.sh` now prints each
+  `### Added` / `### Changed` / `### Fixed` group as one line per entry,
+  holding only the entry's bold lead, and folds the full CHANGELOG text under
+  a closed "Full changelog" disclosure beneath it. Coverage and the commit
+  list follow as before. The CHANGELOG file itself is unchanged; the summary
+  is derived from the bold lead each entry already starts with, and an entry
+  without one is summarised by its first line. `make release-notes
+  TAG=vX.Y.Z` previews the new shape.
+
 ## [0.17.0] - 2026-10-19
 
 ### Added

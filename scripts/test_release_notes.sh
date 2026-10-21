@@ -142,6 +142,42 @@ assert_contains "function coverage is 10.09%" " 10.09% "  "$table"
 assert_contains "region coverage is 9.99%"    " 9.99% "   "$table"
 assert_contains "carries the doc-test caveat" "Doc tests excluded" "$table"
 
+echo "highlights"
+# One line per top-level bullet, holding only the bold lead. The lead may wrap
+# onto a continuation line, a bullet may have no bold lead at all (first line
+# is used), a trailing period is dropped, and a heading with no bullets under
+# it is omitted so the summary never shows an empty group.
+section=$(cat <<'EOF'
+### Added
+
+- **`Foo::bar`** (`feature`). Long prose that must
+  not appear in the summary.
+- **A lead that wraps onto the
+  next line.** More prose.
+- Plain bullet with no bold lead
+  and a continuation line.
+
+### Deprecated
+
+### Fixed
+
+- **Fix one.** Why it mattered.
+EOF
+)
+expected=$(cat <<'EOF'
+### Added
+- `Foo::bar`
+- A lead that wraps onto the next line
+- Plain bullet with no bold lead
+
+### Fixed
+- Fix one
+EOF
+)
+assert_eq "bold leads, wrapped lead, fallback, no empty group" \
+  "$expected" "$(printf '%s\n' "$section" | highlights)"
+assert_eq "empty input gives empty output" "" "$(printf '' | highlights)"
+
 echo "main"
 # v0.3.0: an old released tag with distinctive changelog prose (EPIC-36) to
 # assert on. Nothing else is special about it — [0.3.1] and [0.3.2] have
@@ -149,6 +185,9 @@ echo "main"
 # v9.9.9 test below.
 body=$(main v0.3.0 2>/dev/null)
 assert_contains "body has changelog prose"   "EPIC-36"       "$body"
+assert_contains "body folds the full changelog" "<details><summary>Full changelog</summary>" "$body"
+assert_eq "highlights come before the fold" "yes" \
+  "$(printf '%s\n' "$body" | awk '/^- /{seen=1} /Full changelog/{print (seen ? "yes" : "no"); exit}')"
 assert_contains "body has collapsed commits" "<details>"     "$body"
 assert_contains "body names previous tag"    "since v0.2.1"  "$body"
 

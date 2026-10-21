@@ -128,6 +128,47 @@ coverage_table() {
   printf '_Doc tests excluded — `--doctests` requires nightly, and this repo pins stable._\n'
 }
 
+# Scannable summary of a CHANGELOG section: each '### Group' heading followed
+# by one line per top-level bullet, holding only the bullet's bold lead
+# ('- **title** prose...' -> '- title'). The lead may wrap onto continuation
+# lines, so a bullet is buffered until the next bullet, heading or blank line.
+# A bullet with no bold lead falls back to its first line. A trailing period
+# is dropped so leads written as sentences and leads written as names line up.
+# A heading with no bullets under it is omitted.
+highlights() {
+  awk '
+    function emit(   title) {
+      if (pending == "") return
+      title = pending
+      if (title ~ /^\*\*/ && title ~ /^\*\*.*\*\*/) {
+        sub(/^\*\*/, "", title)
+        sub(/\*\*.*$/, "", title)
+      } else {
+        title = first
+      }
+      sub(/[.]$/, "", title)
+      print "- " title
+      pending = ""
+    }
+    /^### / { emit(); heading = $0; next }
+    /^- / {
+      emit()
+      if (heading != "") {
+        if (printed) print ""
+        print heading
+        heading = ""
+        printed = 1
+      }
+      pending = substr($0, 3)
+      first = pending
+      next
+    }
+    /^  +/ && pending != "" { sub(/^ +/, ""); pending = pending " " $0; next }
+    /^[[:space:]]*$/ { emit() }
+    END { emit() }
+  '
+}
+
 main() {
   local tag="${1:-}" coverage_file="${2:-}"
   if [ -z "$tag" ]; then
@@ -156,7 +197,12 @@ main() {
   prev=$(previous_ref "$target")
   count=$(git rev-list --no-merges --count "$(commit_range "$prev" "$target")") || return 1
 
+  # Highlights first, so the release page scans in one screen; the full
+  # changelog prose is still there, one click away.
+  printf '%s\n\n' "$(printf '%s\n' "$changelog" | highlights)"
+  printf '<details><summary>Full changelog</summary>\n\n'
   printf '%s\n\n' "$changelog"
+  printf '</details>\n\n'
 
   local cov
   cov=$(coverage_table "$coverage_file")
