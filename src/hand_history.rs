@@ -602,7 +602,14 @@ impl HandHistory {
     /// before the first recorded action.
     ///
     /// [`Self::replay_with`] plays the recorded actions on it. The Hold'em
-    /// branch posts the recorded ante (`DEFECT_040`).
+    /// and Omaha branches post the recorded ante (`DEFECT_040`).
+    ///
+    /// For Hold'em and Omaha the deck is the hand's own: the part of
+    /// [`Self::stacked_deck`] the hole cards did not take, burns and board in
+    /// the order the engine deals them, so a table taken from any point of
+    /// the replay deals the record's next cards. When the record cannot be
+    /// stacked (a card recorded twice, say) the deck is the full box deck, as
+    /// it is for every other game.
     ///
     /// # Errors
     ///
@@ -610,12 +617,30 @@ impl HandHistory {
     /// many chairs), a forced bet cannot be posted, or a hole card string does
     /// not parse.
     #[cfg(feature = "hand-histories")]
+    pub(crate) fn replay_table(&self) -> Result<Table, PKError> {
+        let mut table = self.seated_table()?;
+        if matches!(self.hand.game, HandVariant::Holdem | HandVariant::Omaha)
+            && let Ok((deck, holes)) = self.stack_on(&table)
+        {
+            table.deck = deck.iter().skip(holes).copied().collect();
+        }
+        Ok(table)
+    }
+
+    /// [`Self::replay_table`] without the hand's deck: the engine's table
+    /// with the record's seats, forced bets and hole cards, and the box deck.
+    /// [`Self::stacked_deck`] stacks its deck from this table.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::replay_table`].
+    #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation
     )]
-    pub(crate) fn replay_table(&self) -> Result<Table, PKError> {
+    fn seated_table(&self) -> Result<Table, PKError> {
         let sb = self.table.stakes.small_blind as usize;
         let bb = self.table.stakes.big_blind as usize;
         let button = self.table.button.unwrap_or(0);
@@ -707,9 +732,15 @@ impl HandHistory {
                 Table::stud_hi_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, table_id)?
             }
         } else if self.hand.game == HandVariant::Omaha {
-            Table::plo_from_seats_with_id(seats, (sb, bb), table_id)
+            // EPIC-93: Omaha posts the recorded ante, as Hold'em does.
+            let ante = self.table.stakes.ante.map_or(0, |amount| amount as usize);
+            let mut table = Table::plo_from_seats_with_id(seats, (sb, bb), table_id);
+            table.forced = ForcedBets::new_with_ante(sb, bb, ante);
+            table
         } else {
             // `DEFECT_040`: the recorded ante is posted, as stud's always was.
+            // Fixed-limit Hold'em takes its blinds from the bet sizes and posts
+            // no ante (EPIC-93 corrigendum).
             let ante = self.table.stakes.ante.map_or(0, |amount| amount as usize);
             if let crate::games::betting_structure::BettingStructure::FixedLimit {
                 small_bet,
@@ -924,6 +955,8 @@ impl HandHistory {
                     return Ok(None);
                 };
                 table.board = Cards::from_str(&flop.cards)?;
+                let laid: Vec<Card> = table.board.iter().copied().collect();
+                Self::draw_laid(table, &laid);
                 table.phase = GamePhase::DealFlop;
                 &flop.actions
             }
@@ -931,7 +964,9 @@ impl HandHistory {
                 let Some(turn) = streets.and_then(|streets| streets.turn.as_ref()) else {
                     return Ok(None);
                 };
-                table.board.insert(Card::from_str(&turn.card)?);
+                let card = Card::from_str(&turn.card)?;
+                table.board.insert(card);
+                Self::draw_laid(table, &[card]);
                 table.phase = GamePhase::DealTurn;
                 &turn.actions
             }
@@ -939,7 +974,9 @@ impl HandHistory {
                 let Some(river) = streets.and_then(|streets| streets.river.as_ref()) else {
                     return Ok(None);
                 };
-                table.board.insert(Card::from_str(&river.card)?);
+                let card = Card::from_str(&river.card)?;
+                table.board.insert(card);
+                Self::draw_laid(table, &[card]);
                 table.phase = GamePhase::DealRiver;
                 &river.actions
             }
@@ -954,6 +991,26 @@ impl HandHistory {
             table.seats.reset_non_allin_to_yet_to_act();
         }
         Ok(Some(actions))
+    }
+
+    /// Takes a street's burn and `laid`, the cards [`Self::lay_street`] just
+    /// laid, off the top of `table`'s deck, the burn to the muck, as the
+    /// engine's `deal_flop`, `deal_turn` and `deal_river` do. Only the hand's
+    /// own deck from [`Self::replay_table`] is drawn from: the hole cards have
+    /// left it short of 52, and it holds the laid cards there, under the burn.
+    /// The full box deck a hand that cannot be stacked keeps is left whole.
+    #[cfg(feature = "hand-histories")]
+    fn draw_laid(table: &mut Table, laid: &[Card]) {
+        let next: Vec<Card> = table.deck.iter().skip(1).take(laid.len()).copied().collect();
+        if table.deck.len() == Cards::DECK_SIZE || next.as_slice() != laid {
+            return;
+        }
+        if let Ok(burn) = table.deck.draw_one() {
+            table.muck.insert(burn);
+        }
+        for card in laid {
+            table.deck.remove(card);
+        }
     }
 
     /// Convert the [`board`] string field to a pkcore [`Board`].
@@ -4486,6 +4543,38 @@ streets:
         assert_eq!(Some(9_400), last);
     }
 
+    /// EPIC-93 final review M1: Omaha posts the recorded ante, as Hold'em
+    /// does. A raise to 300 that takes the big blind and both antes nets 110.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn replay__omaha_honours_ante() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: plo-ante, game: omaha }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0, ante: 10.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 300.0 }
+      - { seat: 1, action: fold }
+results:
+  - { seat: 0, outcome: win, net: 110.0 }
+  - { seat: 1, outcome: fold, net: -110.0 }
+",
+        )
+        .expect("fixture parses");
+
+        // Blinds of 50 and 100, and two antes of 10.
+        assert_eq!(170, hand.replay_table().expect("table").effective_pot());
+        let result = hand.replay().expect("replay succeeds");
+        assert!(result.is_consistent, "{result:?}");
+        assert_eq!(vec![(0, 1_110), (1, 890)], result.final_stacks);
+        assert!(hand.validate().is_empty(), "{:?}", hand.validate());
+    }
+
     /// EPIC-93: seat 1 has 49,200 behind after the big blind and records a call
     /// of 100,000. The engine can only call 49,200, so replay refuses the hand.
     #[test]
@@ -4786,6 +4875,34 @@ hands:
             &ForcedBets::new(50, 100),
             &[(1, "Alice".to_string(), 1000, None)],
             "A♠ K♠ Q♠",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("5♥ 6♦ 9♣", hh.streets.unwrap().flop.unwrap().cards);
+    }
+
+    /// A board shorter than a flop has no flop order to give, so the logged
+    /// flop stays as the log wrote it.
+    #[test]
+    fn from_table_state__keeps_the_logged_flop_for_a_short_board() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "9♣ 6♦",
             &Winnings::default(),
             &log,
             &[(1, 1000)],

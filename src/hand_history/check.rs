@@ -1,7 +1,7 @@
 //! `HandHistory::validate`: checks a hand history's claims against the rules
 //! of the game (EPIC-93, Faithful Replay).
 //!
-//! A hand history is a claim. [`HandHistory::validate`] reads one and returns a
+//! A hand history is a claim. [`HandHistory::validate`](crate::hand_history::HandHistory::validate) reads one and returns a
 //! [`Finding`] for every place the claim breaks a rule, each one naming the
 //! YAML path of the field at fault and the [`Rule`] it broke. It returns all of
 //! them, not the first, so an author fixes a file in one pass instead of one
@@ -12,7 +12,9 @@
 //! list of findings, so a pass added later (order, legality, amounts, pots,
 //! results, money) joins the sequence in `validate` without touching the
 //! others. A rule that finds nothing wrong adds nothing: absent optional fields
-//! are not findings.
+//! are not findings, except that a record must run to the end of the hand
+//! (the Incomplete rule), so `validate` coming back empty means `replay` and
+//! `cursor` succeed.
 //!
 //! # Seats
 //!
@@ -120,13 +122,16 @@ pub enum Rule {
     /// disagrees with the streets.
     Cards,
     /// Seats are not unique or not within the table, the button is outside the table,
-    /// or an action is by a seat that is not listed or has already folded.
+    /// an action is by a seat that is not listed or has already folded, a
+    /// starting stack is not a whole number of chips, or the engine cannot
+    /// seat the players and post their forced bets.
     Seats,
     /// Actions do not follow the engine's turn order.
     Order,
     /// An action is not legal at that point.
     Legality,
-    /// A recorded amount is not the engine's amount.
+    /// A recorded amount is not the engine's amount, or an amount or stake is
+    /// not a whole number of chips, or the engine cannot post the stakes.
     Amount,
     /// A recorded pot is not the engine's pot.
     Pot,
@@ -136,6 +141,10 @@ pub enum Rule {
     Money,
     /// The game is one `validate` does not check (stud and razz).
     Unsupported,
+    /// The record stops before the hand is over: two or more seats are still
+    /// in, and an action or a street is missing. A hand history runs to the
+    /// end of the hand, so it can be replayed.
+    Incomplete,
 }
 
 impl fmt::Display for Rule {
@@ -151,6 +160,7 @@ impl fmt::Display for Rule {
             Rule::Result => "result",
             Rule::Money => "money",
             Rule::Unsupported => "unsupported",
+            Rule::Incomplete => "incomplete",
         };
         f.write_str(name)
     }
@@ -158,16 +168,34 @@ impl fmt::Display for Rule {
 
 impl crate::hand_history::HandHistory {
     /// Checks this hand history against the rules and returns every
-    /// disagreement. Empty means no rule found a fault.
+    /// disagreement.
+    ///
+    /// Empty means the hand is a complete, legal record that replays: no rule
+    /// found a fault, the record runs to the end of the hand, and
+    /// [`Self::replay`] and [`Self::cursor`] both succeed on it. A record
+    /// that stops before the hand is over (two or more seats still in, with
+    /// an action or a street missing, or no `streets` at all) is a
+    /// [`Rule::Incomplete`] finding; so is a board given only in `board` for a
+    /// hand that went all in, since the streets the engine plays are not
+    /// recorded. Partial records are not supported.
     ///
     /// Stud, stud hi-lo and razz are not checked: they return one
     /// [`Rule::Unsupported`] finding at `hand.game` and nothing else. For every
-    /// other game the rules run in turn (cards, seats, then a walk through the
-    /// engine for order, legality, amounts and pots, then results and money)
-    /// and each appends its findings, so one file's several faults come back
-    /// together. Absent optional fields (`board`, `streets`, hole cards,
-    /// `table.seats`, `table.button`, `pot`, `results`, `net`) are not
-    /// findings.
+    /// other game the rules run in turn (cards, seats, stakes and stacks, then
+    /// a walk through the engine for order, legality, amounts, pots and
+    /// completeness, then results and money) and each appends its findings,
+    /// so one file's several faults come back together. Other absent optional
+    /// fields (`board`, hole cards, `table.seats`, `table.button`, `pot`,
+    /// `results`, `net`) are not findings.
+    ///
+    /// Every stake is a whole, non-negative number of chips (a
+    /// [`Rule::Amount`] finding at `table.stakes.*` otherwise) and so is every
+    /// starting stack (a [`Rule::Seats`] finding at `players[i].stack`): NaN,
+    /// negative and infinite numbers are findings. A hand the engine cannot
+    /// set up at all, such as a listed player with no chips in a blind, is
+    /// one finding at `players` ([`Rule::Seats`]), or at `table.stakes`
+    /// ([`Rule::Amount`]) when the stakes are at fault, naming the engine's
+    /// error.
     ///
     /// A street's `pot` is the engine's pot after the street's last action,
     /// antes, blinds and the street's bets included. Results are checked on
@@ -199,6 +227,10 @@ impl crate::hand_history::HandHistory {
     /// players:
     ///   - { seat: 0, name: A, stack: 1000.0 }
     ///   - { seat: 6, name: B, stack: 1000.0 }
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: fold }
     /// ").unwrap();
     ///
     /// let findings = hand.validate();
@@ -209,7 +241,8 @@ impl crate::hand_history::HandHistory {
     ///
     /// A call records the chips it adds or the caller's street total after it.
     /// The big blind calling a raise to 300 adds 200 and has 300 in, so a call
-    /// of 250 is neither:
+    /// of 250 is neither. The hand plays on to its end, so that is the only
+    /// finding:
     ///
     /// ```
     /// # #[cfg(feature = "hand-histories")]
@@ -227,10 +260,15 @@ impl crate::hand_history::HandHistory {
     ///     actions:
     ///       - { seat: 0, action: raise, amount: 300.0 }
     ///       - { seat: 1, action: call, amount: 250.0 }
+    ///   flop:
+    ///     cards: 'K♠ K♣ 9♦'
+    ///     actions:
+    ///       - { seat: 1, action: bet, amount: 100.0 }
+    ///       - { seat: 0, action: fold }
     /// ").unwrap();
     ///
     /// let findings = hand.validate();
-    /// assert_eq!(1, findings.len());
+    /// assert_eq!(1, findings.len(), "{findings:?}");
     /// assert_eq!(Rule::Amount, findings[0].rule);
     /// assert_eq!("streets.preflop.actions[1].amount", findings[0].path);
     /// # }
@@ -252,6 +290,14 @@ impl crate::hand_history::HandHistory {
     ///   - { seat: 0, name: A, stack: 1000.0, hole_cards: '6♠ 6♥' }
     ///   - { seat: 1, name: B, stack: 1000.0, hole_cards: '5♦ 5♣' }
     /// board: '9♣ 6♦ 5♥ 5♠ 8♠'
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: all_in, amount: 1000.0, all_in: true }
+    ///       - { seat: 1, action: call, amount: 900.0 }
+    ///   flop: { cards: '9♣ 6♦ 5♥', actions: [] }
+    ///   turn: { card: '5♠', actions: [] }
+    ///   river: { card: '8♠', actions: [] }
     /// results:
     ///   - { seat: 0, outcome: win }
     ///   - { seat: 1, outcome: lose }
@@ -260,6 +306,37 @@ impl crate::hand_history::HandHistory {
     /// let findings = hand.validate();
     /// assert!(findings.iter().all(|finding| finding.rule == Rule::Result));
     /// assert!(findings.iter().any(|finding| finding.path == "results[1].outcome"));
+    /// # }
+    /// ```
+    ///
+    /// A record that stops before the hand is over is a [`Rule::Incomplete`]
+    /// finding: both players are all in, but the streets the engine deals are
+    /// not recorded, only the `board`:
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::{HandHistory, Rule};
+    ///
+    /// let hand = HandHistory::from_yaml(r"
+    /// hand: { id: ex, game: holdem }
+    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0 }
+    ///   - { seat: 1, name: B, stack: 1000.0 }
+    /// board: '9♣ 6♦ 5♥ 5♠ 8♠'
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: all_in, amount: 1000.0, all_in: true }
+    ///       - { seat: 1, action: call, amount: 900.0 }
+    /// ").unwrap();
+    ///
+    /// let findings = hand.validate();
+    /// assert_eq!(1, findings.len());
+    /// assert_eq!(Rule::Incomplete, findings[0].rule);
+    /// assert_eq!("streets.preflop", findings[0].path);
+    /// assert!(hand.cursor().is_err());
     /// # }
     /// ```
     #[cfg(feature = "hand-histories")]
@@ -271,6 +348,7 @@ impl crate::hand_history::HandHistory {
         let mut findings = Vec::new();
         passes::cards(self, &mut findings);
         passes::seats(self, &mut findings);
+        passes::chips(self, &mut findings);
         let walk = passes::walk(self, &mut findings);
         passes::results(self, &mut findings);
         passes::money(self, &mut findings);
@@ -699,6 +777,85 @@ mod passes {
         }
     }
 
+    // ── Chips: stakes and stacks ─────────────────────────────────────────────
+
+    /// The stakes, each with the path it lives at.
+    fn stakes(hand: &HandHistory) -> Vec<(&'static str, f64)> {
+        let stakes = &hand.table.stakes;
+        let mut named = vec![
+            ("table.stakes.small_blind", stakes.small_blind),
+            ("table.stakes.big_blind", stakes.big_blind),
+        ];
+        for (path, value) in [
+            ("table.stakes.ante", stakes.ante),
+            ("table.stakes.straddle", stakes.straddle),
+            ("table.stakes.bring_in", stakes.bring_in),
+        ] {
+            if let Some(value) = value {
+                named.push((path, value));
+            }
+        }
+        named
+    }
+
+    /// Amount and Seats rules, on the record alone: every stake (an
+    /// [`Rule::Amount`] finding) and every starting stack (a [`Rule::Seats`]
+    /// finding) is a whole, non-negative number of chips. NaN, a negative
+    /// number and infinity are not, and the engine would read each of them
+    /// as some other number.
+    pub(super) fn chips(hand: &HandHistory, findings: &mut Vec<Finding>) {
+        for (path, value) in stakes(hand) {
+            if !is_whole_chips(value) {
+                findings.push(Finding {
+                    path: path.to_string(),
+                    rule: Rule::Amount,
+                    message: format!("records {value}, which is not a whole number of chips"),
+                });
+            }
+        }
+        for (index, player) in hand.players.iter().enumerate() {
+            if !is_whole_chips(player.stack) {
+                findings.push(Finding {
+                    path: format!("players[{index}].stack"),
+                    rule: Rule::Seats,
+                    message: format!(
+                        "seat {} starts with {}, which is not a whole number of chips",
+                        player.seat, player.stack
+                    ),
+                });
+            }
+        }
+    }
+
+    /// The finding for a hand the engine cannot set up: its stakes when the
+    /// Amount rule found fault with them, otherwise its players. `None` when
+    /// a hole-card string does not parse: the Cards rule has said so.
+    fn unseated(error: crate::PKError, findings: &[Finding]) -> Option<Finding> {
+        let at_fault = |prefix: &str, rule: Rule| {
+            findings
+                .iter()
+                .any(|finding| finding.rule == rule && finding.path.starts_with(prefix))
+        };
+        if at_fault("players[", Rule::Cards) {
+            return None;
+        }
+        Some(if at_fault("table.stakes", Rule::Amount) {
+            Finding {
+                path: "table.stakes".to_string(),
+                rule: Rule::Amount,
+                message: format!("the engine cannot post these stakes ({error:?}: {error})"),
+            }
+        } else {
+            Finding {
+                path: "players".to_string(),
+                rule: Rule::Seats,
+                message: format!(
+                    "the engine cannot seat these players and post the forced bets ({error:?}: {error}); every stack must cover its blind and ante"
+                ),
+            }
+        })
+    }
+
     // ── The walk: Order, Legality, Amount ────────────────────────────────────
 
     /// The message of the one finding that marks the first repair.
@@ -707,7 +864,8 @@ mod passes {
     /// What the walk leaves for the rules that read the engine's table.
     pub(super) struct Walk {
         /// The table after the last action the walk applied; `None` when the
-        /// starting table could not be built (the Cards rule says why).
+        /// starting table could not be built (a Seats or Amount finding at
+        /// `players` or `table.stakes` says why, or the Cards rule does).
         pub(super) table: Option<Table>,
         /// True once an action was repaired: from there the engine's chips are
         /// not the record's, so pots, nets and amounts compared with the engine
@@ -757,18 +915,27 @@ mod passes {
     ///   walk stopped, or that ends after a repair, is not checked, and no pot
     ///   is reported for a hand with an Amount finding.
     ///
-    /// A seat that acts but is not listed is seated with the largest listed
-    /// stack, so the walk can go on past the Seats finding.
+    /// - **Incomplete**: a walk that played every recorded action, or ran out
+    ///   of record mid-street, and left two or more seats in a hand that is
+    ///   not over, reports it once ([`incomplete`]).
+    ///
+    /// A hand the engine cannot set up is one finding ([`unseated`]) and no
+    /// walk. A seat that acts but is not listed is seated with the largest
+    /// listed stack, so the walk can go on past the Seats finding.
     pub(super) fn walk(hand: &HandHistory, findings: &mut Vec<Finding>) -> Walk {
         let recorded = hand;
         let hand = seat_unlisted_actors(hand);
-        let Ok(mut table) = hand.replay_table() else {
-            return Walk {
-                table: None,
-                repaired: false,
-                complete: false,
-                amount_found: false,
-            };
+        let mut table = match hand.replay_table() {
+            Ok(table) => table,
+            Err(error) => {
+                findings.extend(unseated(error, findings));
+                return Walk {
+                    table: None,
+                    repaired: false,
+                    complete: false,
+                    amount_found: false,
+                };
+            }
         };
         let blamed = findings
             .iter()
@@ -784,9 +951,11 @@ mod passes {
             folded_bet: 0,
         };
         let mut pots: Vec<Finding> = Vec::new();
+        let mut last: Option<ReplayStreet> = None;
         // A street whose cards do not parse ends the walk; the Cards rule has
         // already reported it.
         let played = hand.play_streets(&mut table, |table, street, actions| {
+            last = Some(street);
             let prefix = street_prefix(street);
             walker.folded_bet = 0;
             for (index, action) in actions.iter().enumerate() {
@@ -807,12 +976,56 @@ mod passes {
         if !walker.amount_found {
             walker.findings.append(&mut pots);
         }
+        // The walk ran out of record rather than stopping at a fault: every
+        // street played, or the next street could not be dealt because the
+        // last one's betting is not done.
+        let ran_out = !walker.stopped && matches!(played, Ok(()) | Err(crate::PKError::ActionIsntFinished));
+        if ran_out && let Some(finding) = incomplete(&table, last) {
+            walker.findings.push(finding);
+        }
         Walk {
             table: Some(table),
             repaired: walker.repaired,
             complete: played.is_ok() && !walker.stopped,
             amount_found: walker.amount_found,
         }
+    }
+
+    /// Incomplete rule: after a walk that played every recorded action, the
+    /// hand is over: one seat is left, or the river's betting is done. `last`
+    /// is the last street the walk played; the finding is at its path, or at
+    /// `streets` when no action was recorded.
+    fn incomplete(table: &Table, last: Option<ReplayStreet>) -> Option<Finding> {
+        if table.is_game_over() {
+            return None;
+        }
+        let left = table.seats.count_active_in_hand();
+        let Some(street) = last else {
+            return Some(Finding {
+                path: "streets".to_string(),
+                rule: Rule::Incomplete,
+                message: format!(
+                    "no action is recorded, with seat {} first to act and {left} seats in; record every action to the end of the hand",
+                    table.next_to_act()
+                ),
+            });
+        };
+        let path = street_prefix(street).to_string();
+        let message = if table.seats.is_betting_complete() {
+            format!(
+                "the record stops after the {street} with {left} seats still in; record every street to the end of the hand"
+            )
+        } else {
+            format!(
+                "the record stops on the {street} with seat {} to act and {left} seats still in; record every action to the end of the hand",
+                table.next_to_act()
+            )
+        };
+        Some(Finding {
+            path,
+            rule: Rule::Incomplete,
+            message,
+        })
     }
 
     /// The `pot` recorded at the end of `street`, if any.
@@ -1470,6 +1683,24 @@ streets:
         HandHistory::from_yaml(yaml).unwrap()
     }
 
+    /// `hand`'s findings less the one [`Rule::Incomplete`] finding. Many
+    /// fixtures here are partial records on purpose, stopping once their rule
+    /// has something to say; this keeps each test on its own rule. The
+    /// Incomplete rule has tests of its own.
+    #[cfg(feature = "hand-histories")]
+    fn partial(hand: &HandHistory) -> Vec<Finding> {
+        let findings = hand.validate();
+        let incomplete = findings
+            .iter()
+            .filter(|finding| finding.rule == Rule::Incomplete)
+            .count();
+        assert!(incomplete <= 1, "{findings:?}");
+        findings
+            .into_iter()
+            .filter(|finding| finding.rule != Rule::Incomplete)
+            .collect()
+    }
+
     #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__clean_heads_up_hand_has_no_findings() {
@@ -1487,7 +1718,7 @@ players:
   - { seat: 1, name: B, stack: 1000.0, hole_cards: 'Q♦ J♦' }
 board: 'A♠ 7♣ 2♥'
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Cards, findings[0].rule);
         assert_eq!("board", findings[0].path);
@@ -1504,7 +1735,7 @@ players:
   - { seat: 0, name: A, stack: 1000.0, hole_cards: 'A♠ K♠' }
   - { seat: 1, name: B, stack: 1000.0, hole_cards: 'K♠ J♦' }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!("players[1].hole_cards", findings[0].path);
     }
@@ -1519,7 +1750,7 @@ players:
   - { seat: 0, name: A, stack: 1000.0, hole_cards: 'A♠ Zz' }
   - { seat: 1, name: B, stack: 1000.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Cards, findings[0].rule);
         assert_eq!("players[0].hole_cards", findings[0].path);
@@ -1539,7 +1770,7 @@ streets:
   flop: { cards: '9♣ 6♦ 5♥', actions: [] }
   turn: { card: '4♠', actions: [] }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Cards, findings[0].rule);
         assert_eq!("board", findings[0].path);
@@ -1565,7 +1796,7 @@ streets:
   turn: { card: '5♠', actions: [] }
   river: { card: '8♠', actions: [] }
 ";
-        assert_eq!(Vec::<Finding>::new(), hand(yaml).validate());
+        assert_eq!(Vec::<Finding>::new(), partial(&hand(yaml)));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -1579,7 +1810,7 @@ players:
   - { seat: 1, name: B, stack: 1000.0 }
 board: '9♣ 6♦'
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Cards, findings[0].rule);
         assert_eq!("board", findings[0].path);
@@ -1643,7 +1874,7 @@ players:
   - { seat: 0, name: A, stack: 1000.0 }
   - { seat: 6, name: B, stack: 1000.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Seats, findings[0].rule);
         assert_eq!("players[1].seat", findings[0].path);
@@ -1676,7 +1907,7 @@ players:
   - { seat: 0, name: A, stack: 1000.0 }
   - { seat: 1, name: B, stack: 1000.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Seats, findings[0].rule);
         assert_eq!("table.button", findings[0].path);
@@ -2031,7 +2262,7 @@ streets:
     #[test]
     fn validate__call_recorded_as_added_or_total_is_accepted() {
         for amount in ["18000.0", "26000.0"] {
-            let findings = hand(&flop_call(amount)).validate();
+            let findings = partial(&hand(&flop_call(amount)));
             assert_eq!(Vec::<Finding>::new(), findings, "call {amount}");
         }
     }
@@ -2039,7 +2270,7 @@ streets:
     #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__call_matching_neither_reading_is_an_amount_finding() {
-        let findings = hand(&flop_call("20000.0")).validate();
+        let findings = partial(&hand(&flop_call("20000.0")));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Amount, findings[0].rule);
         assert_eq!("streets.flop.actions[2].amount", findings[0].path);
@@ -2066,7 +2297,7 @@ streets:
     #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__unaffordable_call_is_an_amount_finding() {
-        let findings = hand(UNAFFORDABLE_CALL).validate();
+        let findings = partial(&hand(UNAFFORDABLE_CALL));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Amount, findings[0].rule);
         assert_eq!("streets.preflop.actions[1].amount", findings[0].path);
@@ -2089,7 +2320,7 @@ streets:
       - { seat: 0, action: call, amount: 0.5 }
       - { seat: 1, action: check }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Amount, findings[0].rule);
         assert_eq!("streets.preflop.actions[0].amount", findings[0].path);
@@ -2115,7 +2346,7 @@ streets:
       - { seat: 1, action: fold }
       - { seat: 2, action: call, amount: 250.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(2, findings.len(), "{findings:?}");
         assert_eq!(Rule::Seats, findings[0].rule);
         assert_eq!("streets.preflop.actions[2].seat", findings[0].path);
@@ -2185,7 +2416,7 @@ streets:
     #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__street_pot_including_blinds_and_antes_is_clean() {
-        assert_eq!(Vec::<Finding>::new(), hand(&blinds_fold("9400.0")).validate());
+        assert_eq!(Vec::<Finding>::new(), partial(&hand(&blinds_fold("9400.0"))));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -2193,7 +2424,7 @@ streets:
     fn validate__street_pot_excluding_blinds_is_a_pot_finding() {
         // DEFECT_040 item 6: 8,200 is the raise, the call and the antes, and
         // leaves out the blinds of the two seats that folded.
-        let findings = hand(&blinds_fold("8200.0")).validate();
+        let findings = partial(&hand(&blinds_fold("8200.0")));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Pot, findings[0].rule);
         assert_eq!("streets.preflop.pot", findings[0].path);
@@ -2339,7 +2570,7 @@ results:
     #[test]
     fn validate__true_results_are_clean() {
         let yaml = quads_and_boat(&format!("{}{}", boat("lose"), quads("124", "win")));
-        assert_eq!(Vec::<Finding>::new(), hand(&yaml).validate());
+        assert_eq!(Vec::<Finding>::new(), partial(&hand(&yaml)));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -2348,7 +2579,7 @@ results:
         // DEFECT_040 item 2: the full house (271) is marked the winner over
         // the quads (124). Lower is stronger.
         let yaml = quads_and_boat(&format!("{}{}", boat("win"), quads("124", "lose")));
-        let findings = hand(&yaml).validate();
+        let findings = partial(&hand(&yaml));
         assert!(!findings.is_empty(), "{findings:?}");
         assert!(
             findings.iter().all(|finding| finding.rule == Rule::Result),
@@ -2374,7 +2605,7 @@ results:
         // DEFECT_040 item 3: 117 is in the FourSixes range; quad fives with a
         // nine kicker is 124.
         let yaml = quads_and_boat(&format!("{}{}", boat("lose"), quads("117", "win")));
-        let findings = hand(&yaml).validate();
+        let findings = partial(&hand(&yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Result, findings[0].rule);
         assert_eq!("results[1].hand_rank.value", findings[0].path);
@@ -2414,7 +2645,7 @@ results:
   - { seat: 0, outcome: win }
   - { seat: 1, outcome: tie }
 ";
-        assert_eq!(Vec::<Finding>::new(), hand(yaml).validate());
+        assert_eq!(Vec::<Finding>::new(), partial(&hand(yaml)));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -2443,7 +2674,7 @@ results:
   - { seat: 0, outcome: lose, net: -1500.0 }
   - { seat: 1, outcome: win, net: 1500.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Money, findings[0].rule);
         assert_eq!("results[0].net", findings[0].path);
@@ -2464,7 +2695,7 @@ results:
   - { seat: 0, outcome: lose, net: -500.0 }
   - { seat: 1, outcome: win, net: 400.0 }
 ";
-        let findings = hand(yaml).validate();
+        let findings = partial(&hand(yaml));
         assert_eq!(1, findings.len(), "{findings:?}");
         assert_eq!(Rule::Money, findings[0].rule);
         assert_eq!("results", findings[0].path);
@@ -2482,6 +2713,204 @@ results:
         assert!(money[0].message.contains("the engine's is 100"), "{}", money[0].message);
         assert_eq!("results[1].net", money[1].path);
         assert_eq!(2, findings.len(), "{findings:?}");
+    }
+
+    // ── validate ⇒ cursor (EPIC-93 final review I3) ─────────────────────────
+
+    /// Asserts `findings` hold a `rule` finding at `path`, and that the hand
+    /// it came from has no cursor: a clean `validate` would have lied.
+    #[cfg(feature = "hand-histories")]
+    fn assert_refused(yaml: &str, rule: Rule, path: &str) -> Vec<Finding> {
+        let hand = hand(yaml);
+        let findings = hand.validate();
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.rule == rule && finding.path == path),
+            "no {rule} finding at {path}: {findings:?}"
+        );
+        assert!(hand.cursor().is_err(), "the cursor builds, so the finding is wrong");
+        findings
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__board_only_all_in_is_incomplete() {
+        let findings = assert_refused(
+            r"
+hand: { id: board-only, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0, hole_cards: '7♦ 2♣' }
+  - { seat: 1, name: B, stack: 1000.0, hole_cards: 'A♠ A♥' }
+board: 'K♠ K♣ 9♦ 8♠ 4♥'
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: all_in, amount: 1000.0, all_in: true }
+      - { seat: 1, action: call, amount: 900.0 }
+",
+            Rule::Incomplete,
+            "streets.preflop",
+        );
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert!(findings[0].message.contains("2 seats"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__record_that_stops_mid_flop_is_incomplete() {
+        let findings = assert_refused(
+            r"
+hand: { id: mid-flop, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 50.0 }
+      - { seat: 1, action: check }
+  flop:
+    cards: 'K♠ K♣ 9♦'
+    actions:
+      - { seat: 1, action: bet, amount: 100.0 }
+",
+            Rule::Incomplete,
+            "streets.flop",
+        );
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert!(findings[0].message.contains("seat 0 to act"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__zero_stack_in_the_blind_is_a_seats_finding() {
+        let findings = assert_refused(
+            r"
+hand: { id: zero-stack, game: holdem }
+table: { seats: 3, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+  - { seat: 2, name: C, stack: 0.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: fold }
+      - { seat: 1, action: fold }
+",
+            Rule::Seats,
+            "players",
+        );
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert!(
+            findings[0].message.contains("InsufficientChips"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__nan_negative_and_infinite_stakes_and_stacks_are_findings() {
+        let findings = assert_refused(
+            r"
+hand: { id: nan, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: .nan, big_blind: -100.0, ante: .inf } }
+players:
+  - { seat: 0, name: A, stack: .nan }
+  - { seat: 1, name: B, stack: -5.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: .inf }
+      - { seat: 1, action: fold }
+",
+            Rule::Amount,
+            "table.stakes.small_blind",
+        );
+        for (rule, path) in [
+            (Rule::Amount, "table.stakes.big_blind"),
+            (Rule::Amount, "table.stakes.ante"),
+            (Rule::Seats, "players[0].stack"),
+            (Rule::Seats, "players[1].stack"),
+        ] {
+            assert!(
+                findings
+                    .iter()
+                    .any(|finding| finding.rule == rule && finding.path == path),
+                "no {rule} finding at {path}: {findings:?}"
+            );
+        }
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__stakes_the_engine_cannot_post_are_an_amount_finding() {
+        // A negative big blind with whole, positive stacks: the stakes are at
+        // fault, so the finding is at `table.stakes`.
+        let findings = hand(
+            r"
+hand: { id: negative-blind, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: -100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: fold }
+",
+        )
+        .validate();
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.rule == Rule::Amount && finding.path == "table.stakes.big_blind"),
+            "{findings:?}"
+        );
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__finished_hands_are_not_incomplete() {
+        // A fold-out ends when one seat is left; a showdown after the river.
+        let checked_down = r"
+hand: { id: checked-down, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 50.0 }
+      - { seat: 1, action: check }
+  flop:
+    cards: 'K♠ K♣ 9♦'
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  turn:
+    card: '8♠'
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+  river:
+    card: '4♥'
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 0, action: check }
+";
+        for yaml in [CLEAN, checked_down] {
+            let findings = hand(yaml).validate();
+            assert!(
+                findings.iter().all(|finding| finding.rule != Rule::Incomplete),
+                "{findings:?}"
+            );
+        }
     }
 
     #[test]
@@ -2506,6 +2935,7 @@ results:
             (Rule::Result, "result"),
             (Rule::Money, "money"),
             (Rule::Unsupported, "unsupported"),
+            (Rule::Incomplete, "incomplete"),
         ];
         for (rule, name) in rules {
             assert_eq!(name, rule.to_string());

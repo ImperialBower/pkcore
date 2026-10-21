@@ -13,56 +13,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   history is a claim; `validate` checks it and returns every disagreement, not
   the first, each a `Finding` naming the YAML path at fault (`board`,
   `players[1].hole_cards`, `streets.preflop.actions[3].seat`) and the `Rule` it
-  broke. It starts with two rules. **Cards**: every card string parses, no card appears
-  twice across the hole cards and board, the board is 3 to 5 cards and agrees
-  with the streets. **Seats**: seats are unique and inside `table.seats`, the
-  button is inside the table, every action is by a listed seat that has not
-  folded; a gap between seats is fine, and so are a dead button (on an empty
-  chair) and a zero `post` by an empty chair (the dead small blind). Stud, stud hi-lo and razz return one
-  `Rule::Unsupported` finding. Absent optional fields are not findings. The
-  order, legality, amount, pot, result and money rules are the next entries.
-  `tests/defects/validate/` holds hands that are wrong on purpose, starting with
-  `data/hands/the_hand.yaml` as it stood (DEFECT_040). See
-  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
-- **`validate` walks the hand through the engine: the Order, Legality and
-  Amount rules** (`hand-histories`). **Order**: each action is by the engine's
-  next seat to act; an action out of turn cannot be applied, so the walk stops
-  there (not reported again where the Seats rule already blamed the seat).
-  **Legality**: a bet or raise below the minimum and not all in, a bet or raise
-  larger than the stack, a bet or raise when no raise is open, and a check
-  facing a bet; each is repaired (to the minimum, an all-in, a call, or a check)
-  and the walk goes on, and the first repair adds one finding, "pots, nets and
-  amounts after this point are not checked": from there only the whole-chips
-  check runs on amounts. **Amount**: a
-  recorded amount is a whole number of chips and is the engine's. A `call` may
-  record the chips it adds or the caller's street total after it (both are
-  accepted; one matching neither is a finding), and a `bet`, `raise` or
-  `all_in` records the seat's street total after it. A call larger than the
-  stack can put in, not marked `all_in`, names both numbers ("calls 100000 with
-  49200 behind"). A seat that acts without being listed is
-  seated with the largest listed stack so the walk can continue past the Seats
-  finding. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
-- **`validate` checks pots, results and money: the Pot, Result and Money
-  rules** (`hand-histories`). **Pot**: each street's recorded `pot` is the
-  engine's pot after the street's last action, antes, blinds and the street's
-  bets included ("records a pot of 8200; the engine's pot after the preflop is
-  9400"). When everyone else folds, three readings are accepted: that full
-  pot, the pot once the uncalled bet is returned, and the pot without the
-  winner's street bet, as the engine's own log writes it. A street the walk did
-  not finish, or that ends after a repair, is not checked. **Result** (Hold'em, on the
-  record alone, so it reports even when the walk stops early): `best_hand` is a
-  best five of the seat's hole cards and the board, `hand_rank`'s `value`,
-  `name` and `class` are pkcore's, and at showdown the best hand is marked
-  `win` (or `tie` when split) and a weaker hand that a best hand covers is not.
-  **Money**: no seat loses more than its starting stack, and the nets sum to
-  zero when every seat that put chips in has one; when the walk played every
-  action without a repair, each `net` is the seat's chips after the engine's
-  showdown less its starting stack. One fault, one finding: a hand whose walk
-  reports an Amount finding gets no walked Pot or Money findings. A
-  `results` entry marked `fold` is not ranked at showdown. `DEFECT_040`'s file now reports its wrong
-  winner, its rank value outside its class (117 for quad fives; pkcore says
-  124) and its loss larger than the stack. See
-  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+  broke. An empty result means the hand is a complete, legal record that
+  replays: `replay()` and `cursor()` succeed on it. Stud, stud hi-lo and razz
+  return one `Rule::Unsupported` finding; every other game is checked by these
+  rules.
+  **Cards**: every card string parses, no card appears twice across the hole
+  cards and board, the board is 3 to 5 cards and agrees with the streets.
+  **Seats**: seats are unique and inside `table.seats`, the button is inside
+  the table, every action is by a listed seat that has not folded, and every
+  starting stack is a whole, non-negative number of chips; a gap between
+  seats is fine, and so are a dead button (on an empty chair) and a zero
+  `post` by an empty chair (the dead small blind). A hand the engine cannot
+  set up (a listed player with no chips in a blind) is one finding at
+  `players` naming the engine's error.
+  **Order**, **Legality** and **Amount** come from a walk of the hand through
+  the engine. Each action is by the engine's next seat to act; an action out
+  of turn stops the walk. A bet or raise below the minimum and not all in,
+  larger than the stack, or made when no raise is open, and a check facing a
+  bet, are each repaired (to the minimum, an all-in, a call, or a check) so the
+  walk goes on, and the first repair adds "pots, nets and amounts after this
+  point are not checked". A recorded amount and every stake are whole numbers
+  of chips (NaN, negative and infinite numbers are findings), and an amount is
+  the engine's: a `call` records the chips it adds or the caller's street
+  total after it (one matching neither is a finding), a `bet`, `raise` or
+  `all_in` the seat's street total after it.
+  **Pot**: each street's `pot` is the engine's pot after the street's last
+  action, antes and blinds included; when everyone else folds, the pot with or
+  without the uncalled bet, or the engine's own log's reading, is accepted.
+  **Result** (Hold'em, on the record alone): `best_hand` is a best five of the
+  seat's hole cards and the board, `hand_rank` is pkcore's, and at showdown the
+  best hand is marked `win` (or `tie` when split).
+  **Money**: no seat loses more than its starting stack, the nets sum to zero,
+  and, when the walk played every action without a repair, each `net` is the
+  engine's.
+  **Incomplete**: the record runs to the end of the hand. One that stops with
+  two or more seats still in (an action or a street missing, no `streets`, or
+  a board given only in `board` for a hand that went all in) is a finding at
+  the last street's path; partial records are not supported.
+  One fault, one finding: an Amount finding suppresses the walked Pot and
+  Money findings it would cause. `tests/defects/validate/` holds
+  `data/hands/the_hand.yaml` as it stood before DEFECT_040, which reports its
+  wrong winner, its rank value outside its class and its loss larger than the
+  stack. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`PKError::ReplayAmountMismatch { seat, recorded, engine }`**, the error
   `replay` returns for a recorded amount the engine disagrees with.
 - **`HandHistory::cursor`, `Replay` and `ReplayEvent`** (`hand-histories`): a
@@ -71,15 +63,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   lists its events: `Forced` (the starting table, forced bets posted), each
   recorded action the engine applies (`Action`, with its street and its index
   in the street's `actions`; recorded posts are part of `Forced`), a `Deal`
-  before the flop, turn and river, `Showdown` when two or more seats are still
-  in after the river, and one `Award` per share of each pot as the engine's
-  showdown pays it (a split pot gives one per winner, a side pot one per pot
-  and winner, and a fold-win one award with no showdown). The cursor stands on
+  before the flop, turn and river, one `Return` for chips nobody matched (an
+  uncalled bet, or the part of an all-in a shorter stack could not call: the
+  top contributor's total over the second-largest contribution, which goes
+  back to that seat and is not a win), `Showdown` when two or more seats are
+  still in after the river, and one `Award` per share of each pot won (a
+  split pot gives one per winner, a side pot one per pot and winner, and a
+  fold-win its award with no showdown). `ReplayEvent` is `#[non_exhaustive]`.
+  The table at each event holds the hand's own remaining deck (Hold'em and
+  Omaha), so `Replay::table()` is a takeover point: deal on from it and the
+  record's next cards come out. The cursor stands on
   event 0; `step()` applies the next event (`Ok(false)` at the end), `seek(i)`
   rebuilds the table and applies events `0..=i`, so scrubbing back gives the
   same table as walking forward, and `at()` is the index of the last event
-  applied. After the last award the pot is empty and every stack is the one
-  `replay()` reports. `cursor()` fails wherever `replay()` does, a mismatched
+  applied. At the end the pot is empty and every stack is the one `replay()`
+  reports. `cursor()` returns `Err` exactly when `replay()` does, a mismatched
   amount included, because `replay_with` and the cursor share one walk. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`HandHistory::stacked_deck` and `PokerSession::start_hand_with_deck`**
@@ -97,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without the shuffle, so play can carry on from a recorded hand ("take over
   from here"); a deck that is not exactly 52 cards is refused with
   `InvalidCardCount` and the session is left as it was. `start_hand` and
-  `start_hand_with` behave as before. See
+  `start_hand_with` behave as before. To take over part way through a hand,
+  use `Replay::table()` at that event. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **The hand-history corpus test** (`tests/hand_history_corpus.rs`,
   `hand-histories`). Every `*.yaml` under `data/hands/` and `tests/defects/`,
@@ -106,7 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pre-dead-button blind rule) and `tests/defects/validate/` (wrong on purpose)
   are left out. A defect fixture that breaks a rule on purpose is named in an
   allowlist with its reason and must still break it: today only `DEFECT_014`,
-  whose legacy `seats` field holds the player count. See
+  whose legacy `seats` field holds the player count. Every hand that validates
+  clean must also build a `cursor()`, and a file that holds no hands fails. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
 ### Changed
@@ -135,7 +135,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`examples/yaml_audit.rs` validates.** It reads one hand or a
   `HandCollection` and prints every `validate()` finding as
   `path: message (Rule)`, in place of its own card-string checks; when a hand
-  validates clean it still replays it and compares the stacks.
+  validates clean it still replays it and compares the stacks. A file that
+  holds no hands exits 1: nothing checked is not a pass.
   `cargo run --features full --example yaml_audit -- data/hands/the_hand.yaml`
   passes.
 - **CI's wasm32 job runs `make check-wasm`**, which checks the library in
@@ -146,12 +147,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Replay now posts the ante in Hold'em** (`DEFECT_040`). `HandHistory::replay`
-  and `replay_with` built a no-limit Hold'em table with blinds only, so a hand
-  recorded with `stakes.ante` replayed 200 chips light per player (a six-handed
-  `400/800/200` hand showed a pot of 8,200 where 9,400 was dealt). Stud already
-  posted its ante. Pot-limit Omaha and fixed-limit Hold'em tables are built as
-  before. The table construction moved to one crate-internal builder, `replay_table`,
+- **Replay now posts the ante in Hold'em and Omaha** (`DEFECT_040`).
+  `HandHistory::replay` and `replay_with` built no-limit Hold'em and pot-limit
+  Omaha tables with blinds only, so a hand recorded with `stakes.ante`
+  replayed 200 chips light per player (a six-handed `400/800/200` hand showed
+  a pot of 8,200 where 9,400 was dealt). Stud already posted its ante.
+  Fixed-limit Hold'em still takes its blinds from the bet sizes and posts no
+  ante. The table construction moved to one crate-internal builder, `replay_table`,
   so later checks and a step-by-step replay start from the same table. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`data/hands/the_hand.yaml` is recorded from the engine, not typed**
@@ -174,7 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TestData::the_hand_table` dealt `6♦ 5♥ 5♠ A♠ J♠`; it now deals
   `9♣ 6♦ 5♥ 5♠ 8♠`. The burns are the ones `HandHistory::stacked_deck` picks,
   so the recorded hand rebuilds the fixture's deck card for card. "Antonio
-  Esfandari" is spelled Esfandiari.
+  Esfandari" is spelled Esfandiari. `TestData::the_hand_cards` listed `9♣`
+  twice and left out Filippi's `2♣`; it is now the hand's 21 cards once each.
 - **`HandHistory::from_table_state` writes the flop in the order it was
   dealt** (DEFECT_040). The event log carries the flop as a set, so the flop
   came out in deck order (`5♥ 6♦ 9♣`) beside a board in dealt order

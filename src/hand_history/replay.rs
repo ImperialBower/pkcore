@@ -4,11 +4,18 @@
 //! [`Replay`] plays it as a list of [`ReplayEvent`]s and stands on any one of
 //! them, so a viewer can step through a hand, scrub back and forth, and show the
 //! [`Table`] as it stood after each event: the forced bets, every recorded
-//! action, each street's deal, the showdown, and each award.
+//! action, each street's deal, the uncalled chips going back, the showdown,
+//! and each award.
 //!
-//! The events come from the same walk [`HandHistory::replay_with`] makes, so a
-//! cursor exists exactly when a replay succeeds, and fails the same way
-//! (`PKError::ReplayAmountMismatch` included) when it does not.
+//! The events come from the same walk [`HandHistory::replay_with`] makes, so
+//! `cursor()` returns `Err` exactly when `replay()` does, and with the same
+//! error (`PKError::ReplayAmountMismatch` included). A replay that succeeds
+//! but disagrees with the recorded nets (`is_consistent == false`) still has
+//! a cursor.
+//!
+//! The table at every event holds the hand's own remaining deck (Hold'em and
+//! Omaha), so it is also a place to take the hand over and deal on: see
+//! [`Replay::table`].
 //!
 //! See [EPIC-93](https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-93_Faithful_Replay.md).
 
@@ -23,8 +30,12 @@ use std::str::FromStr;
 ///
 /// A [`Replay`] is a list of these, always in this shape: one `Forced`, then
 /// the recorded actions with a `Deal` before each street after the preflop,
-/// then `Showdown` when two or more seats are still in the hand after the
-/// river, then one `Award` for each share of each pot.
+/// then a `Return` when one seat put in chips nobody matched, then `Showdown`
+/// when two or more seats are still in the hand after the river, then one
+/// `Award` for each share of each pot won.
+///
+/// The enum is `#[non_exhaustive]`: a `match` on it needs a wildcard arm, so
+/// a later event (a stud street, say) is not a breaking change.
 ///
 /// # Domain
 ///
@@ -32,9 +43,12 @@ use std::str::FromStr;
 /// - **Invariants:**
 ///   - `Deal(ReplayStreet::Preflop)` is never emitted: the hole cards are part
 ///     of `Forced`'s starting table
-///   - `Award`s follow the engine's showdown: a split pot gives one award per
-///     winner, a side-pot hand one per pot and winner, and the shares of one
-///     hand sum to every chip put in
+///   - at most one `Return`, for the top contributor's chips over the
+///     second-largest contribution: chips taken back, not won
+///   - `Award`s follow the engine's showdown, less the returned chips: a
+///     split pot gives one award per winner, a side-pot hand one per pot and
+///     winner, and the `Return` and `Award`s of one hand sum to every chip
+///     put in
 ///
 /// # Examples
 ///
@@ -50,8 +64,10 @@ use std::str::FromStr;
 /// };
 /// assert_eq!("preflop[0]: seat 0 Raise(300)", event.to_string());
 /// assert_eq!("seat 1 wins 400", ReplayEvent::Award { seat: 1, amount: 400 }.to_string());
+/// assert_eq!("seat 0 takes back 800", ReplayEvent::Return { seat: 0, amount: 800 }.to_string());
 /// ```
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum ReplayEvent {
     /// The starting table: seats placed, blinds, antes and any bring-in
     /// posted, hole cards dealt. Always the first event, and only there.
@@ -71,10 +87,21 @@ pub enum ReplayEvent {
     },
     /// The bets go into the pot and the street's cards are dealt.
     Deal(ReplayStreet),
+    /// `amount` chips nobody matched go back from the pot to `seat`, the seat
+    /// that put them in: the top contributor's total over the second-largest
+    /// contribution, such as a bet everyone folded to or the part of an
+    /// all-in a shorter stack could not call. The seat takes them back; it
+    /// does not win them. The last bets go into the pot first.
+    Return {
+        /// The seat the chips go back to, 0-based.
+        seat: u8,
+        /// The chips returned.
+        amount: usize,
+    },
     /// Two or more seats show down after the river; the last bets go into the
     /// pot.
     Showdown,
-    /// `amount` chips of one pot share go from the pot to `seat`.
+    /// `amount` chips of one pot share won go from the pot to `seat`.
     Award {
         /// The seat paid, 0-based.
         seat: u8,
@@ -94,6 +121,7 @@ impl std::fmt::Display for ReplayEvent {
                 street,
             } => write!(f, "{street}[{index}]: seat {seat} {action}"),
             ReplayEvent::Deal(street) => write!(f, "deal the {street}"),
+            ReplayEvent::Return { seat, amount } => write!(f, "seat {seat} takes back {amount}"),
             ReplayEvent::Showdown => f.write_str("showdown"),
             ReplayEvent::Award { seat, amount } => write!(f, "seat {seat} wins {amount}"),
         }
@@ -141,7 +169,9 @@ impl std::fmt::Display for ReplayEvent {
 ///
 /// let mut replay = hand.cursor().unwrap();
 /// while replay.step().unwrap() {}
-/// assert_eq!(Some(&ReplayEvent::Award { seat: 0, amount: 400 }), replay.event(replay.at()));
+/// // 200 of the raise is uncalled and comes back; 200 is won.
+/// assert_eq!(Some(&ReplayEvent::Return { seat: 0, amount: 200 }), replay.event(replay.at() - 1));
+/// assert_eq!(Some(&ReplayEvent::Award { seat: 0, amount: 200 }), replay.event(replay.at()));
 /// assert_eq!(1_100, replay.table().seats.get_seat(0).unwrap().player.chips);
 /// # }
 /// ```
@@ -203,7 +233,10 @@ impl HandHistory {
     /// [`ReplayEvent::Forced`].
     ///
     /// Plays the hand once to list its events, and runs the engine's showdown
-    /// on a copy of the final table to list the awards.
+    /// on a copy of the final table to list the awards. The uncalled chips
+    /// the showdown pays back are split out of the awards as one
+    /// [`ReplayEvent::Return`], before the `Showdown`, so every `Award` is
+    /// chips won.
     ///
     /// # Errors
     ///
@@ -232,8 +265,9 @@ impl HandHistory {
     ///       - { seat: 1, action: fold }
     /// ").unwrap();
     ///
+    /// // Forced, the raise, the fold, the uncalled 200 back, the award.
     /// let replay = hand.cursor().unwrap();
-    /// assert_eq!(4, replay.len());
+    /// assert_eq!(5, replay.len());
     /// assert_eq!(0, replay.at());
     /// assert_eq!(Some(&ReplayEvent::Forced), replay.event(0));
     /// # }
@@ -255,11 +289,16 @@ impl HandHistory {
             }),
             Walked::Acted { applied: None, .. } => {}
         })?;
+        let mut shares = Replay::awards(&table)?;
+        if let Some((seat, amount)) = self.uncalled(&table, &shares) {
+            Replay::take_back(&mut shares, seat, amount);
+            events.push(ReplayEvent::Return { seat, amount });
+        }
         if table.seats.active_in_hand().len() >= 2 {
             events.push(ReplayEvent::Showdown);
         }
         events.extend(
-            Replay::awards(&table)?
+            shares
                 .into_iter()
                 .map(|(seat, amount)| ReplayEvent::Award { seat, amount }),
         );
@@ -269,6 +308,33 @@ impl HandHistory {
             at: 0,
             table: start,
         })
+    }
+
+    /// The chips nobody matched, as `(seat, chips)`: the top contributor's
+    /// total over the second-largest contribution, from the record's starting
+    /// stacks and `end`, the table after the last recorded action. Capped at
+    /// what `shares` pay the seat, so a return never pays out chips the
+    /// engine's showdown did not. `None` when the top contribution is matched.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    fn uncalled(&self, end: &Table, shares: &[(u8, usize)]) -> Option<(u8, usize)> {
+        let mut contributed: Vec<(u8, usize)> = self
+            .players
+            .iter()
+            .filter_map(|player| {
+                let behind = end.seats.get_seat(player.seat)?.player.chips;
+                Some((player.seat, (player.stack as usize).saturating_sub(behind)))
+            })
+            .collect();
+        contributed.sort_by_key(|(_, chips)| std::cmp::Reverse(*chips));
+        let (seat, most) = *contributed.first()?;
+        let second = contributed.get(1).map_or(0, |(_, chips)| *chips);
+        let paid: usize = shares
+            .iter()
+            .filter(|(paid, _)| *paid == seat)
+            .map(|(_, chips)| chips)
+            .sum();
+        let returned = (most - second).min(paid);
+        (returned > 0).then_some((seat, returned))
     }
 
     /// A 52-card deck that, dealt by the engine, reproduces the cards this
@@ -291,7 +357,9 @@ impl HandHistory {
     ///
     /// Pair it with [`PokerSession::start_hand_with_deck`](crate::casino::session::PokerSession::start_hand_with_deck) to take over a
     /// recorded hand: the session deals the record's hole cards, and the board
-    /// follows as the engine deals the streets.
+    /// follows as the engine deals the streets. To take over part way
+    /// through, use [`Replay::table`] at that event instead: its deck is the
+    /// part of this deck not yet dealt.
     ///
     /// # Errors
     ///
@@ -335,7 +403,13 @@ impl HandHistory {
         if !matches!(self.hand.game, HandVariant::Holdem | HandVariant::Omaha) {
             return Err(PKError::NotImplemented);
         }
-        let table = self.replay_table()?;
+        let table = self.seated_table()?;
+        self.stack_on(&table).map(|(deck, _)| deck)
+    }
+
+    /// [`HandHistory::stacked_deck`] for `table`, the hand's seated table, and
+    /// the number of hole cards the engine deals off its top.
+    pub(crate) fn stack_on(&self, table: &Table) -> Result<(Cards, usize), PKError> {
         let cards_per = table.game.cards_per_player() as usize;
         let recorded_holes = self.recorded_hole_cards(cards_per)?;
         let board = self.recorded_board()?;
@@ -356,6 +430,7 @@ impl HandHistory {
                 }
             }
         }
+        let holes = slots.len();
         // Then burn, flop, burn, turn, burn, river: `deal_flop` and friends.
         slots.push(None);
         slots.extend_from_slice(&board[0..3]);
@@ -397,7 +472,7 @@ impl HandHistory {
         if deck.len() != Cards::DECK_SIZE {
             return Err(PKError::InvalidCardCount);
         }
-        Ok(deck)
+        Ok((deck, holes))
     }
 
     /// Each player's recorded hole cards, as `(seat, cards)`.
@@ -472,8 +547,8 @@ impl Replay {
     ///       - { seat: 0, action: fold }
     /// ").unwrap();
     ///
-    /// // Forced, the fold, the award.
-    /// assert_eq!(3, hand.cursor().unwrap().len());
+    /// // Forced, the fold, the big blind's uncalled 50 back, the award.
+    /// assert_eq!(4, hand.cursor().unwrap().len());
     /// # }
     /// ```
     #[must_use]
@@ -585,6 +660,15 @@ impl Replay {
 
     /// The table as it stands after event [`Self::at`].
     ///
+    /// For Hold'em and Omaha its `deck` is the hand's remaining deck: the
+    /// burns and board cards not yet dealt, in the order the engine deals
+    /// them, then the rest of [`HandHistory::stacked_deck`]. Each `Deal` takes
+    /// its burn and cards off the top, as the engine does. So a table taken
+    /// from any event is a place to take the hand over: deal on from it and
+    /// the record's next cards come out. A hand whose cards cannot be stacked
+    /// (one card recorded twice, say) keeps the box deck, which is not the
+    /// hand's and must not be dealt from.
+    ///
     /// # Examples
     ///
     /// ```
@@ -607,6 +691,49 @@ impl Replay {
     /// // The blinds are posted before the first action.
     /// let replay = hand.cursor().unwrap();
     /// assert_eq!(100, replay.table().bet);
+    /// # }
+    /// ```
+    ///
+    /// Take over on the flop and the engine deals the recorded turn:
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::HandHistory;
+    ///
+    /// let hand = HandHistory::from_yaml(r#"
+    /// hand: { id: ex, game: holdem }
+    /// table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0, hole_cards: "7♦ 2♣" }
+    ///   - { seat: 1, name: B, stack: 1000.0, hole_cards: "A♠ A♥" }
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: call, amount: 50.0 }
+    ///       - { seat: 1, action: check }
+    ///   flop:
+    ///     cards: "K♠ K♣ 9♦"
+    ///     actions:
+    ///       - { seat: 1, action: check }
+    ///       - { seat: 0, action: check }
+    ///   turn:
+    ///     card: "8♠"
+    ///     actions:
+    ///       - { seat: 1, action: check }
+    ///       - { seat: 0, action: check }
+    ///   river:
+    ///     card: "4♥"
+    ///     actions:
+    ///       - { seat: 1, action: check }
+    ///       - { seat: 0, action: check }
+    /// "#).unwrap();
+    ///
+    /// let mut replay = hand.cursor().unwrap();
+    /// replay.seek(4).unwrap(); // the flop's first check
+    /// let mut table = replay.table().clone();
+    /// table.deal_turn().unwrap();
+    /// assert_eq!("K♠ K♣ 9♦ 8♠", table.board.to_string());
     /// # }
     /// ```
     #[must_use]
@@ -693,6 +820,7 @@ impl Replay {
     ///
     /// let mut replay = hand.cursor().unwrap();
     /// assert!(replay.step().unwrap()); // the fold
+    /// assert!(replay.step().unwrap()); // the uncalled 50 back
     /// assert!(replay.step().unwrap()); // the award
     /// assert!(!replay.step().unwrap()); // the end
     /// assert_eq!(1_050, replay.table().seats.get_seat(1).unwrap().player.chips);
@@ -726,7 +854,7 @@ impl Replay {
                 table.phase = GamePhase::Showdown;
                 Ok(())
             }
-            ReplayEvent::Award { seat, amount } => {
+            ReplayEvent::Return { seat, amount } | ReplayEvent::Award { seat, amount } => {
                 Self::gather(table);
                 table.pot = table.pot.checked_sub(*amount).ok_or(PKError::InsufficientChips)?;
                 let winner = table.seats.get_seat_mut(*seat).ok_or(PKError::InvalidSeatNumber)?;
@@ -746,6 +874,20 @@ impl Replay {
         }
         table.pot += collected;
         table.bet = 0;
+    }
+
+    /// Takes `amount` returned chips off `seat`'s shares, last share first, and
+    /// drops the shares left empty: what is left is what the seat won.
+    fn take_back(shares: &mut Vec<(u8, usize)>, seat: u8, amount: usize) {
+        let mut owed = amount;
+        for (paid, chips) in shares.iter_mut().rev() {
+            if *paid == seat && owed > 0 {
+                let taken = owed.min(*chips);
+                *chips -= taken;
+                owed -= taken;
+            }
+        }
+        shares.retain(|(_, chips)| *chips > 0);
     }
 
     /// The pot shares the engine's showdown pays from `end`, the table after
@@ -1207,6 +1349,120 @@ players:
         }
     }
 
+    fn the_hand() -> HandHistory {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/hands/the_hand.yaml");
+        hand(&std::fs::read_to_string(path).unwrap())
+    }
+
+    /// The number of hole cards the engine deals on `hand`'s starting table.
+    fn hole_slots(hand: &HandHistory) -> usize {
+        let start = hand.replay_table().unwrap();
+        let in_hand = (0..start.seats.size())
+            .filter(|seat| start.seats.is_seat_in_hand(*seat))
+            .count();
+        in_hand * start.game.cards_per_player() as usize
+    }
+
+    /// The first event of `street` the cursor lists, a `Deal` or an `Action`.
+    fn first_on(replay: &Replay, street: ReplayStreet, deal: bool) -> usize {
+        (0..replay.len())
+            .find(|index| match replay.event(*index) {
+                Some(ReplayEvent::Deal(dealt)) => deal && *dealt == street,
+                Some(ReplayEvent::Action { street: acted, .. }) => !deal && *acted == street,
+                _ => false,
+            })
+            .unwrap()
+    }
+
+    /// Takes over the hand at its first flop action and deals the turn and
+    /// river with the engine: out come the recorded turn and river.
+    fn assert_takeover_deals_the_record(hand: &HandHistory) {
+        let mut replay = hand.cursor().unwrap();
+        replay.seek(first_on(&replay, ReplayStreet::Flop, false)).unwrap();
+        let mut table = replay.table().clone();
+
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        let streets = hand.streets.as_ref().unwrap();
+        let board: Vec<Card> = table.board.iter().copied().collect();
+        assert_eq!(5, board.len(), "{}", hand.hand.id);
+        assert_eq!(
+            Card::from_str(&streets.turn.as_ref().unwrap().card).unwrap(),
+            board[3],
+            "{}: turn",
+            hand.hand.id
+        );
+        assert_eq!(
+            Card::from_str(&streets.river.as_ref().unwrap().card).unwrap(),
+            board[4],
+            "{}: river",
+            hand.hand.id
+        );
+    }
+
+    #[test]
+    fn replay__table_at_a_flop_action_deals_the_recorded_turn_and_river() {
+        assert_takeover_deals_the_record(&the_hand());
+        assert_takeover_deals_the_record(&defect("DEFECT_007_no_legal_raise_for_a_short_stack.yaml"));
+    }
+
+    #[test]
+    fn replay__deck_after_each_deal_is_what_the_engine_leaves() {
+        for hand in [
+            the_hand(),
+            defect("DEFECT_007_no_legal_raise_for_a_short_stack.yaml"),
+            hand(ALL_IN),
+        ] {
+            let stacked: Vec<Card> = hand.stacked_deck().unwrap().iter().copied().collect();
+            let holes = hole_slots(&hand);
+            let mut replay = hand.cursor().unwrap();
+            assert_eq!(
+                stacked[holes..].to_vec(),
+                replay.table().deck.to_vec(),
+                "{}: forced",
+                hand.hand.id
+            );
+            for (street, dealt, burns) in [
+                (ReplayStreet::Flop, 4, 1),
+                (ReplayStreet::Turn, 6, 2),
+                (ReplayStreet::River, 8, 3),
+            ] {
+                replay.seek(first_on(&replay, street, true)).unwrap();
+                assert_eq!(
+                    stacked[holes + dealt..].to_vec(),
+                    replay.table().deck.to_vec(),
+                    "{}: {street}",
+                    hand.hand.id
+                );
+                for burn in [holes, holes + 4, holes + 6].into_iter().take(burns) {
+                    assert!(
+                        replay.table().muck.contains(&stacked[burn]),
+                        "{}: {street} burns {}",
+                        hand.hand.id,
+                        stacked[burn]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn replay__a_hand_it_cannot_stack_keeps_the_box_deck() {
+        // Seat 1's hole cards are seat 0's: no stacked deck, so the deck is
+        // the one the replay always had.
+        let mut twice = hand(ALL_IN);
+        twice.players[1].hole_cards = Some("A♠ 7♦".to_string());
+        assert!(twice.stacked_deck().is_err());
+
+        let mut replay = twice.cursor().unwrap();
+        assert_eq!(Cards::deck(), replay.table().deck);
+        // The deals lay the recorded board and leave the box deck whole.
+        to_end(&mut replay);
+        assert_eq!(Cards::deck(), replay.table().deck);
+        assert_eq!("K♠ K♣ 9♦ 8♠ 4♥", replay.table().board.to_string());
+    }
+
     fn to_end(replay: &mut Replay) {
         replay.seek(replay.len() - 1).unwrap();
     }
@@ -1286,8 +1542,13 @@ players:
         for (path, hand) in replayable_defects() {
             let mut replay = hand.cursor().unwrap();
             to_end(&mut replay);
+            // A hand nobody matched (DEFECT_013: everyone folds to a lone big
+            // blind) ends on the Return: nothing was won.
             assert!(
-                matches!(replay.event(replay.at()), Some(ReplayEvent::Award { .. })),
+                matches!(
+                    replay.event(replay.at()),
+                    Some(ReplayEvent::Award { .. } | ReplayEvent::Return { .. })
+                ),
                 "{path}"
             );
             assert_eq!(0, replay.table().pot, "{path}");
@@ -1307,16 +1568,74 @@ players:
         }
     }
 
+    /// The cursor's events from the last recorded action or deal to the end.
+    fn settlement(replay: &Replay) -> Vec<ReplayEvent> {
+        let last = (0..replay.len())
+            .filter(|index| {
+                matches!(
+                    replay.event(*index),
+                    Some(ReplayEvent::Forced | ReplayEvent::Action { .. } | ReplayEvent::Deal(_))
+                )
+            })
+            .max()
+            .unwrap();
+        (last + 1..replay.len())
+            .filter_map(|index| replay.event(index).cloned())
+            .collect()
+    }
+
+    /// Every chip the cursor's `Return`s and `Award`s move.
+    fn paid_out(replay: &Replay) -> usize {
+        (0..replay.len())
+            .filter_map(|index| match replay.event(index) {
+                Some(ReplayEvent::Award { amount, .. } | ReplayEvent::Return { amount, .. }) => Some(*amount),
+                _ => None,
+            })
+            .sum()
+    }
+
     #[test]
     fn cursor__fold_out_has_no_showdown() {
         let replay = hand(FOLD_OUT).cursor().unwrap();
 
         assert!((0..replay.len()).all(|index| replay.event(index) != Some(&ReplayEvent::Showdown)));
-        // Seat 0's 300 comes back with seat 1's big blind.
-        assert_eq!(vec![(0, 400)], awards(&replay));
+        // Seat 0's raise to 300 is called by nobody: 200 of it comes back, and
+        // seat 0 wins its matched 100 and seat 1's big blind.
         assert_eq!(
-            Some(&ReplayEvent::Award { seat: 0, amount: 400 }),
-            replay.event(replay.len() - 1)
+            vec![
+                ReplayEvent::Return { seat: 0, amount: 200 },
+                ReplayEvent::Award { seat: 0, amount: 200 },
+            ],
+            settlement(&replay)
+        );
+        assert_eq!(400, paid_out(&replay));
+    }
+
+    #[test]
+    fn cursor__walk_returns_the_small_blinds_uncalled_half() {
+        // Seat 0, the small blind, folds: seat 1's 50 above it is uncalled.
+        let replay = hand(
+            r"
+hand: { id: walk, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: fold }
+",
+        )
+        .cursor()
+        .unwrap();
+
+        assert_eq!(
+            vec![
+                ReplayEvent::Return { seat: 1, amount: 50 },
+                ReplayEvent::Award { seat: 1, amount: 100 },
+            ],
+            settlement(&replay)
         );
     }
 
@@ -1324,14 +1643,82 @@ players:
     fn cursor__side_pot_awards_each_share() {
         let hand = defect("DEFECT_003_short_winner_excess_returned.yaml");
         let replay = hand.cursor().unwrap();
-        let shares = awards(&replay);
 
-        // The short stack's matched 400, then the deep stack's uncalled 800
-        // back as its own share, as the engine's showdown pays it.
-        assert_eq!(vec![(1, 400), (0, 800)], shares);
+        // The deep stack's uncalled 800 goes back before the showdown; the
+        // short stack wins the matched 400. The loser is never paid.
+        assert_eq!(
+            vec![
+                ReplayEvent::Return { seat: 0, amount: 800 },
+                ReplayEvent::Showdown,
+                ReplayEvent::Award { seat: 1, amount: 400 },
+            ],
+            settlement(&replay)
+        );
+        assert_eq!(vec![(1, 400)], awards(&replay));
         // Both seats are all in: every chip at the table was put in.
         let put_in = hand.replay_table().unwrap().table_chip_count();
-        assert_eq!(put_in, shares.iter().map(|(_, chips)| chips).sum::<usize>());
+        assert_eq!(put_in, paid_out(&replay));
+    }
+
+    #[test]
+    fn cursor__tied_short_all_in_returns_the_excess_then_splits() {
+        let hand = defect("DEFECT_003_tied_short_all_in.yaml");
+        let replay = hand.cursor().unwrap();
+
+        assert_eq!(
+            vec![
+                ReplayEvent::Return { seat: 0, amount: 800 },
+                ReplayEvent::Showdown,
+                ReplayEvent::Award { seat: 1, amount: 200 },
+                ReplayEvent::Award { seat: 0, amount: 200 },
+            ],
+            settlement(&replay)
+        );
+        assert_eq!(hand.replay_table().unwrap().table_chip_count(), paid_out(&replay));
+    }
+
+    #[test]
+    fn cursor__return_moves_the_chips_from_the_pot_to_the_seat() {
+        let hand = defect("DEFECT_003_short_winner_excess_returned.yaml");
+        let mut replay = hand.cursor().unwrap();
+        let at = (0..replay.len())
+            .find(|index| matches!(replay.event(*index), Some(ReplayEvent::Return { .. })))
+            .unwrap();
+        replay.seek(at - 1).unwrap();
+        let before = replay.table().clone();
+        replay.step().unwrap();
+        let after = replay.table();
+
+        let pot_before = before.pot + before.seats.iter().map(|seat| seat.player.bet).sum::<usize>();
+        assert_eq!(pot_before - 800, after.pot);
+        assert_eq!(
+            before.seats.get_seat(0).unwrap().player.chips + 800,
+            after.seats.get_seat(0).unwrap().player.chips
+        );
+    }
+
+    #[test]
+    fn cursor__returns_and_awards_pay_out_every_chip_put_in() {
+        for (path, hand) in replayable_defects() {
+            let mut replay = hand.cursor().unwrap();
+            let first_paid = (0..replay.len())
+                .find(|index| {
+                    matches!(
+                        replay.event(*index),
+                        Some(ReplayEvent::Return { .. } | ReplayEvent::Award { .. })
+                    )
+                })
+                .unwrap();
+            replay.seek(first_paid - 1).unwrap();
+            let table = replay.table();
+            let put_in = table.pot + table.seats.iter().map(|seat| seat.player.bet).sum::<usize>();
+
+            assert_eq!(put_in, paid_out(&replay), "{path}");
+            let returns = (0..replay.len())
+                .filter(|index| matches!(replay.event(*index), Some(ReplayEvent::Return { .. })))
+                .count();
+            assert!(returns <= 1, "{path}: {returns} returns");
+        }
     }
 
     #[test]
@@ -1367,6 +1754,35 @@ players:
         );
     }
 
+    /// The shared-walk ruling: at every `Action` event the cursor's table is
+    /// the table `replay_with` shows its observer after the same entry.
+    #[test]
+    fn cursor__table_at_each_action_is_the_one_replay_with_observes() {
+        let mut hands = replayable_defects();
+        hands.push(("data/hands/the_hand.yaml".to_string(), the_hand()));
+        for (path, hand) in hands {
+            let mut observed: Vec<(ReplayStreet, usize, Table)> = Vec::new();
+            hand.replay_with(|step, table| observed.push((step.street, step.index, table.clone())))
+                .unwrap();
+
+            let mut replay = hand.cursor().unwrap();
+            let mut actions = 0;
+            for at in 0..replay.len() {
+                let Some(ReplayEvent::Action { street, index, .. }) = replay.event(at).cloned() else {
+                    continue;
+                };
+                replay.seek(at).unwrap();
+                let (_, _, table) = observed
+                    .iter()
+                    .find(|(seen, entry, _)| *seen == street && *entry == index)
+                    .unwrap_or_else(|| panic!("{path}: {street}[{index}] not observed"));
+                assert_eq!(table, replay.table(), "{path}: {street}[{index}]");
+                actions += 1;
+            }
+            assert!(actions > 0, "{path}: no actions");
+        }
+    }
+
     #[test]
     fn cursor__skips_recorded_posts() {
         let hand = hand(
@@ -1386,7 +1802,8 @@ streets:
         );
         let replay = hand.cursor().unwrap();
 
-        assert_eq!(3, replay.len());
+        // Forced, the fold, the big blind's uncalled 50 back, the award.
+        assert_eq!(4, replay.len());
         assert_eq!(
             Some(&ReplayEvent::Action {
                 seat: 0,
@@ -1424,8 +1841,8 @@ streets:
     fn replay__len_and_is_empty() {
         let replay = hand(FOLD_OUT).cursor().unwrap();
 
-        // Forced, raise, fold, award.
-        assert_eq!(4, replay.len());
+        // Forced, raise, fold, return, award.
+        assert_eq!(5, replay.len());
         assert!(!replay.is_empty());
     }
 
@@ -1489,6 +1906,10 @@ streets:
         assert_eq!("deal the flop", ReplayEvent::Deal(ReplayStreet::Flop).to_string());
         assert_eq!("showdown", ReplayEvent::Showdown.to_string());
         assert_eq!("seat 2 wins 10", ReplayEvent::Award { seat: 2, amount: 10 }.to_string());
+        assert_eq!(
+            "seat 0 takes back 800",
+            ReplayEvent::Return { seat: 0, amount: 800 }.to_string()
+        );
         assert_eq!(
             "river[3]: seat 4 Call",
             ReplayEvent::Action {

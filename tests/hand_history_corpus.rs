@@ -10,6 +10,10 @@
 //! - `tests/defects/validate/` — hands that are wrong on purpose, checked
 //!   finding by finding in `tests/hand_history_validate.rs`.
 //!
+//! A file that holds no hands fails: a clean run must mean every file was
+//! checked. And every hand that validates clean must also build a
+//! [`HandHistory::cursor`], the promise `validate` makes to a consumer.
+//!
 //! A defect fixture that is wrong **on purpose** for its own defect is named
 //! in [`EXPECTED`], with the rule it breaks and why. Each entry must still
 //! fire: a fixture that stops breaking its rule is as much news as one that
@@ -72,14 +76,19 @@ fn corpus() -> Vec<String> {
 }
 
 /// The hands in a file: a [`HandCollection`] (it has a `hands:` list) or a
-/// single [`HandHistory`].
+/// single [`HandHistory`]. A file with no hands is an error: a corpus file
+/// that checks nothing must not pass as clean.
 fn hands(text: &str) -> Result<Vec<HandHistory>, String> {
-    match HandCollection::from_yaml(text) {
-        Ok(collection) => Ok(collection.hands().to_vec()),
+    let hands = match HandCollection::from_yaml(text) {
+        Ok(collection) => collection.hands().to_vec(),
         Err(as_collection) => HandHistory::from_yaml(text)
             .map(|hand| vec![hand])
-            .map_err(|as_hand| format!("not a hand ({as_hand}) or a collection ({as_collection})")),
+            .map_err(|as_hand| format!("not a hand ({as_hand}) or a collection ({as_collection})"))?,
+    };
+    if hands.is_empty() {
+        return Err("holds no hands, so nothing in it is checked".to_string());
     }
+    Ok(hands)
 }
 
 /// Every finding in one file. A file that does not parse is one line of its own.
@@ -145,4 +154,38 @@ fn hands__reads_a_collection_and_a_single_hand() {
     assert_eq!(hands(single).map(|hands| hands.len()), Ok(1));
     assert_eq!(hands(collection).map(|hands| hands.len()), Ok(1));
     assert!(hands("not: [a, hand").is_err());
+}
+
+#[test]
+fn hands__a_file_with_no_hands_is_an_error() {
+    // A clean report must mean something was checked.
+    assert!(hands("hands: []\n").is_err());
+}
+
+/// `validate` coming back empty means the hand replays: bowery vets a file
+/// with `validate()` and then drives `cursor()`, so the two cannot drift.
+#[test]
+fn corpus__a_clean_hand_has_a_cursor() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut checked = 0;
+    let mut failures: Vec<String> = Vec::new();
+    for file in corpus() {
+        let text = std::fs::read_to_string(root.join(&file)).unwrap_or_else(|error| panic!("{file}: {error}"));
+        let Ok(hands) = hands(&text) else {
+            continue;
+        };
+        for hand in hands {
+            if hand.validate().is_empty() {
+                checked += 1;
+                if let Err(error) = hand.cursor() {
+                    failures.push(format!(
+                        "{file} ({}): validates clean, but cursor() is {error:?}",
+                        hand.hand.id
+                    ));
+                }
+            }
+        }
+    }
+    assert!(checked > 0, "no hand in the corpus validates clean");
+    assert!(failures.is_empty(), "\n{}", failures.join("\n"));
 }

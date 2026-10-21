@@ -234,9 +234,11 @@ impl TestData {
         hups
     }
 
+    /// "The Hand"'s 21 cards: each seat's hole cards, seat 0 to seat 7, then
+    /// the board.
     #[must_use]
     pub fn the_hand_cards() -> Cards {
-        cards!("T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
     /// "The Hand" in the order a dealer starting at the button deals it: the
@@ -489,6 +491,19 @@ mod util__data_tests {
 
     /// We want to make sure that our test data enforces the correct contract of the structs that
     /// we are validating with it.
+    #[test]
+    fn the_hand_cards__is_every_hole_card_and_the_board_once() {
+        let expected: Cards = TestData::the_hand_seats()
+            .iter()
+            .flat_map(|seat| seat.cards.cards().iter().copied().collect::<Vec<_>>())
+            .chain(cards!("9♣ 6♦ 5♥ 5♠ 8♠").iter().copied())
+            .collect();
+
+        let cards = TestData::the_hand_cards();
+        assert_eq!(21, cards.len(), "{cards}");
+        assert_eq!(expected.sort(), cards.sort());
+    }
+
     #[test]
     fn shu_hup_alignment() {
         let hup = TestData::the_hand_as_hup_result();

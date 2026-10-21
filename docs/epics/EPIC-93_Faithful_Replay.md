@@ -445,7 +445,59 @@ design text is kept as written; these notes win.
    not a `Finding` variant. Test names follow `validate__<case>`, not
    `validate__<rule>__<case>`. The corpus test is
    `corpus__every_hand_validates_clean` in `tests/hand_history_corpus.rs`
-   (`validate__clean_corpus` in the Test Plan).
+   (`validate__clean_corpus` in the Test Plan). Phase 1c's "one fixture per
+   rule under `tests/defects/validate/`" became inline unit fixtures in
+   `src/hand_history/check.rs` (the `validate__*` tests); only the DEFECT_040
+   before-file lives in `tests/defects/validate/`, so exit criterion 3 is met
+   there, not in the directory.
+10. **A replay table is a takeover point (final review I1).** For Hold'em and
+    Omaha, `replay_table` gives the table the hand's own deck: the part of
+    `stacked_deck()` the hole cards did not take. Each `Deal` lays the
+    recorded street, as before, and takes its burn (to the muck) and cards
+    off the top of that deck, as `deal_flop` and friends do. So
+    `Replay::table()` at any event deals the record's next cards when a
+    consumer plays on from it. A record that cannot be stacked (a card
+    recorded twice) keeps the box deck, and replays and validates exactly as
+    before. `stacked_deck` stacks from the table builder without the deck
+    step (`seated_table`), so the two do not recurse. There is no
+    `starting_table()`.
+11. **Returned chips are a `ReplayEvent::Return` (final review I2).** § Design
+    lists `Award` as "one per pot share". The engine pays an uncalled bet or
+    an all-in's unmatched excess back at the showdown, and as an `Award` it
+    read as the loser winning. The cursor now emits one
+    `Return { seat, amount }` for the top contributor's total over the
+    second-largest contribution (capped at what the showdown pays that seat),
+    after the last action or deal and before `Showdown` (or before a fold-out
+    winner's `Award`), and shrinks or drops that seat's shares by it, so every
+    `Award` is chips won. `Return` and `Award`s together still pay out every
+    chip put in, and the pot ends at 0. A hand nobody matched (everyone folds
+    to a lone big blind, `DEFECT_013`) ends on its `Return`. `ReplayEvent` is
+    `#[non_exhaustive]`.
+12. **`validate` coming back empty means the hand replays (final review I3).**
+    § Scope's "absent optional fields are not findings" no longer covers
+    `streets`: a new `Rule::Incomplete` reports a record whose walk played
+    every recorded action but left the hand unfinished (two or more seats
+    in, an action or a street missing, or no `streets` at all), at the last
+    street's path (`streets` when no action is recorded). A board-only all-in
+    record is Incomplete. Stakes and starting stacks must be whole,
+    non-negative numbers of chips (`Rule::Amount` at `table.stakes.*`,
+    `Rule::Seats` at `players[i].stack`; NaN, negative and infinite numbers
+    included), and a hand the engine cannot set up at all (a listed player
+    with no chips in a blind) is one finding at `players` (`Rule::Seats`) or
+    `table.stakes` (`Rule::Amount`) naming the engine's error. The corpus
+    test asserts `validate().is_empty()` implies `cursor().is_ok()` for every
+    corpus hand, and fails a file that holds no hands; `yaml_audit` exits 1
+    when it checked nothing. Partial records are not supported
+    (`docs/TECHNICAL_DEBT.md`).
+13. **Omaha posts the ante; fixed-limit Hold'em does not (final review M1).**
+    § Design "Replay fidelity" says Hold'em and Omaha post `stakes.ante`; the
+    Omaha branch now does (`ForcedBets::new_with_ante` on the PLO table).
+    Fixed-limit Hold'em still takes its blinds from the bet sizes and posts
+    no ante (`docs/TECHNICAL_DEBT.md`).
+14. **The Result rule is Hold'em only (final review M2).** § Context says
+    Hold'em and Omaha are validated. Omaha hands get every rule but Result:
+    `best_hand`, `hand_rank` and `outcome` are not checked for Omaha
+    (`docs/TECHNICAL_DEBT.md`).
 
 ### Phase status summary
 
@@ -456,6 +508,7 @@ design text is kept as written; these notes win.
 | 2 | 2a–2c | `49f7c1b5`, `629a3000`, `3245e326` | corrigenda 1, 2 |
 | 3 | 3a–3c | `1356a11a` | corrigenda 3–5 |
 | 4 | 4a–4e | `b01f46ec`, `87190520`, close-out | corrigenda 6, 7; DEFECT_040 fixed |
+| Final review | I1–I3, M1–M6, parked | final fix wave | corrigenda 9–14 |
 
 ---
 

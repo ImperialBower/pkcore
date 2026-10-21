@@ -10,8 +10,8 @@
 //!
 //! 2. **Replay** — when validate is clean, the hand is replayed and the
 //!    resulting chip counts are compared against the recorded `net` values.
-//!    A failure here means the engine disagrees with what was recorded — the
-//!    most common symptom of action-logging bugs in pkdealer / pkarena0-web.
+//!    A clean `validate` already promises the replay succeeds; this layer
+//!    shows the per-seat chip delta when a recorded `net` is off.
 //!
 //! **Usage:**
 //! ```text
@@ -22,7 +22,8 @@
 //! cargo run --features hand-histories,bot-profiles --example yaml_audit
 //! ```
 //!
-//! Exits 0 if every hand passes both layers, 1 if any hand fails.
+//! Exits 0 if every hand passes both layers, 1 if any hand fails or the file
+//! holds no hands (nothing checked is not a pass).
 
 use pkcore::hand_history::{HandCollection, HandHistory, PlayerEntry};
 use std::path::PathBuf;
@@ -59,15 +60,22 @@ fn main() {
     }
 
     println!();
-    if passed == n {
+    if n == 0 {
+        println!("=== Summary: no hands in the file — nothing was checked ===");
+    } else if passed == n {
         println!("=== Summary: {passed}/{n} passed ✓ ===");
     } else {
         println!("=== Summary: {passed}/{n} passed — {} FAILED ===", n - passed);
     }
 
-    if passed < n {
-        process::exit(1);
-    }
+    process::exit(exit_code(passed, n));
+}
+
+/// The process exit code: 0 when every one of `total` hands passed, 1 when
+/// any failed or when there were no hands, since a clean run must mean
+/// something was checked.
+fn exit_code(passed: usize, total: usize) -> i32 {
+    i32::from(total == 0 || passed < total)
 }
 
 /// Reads a [`HandCollection`] (a file with a `hands:` list), or a single
@@ -262,6 +270,13 @@ mod tests {
         assert_eq!(parse(single).map(|c| c.len()), Ok(1));
         assert_eq!(parse(&collection).map(|c| c.len()), Ok(1));
         assert!(parse("not: [a, hand").is_err());
+    }
+
+    #[test]
+    fn exit_code_fails_a_file_that_checked_nothing() {
+        assert_eq!(1, exit_code(0, 0));
+        assert_eq!(0, exit_code(2, 2));
+        assert_eq!(1, exit_code(1, 2));
     }
 
     #[test]

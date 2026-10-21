@@ -107,6 +107,30 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   entry turns off the best-hand-must-win check for the whole hand, so once
   any seat mucks, nothing checks that the best of the hands shown was the one
   marked `win`.
+- [ ] **Partial records get no cursor** — found 2026-10-21 in the EPIC-93
+  final review (I3). `HandHistory::cursor()` needs a record that runs to the
+  end of the hand, and `validate` now reports one that stops early as
+  `Rule::Incomplete`: a book's hand that stops at "hero to act", a record
+  that stops mid-street, a record with no `streets`, and a board-only all-in
+  (both players all in preflop, the cards given only in `board`, no
+  `flop`/`turn`/`river` streets) are all Incomplete and have no cursor. A
+  cursor that accepts an unfinished record and ends without `Showdown` or
+  `Award` would let bowery show such hands; until then they are not
+  supported. ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
+- [ ] **Fixed-limit Hold'em replay posts no ante** — found 2026-10-21 in the
+  EPIC-93 final review (M1). Hold'em and Omaha replays post the recorded
+  ante; `limit_holdem_from_seats_with_id` takes its blinds from the bet sizes
+  (`small_bet / 2`, `small_bet`) and the replay ignores `table.stakes`, ante
+  included (`src/hand_history.rs`, `seated_table`). A fixed-limit record with
+  an ante replays short by the antes, and `validate` blames the record's
+  pots and nets. ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
+- [ ] **Omaha results are not checked** — found 2026-10-21 in the EPIC-93
+  final review (M2). The Result rule ranks seven cards, so it runs for
+  Hold'em only (`src/hand_history/check.rs`, `passes::results`); an Omaha
+  record's `best_hand`, `hand_rank` and `outcome` are not checked, though
+  § Context says Omaha is validated. Ranking with `OmahaHigh` (two from the
+  hand, three from the board) would close it.
+  ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
 - [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:626`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
