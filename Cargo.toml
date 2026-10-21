@@ -373,6 +373,10 @@ name = "hand_history_validate"
 required-features = ["hand-histories"]
 
 [[test]]
+name = "hand_history_corpus"
+required-features = ["hand-histories"]
+
+[[test]]
 name = "player_stats_consistency"
 required-features = ["bot-profiles", "hand-histories", "player-stats"]
 

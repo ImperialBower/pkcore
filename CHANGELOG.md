@@ -13,14 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   history is a claim; `validate` checks it and returns every disagreement, not
   the first, each a `Finding` naming the YAML path at fault (`board`,
   `players[1].hole_cards`, `streets.preflop.actions[3].seat`) and the `Rule` it
-  broke. Two rules so far. **Cards**: every card string parses, no card appears
+  broke. It starts with two rules. **Cards**: every card string parses, no card appears
   twice across the hole cards and board, the board is 3 to 5 cards and agrees
   with the streets. **Seats**: seats are unique and inside `table.seats`, the
   button is inside the table, every action is by a listed seat that has not
   folded; a gap between seats is fine, and so are a dead button (on an empty
   chair) and a zero `post` by an empty chair (the dead small blind). Stud, stud hi-lo and razz return one
   `Rule::Unsupported` finding. Absent optional fields are not findings. The
-  order, legality, amount, pot, result and money rules follow below.
+  order, legality, amount, pot, result and money rules are the next entries.
   `tests/defects/validate/` holds hands that are wrong on purpose, starting with
   `data/hands/the_hand.yaml` as it stood (DEFECT_040). See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
@@ -99,6 +99,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `InvalidCardCount` and the session is left as it was. `start_hand` and
   `start_hand_with` behave as before. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **The hand-history corpus test** (`tests/hand_history_corpus.rs`,
+  `hand-histories`). Every `*.yaml` under `data/hands/` and `tests/defects/`,
+  one hand or a collection, validates clean, and a failure prints one
+  `file: finding` line each. `data/hands/legacy/` (recorded under the
+  pre-dead-button blind rule) and `tests/defects/validate/` (wrong on purpose)
+  are left out. A defect fixture that breaks a rule on purpose is named in an
+  allowlist with its reason and must still break it: today only `DEFECT_014`,
+  whose legacy `seats` field holds the player count. See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
 ### Changed
 
@@ -123,6 +132,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   caller's street total after it (both are accepted); for `bet`,
   `raise` and `all_in`, the total the player has bet on the street after the
   action. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`examples/yaml_audit.rs` validates.** It reads one hand or a
+  `HandCollection` and prints every `validate()` finding as
+  `path: message (Rule)`, in place of its own card-string checks; when a hand
+  validates clean it still replays it and compares the stacks.
+  `cargo run --features full --example yaml_audit -- data/hands/the_hand.yaml`
+  passes.
+- **CI's wasm32 job runs `make check-wasm`**, which checks the library in
+  three configurations: the default features, pkarena0-web's set
+  (`equity,bot-profiles,hand-histories,player-stats`), and bowery's
+  (`equity,hand-histories,bot-profiles`, new). It used to check only the
+  default build.
 
 ### Fixed
 
@@ -131,7 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recorded with `stakes.ante` replayed 200 chips light per player (a six-handed
   `400/800/200` hand showed a pot of 8,200 where 9,400 was dealt). Stud already
   posted its ante. Pot-limit Omaha and fixed-limit Hold'em tables are built as
-  before. The table construction moved to one private builder, `replay_table`,
+  before. The table construction moved to one crate-internal builder, `replay_table`,
   so later checks and a step-by-step replay start from the same table. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`data/hands/the_hand.yaml` is recorded from the engine, not typed**

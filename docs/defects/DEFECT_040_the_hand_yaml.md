@@ -5,8 +5,8 @@
 **Severity:** Medium — the repo's showcase hand is wrong in seven ways, the
 fixture it should be checked against is wrong in two more, and a unit test
 pins one of the errors as correct  
-**Status:** Open — fixed by [EPIC-93](../epics/EPIC-93_Faithful_Replay.md)
-Phase 4  
+**Status:** Fixed in `0.17.0` — by [EPIC-93](../epics/EPIC-93_Faithful_Replay.md)
+Phase 4 (`87190520`), 2026-10-20  
 **Found by:** drawing the hand for bower EPIC-20 (*bowery*), 2026-10-19: the
 river mockup showed Negreanu calling 205,000 with 201,700 behind  
 **Affects:** `data/hands/the_hand.yaml`, the inline `THE_HAND_YAML`
@@ -193,4 +193,85 @@ Owned by EPIC-93, which adds the check this defect proves is missing:
 
 ## Resolution
 
-*Not yet resolved.*
+**Fixed in `0.17.0`**, on branch `epic-93-faithful-replay`. The file is now
+recorded, not typed, and a check that did not exist when it was filed reads it
+on every `cargo test`.
+
+### What changed
+
+- **The check** (EPIC-93 Phases 1–2, `f91487e2` … `3245e326`).
+  `HandHistory::validate` plays a hand history through the engine and returns a
+  located `Finding` for every claim it gets wrong: Cards, Seats, Order,
+  Legality, Amount, Pot, Result and Money. Replay posts the Hold'em ante
+  (`49f7c1b5`) and refuses a recorded amount the engine disagrees with
+  (`629a3000`), so the two holes listed under § Symptom are closed.
+- **The record** (`87190520`, Fix steps 2–4). `data/hands/the_hand.yaml` is the
+  output of `cargo run --features full --example record_the_hand`, which plays
+  `TestData::the_hand_broadcast_table()` (eight players, button seat 0,
+  `ForcedBets::new_with_ante(300, 600, 100)`) through
+  `TestData::the_hand_line()` (the 19 actions of `examples/the_hand.rs`, now
+  shared with it) and writes the result with `HandHistory::from_table_state`.
+  The engine wrote the pots, the nets and the ranks. Item by item:
+  1. Hansen (seat 3) holds the fives and Negreanu (seat 4) the sixes, as in
+     `TestData`.
+  2. and 3. Hansen `win` with `FourFives` 124; Negreanu `lose` with `FullHouse`
+     271.
+  4. Hansen moves all in on the river to 232,000 for the street, his whole
+     287,100, and Negreanu calls the 167,000 more with chips behind.
+  5. Negreanu's net is −287,100; Hansen's is +288,600. The nets sum to zero
+     and the final pot is 575,700, the broadcast's.
+  6. Every street's pot includes the blinds and antes: 11,700 after the
+     preflop, 63,700 after the flop, 111,700 after the turn.
+  7. The turn is the broadcast's: Hansen bets 24,000 and Negreanu calls. No
+     raise, so no illegal one.
+  8. `TestData::the_hand_seats` gives Elezra `8♣ 3♥`.
+  9. `TestData::the_hand_cards_dealable` holds three burn cards, so
+     `TestData::the_hand_table` deals `9♣ 6♦ 5♥ 5♠ 8♠`. The burns are the
+     ones `HandHistory::stacked_deck` picks, so the recorded file rebuilds the
+     fixture's deck card for card.
+  `HandHistory::from_table_state` also had to change: it wrote the flop in
+  deck order beside a board in dealt order, and `validate` reported the
+  recorded hand's own cards (CHANGELOG `0.17.0`, Fixed).
+  The inline `THE_HAND_YAML` is now `include_str!` of the file, and its test,
+  `the_hand_yaml__is_the_recorded_hand`, asserts the new cards and results.
+- **The corpus** (EPIC-93 4b, Fix step 5). `tests/hand_history_corpus.rs`
+  validates every hand under `data/hands/` (except `legacy/`) and
+  `tests/defects/` (except `validate/`) on every `cargo test`, the_hand.yaml
+  included. `examples/yaml_audit.rs` prints the same findings for one file.
+- **The old file is kept** as `tests/defects/validate/DEFECT_040_the_hand_before.yaml`,
+  wrong on purpose, and `the_hand_before__reports_defect_040`
+  (`tests/hand_history_validate.rs`) asserts it still reports Seats, Result
+  and Money.
+
+### Red, then green
+
+- **Red** (`f91487e2`, Phase 1, recorded in its commit message):
+  `the_hand_yaml__validates`, run with `--ignored` against the old file,
+  failed with four Seats findings (seats 2, 3, 5 and 6 act but are not in
+  `players`); 0 passed, 1 failed. With every rule in place, the old file (now
+  the before-file) reports seven findings: those four Seats, two Result
+  (`results[1].hand_rank.value` records 117 where pkcore ranks quad fives
+  124, and `results[1].outcome` is `lose` for the best hand at showdown) and
+  one Money (`results[1].net`, a loss of 335,100 from a 331,400 stack).
+  Items 4, 6 and 7 need the engine's walk, which stops at the file's first
+  action by an unlisted seat. They are pinned by unit fixtures in
+  `src/hand_history/check.rs`:
+  `validate__unaffordable_call_is_an_amount_finding`,
+  `validate__street_pot_excluding_blinds_is_a_pot_finding` and
+  `validate__raise_below_minimum_is_a_legality_finding`. Item 1 is not
+  machine-detectable.
+- **Green** (`87190520`, and on this branch since):
+  `the_hand_yaml__validates` passes un-ignored, `corpus__every_hand_validates_clean`
+  passes, and `cargo run --features full --example yaml_audit --
+  data/hands/the_hand.yaml` prints `hsp-s2e11-the-hand  PASS`.
+
+### The estimate caveat
+
+The stakes, the button, the cards, the action, Hansen's 287,100 and the
+575,700 pot are the broadcast's. **Negreanu's 387,100 and the 100,000 each of
+the six who fold are estimates**: no source found publishes them, and the
+file's header says so (`# ESTIMATE — not from the broadcast; read off the
+episode to replace`). They change no pot, no action and no result. Whoever
+reads them off the episode changes `TestData::the_hand_broadcast_table` and
+records the file again; the file is not to be edited by hand. The burn cards
+are not from the broadcast either.

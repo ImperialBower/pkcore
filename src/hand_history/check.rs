@@ -1704,7 +1704,7 @@ players:
     #[test]
     fn validate__zero_or_amountless_post_by_an_unlisted_seat_is_not_a_finding() {
         // The engine places the small blind on seat 0 when a dead SB wraps
-        // (suspected engine defect, TECHNICAL_DEBT via EPIC-93 Task 10), so the
+        // (suspected engine defect, docs/TECHNICAL_DEBT.md), so the
         // walk reports seat 1's fold as out of turn. This test is about the
         // Seats rule only.
         let yaml = r"

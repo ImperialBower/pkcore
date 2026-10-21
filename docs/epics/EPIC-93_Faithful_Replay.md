@@ -28,7 +28,9 @@
   for each machine-detectable DEFECT_040 item, and green after the fix. The corpus test validates every
   file under `data/hands/` (except `legacy/`) and `tests/defects/`. CI's
   wasm32 step runs `make check-wasm` with the feature set bowery uses.
-- **Status:** Planned. Filed 19 October 2026.
+- **Status:** Complete, in `0.17.0`. Filed 19 October 2026; closed 20
+  October 2026 on branch `epic-93-faithful-replay`. What was built differs from
+  this design in a few places: see § Implementation corrigendum.
 
 ---
 
@@ -109,11 +111,11 @@ wasm32 (`Cargo.toml:113-118`).
 
 | Component | Status |
 |---|---|
-| Phase 0 — numbering, wasm32 check job, replay moved under `hand-histories` | Planned |
-| Phase 1 — `Finding`, `Rule`, `validate()` skeleton; failing tests for DEFECT_040 | Planned |
-| Phase 2 — replay fidelity: antes, call amounts, all-in, min-raise | Planned |
-| Phase 3 — `Replay` cursor with deal, showdown and award events | Planned |
-| Phase 4 — `stacked_deck`, `start_hand_with_deck`; DEFECT_040 fixed; corpus test | Planned |
+| Phase 0 — numbering, wasm32 check job, replay moved under `hand-histories` | **Complete** — `38a58bc1` (0a, 0c), `f2005f18` (0b, 0d; `0.17.0`) |
+| Phase 1 — `Finding`, `Rule`, `validate()` skeleton; failing tests for DEFECT_040 | **Complete** — `f91487e2`, `0ec2c1d0` (tests gated for `make test-kernel`) |
+| Phase 2 — replay fidelity: antes, call amounts, all-in, min-raise | **Complete** — `49f7c1b5` (2a), `629a3000` (2b; 2c Order, Legality, Amount), `3245e326` (2c Pot, Result, Money) |
+| Phase 3 — `Replay` cursor with deal, showdown and award events | **Complete** — `1356a11a` |
+| Phase 4 — `stacked_deck`, `start_hand_with_deck`; DEFECT_040 fixed; corpus test | **Complete** — `b01f46ec` (4a), `87190520` (4c), the EPIC-93 close-out commit (4b, 4e, 4d) |
 
 ---
 
@@ -199,6 +201,7 @@ must not hide its river call (item 4).
 it is to (`:686`). A hand-typed file that records calls as totals, as
 the_hand.yaml does ("call 26000" after a bet of 8,000), produces `Amount`
 findings. The field's doc (`src/hand_history.rs:2585`) says so after 0d.
+*As built, a `call` is accepted in either reading* (corrigendum 1).
 
 **A seat that acts must be in `players`.** One that is not is a `Seats`
 finding, and the walk seats it with an unknown stack so it can continue. A
@@ -311,73 +314,148 @@ Negreanu's seat on the flop is then dealt the real 5♠ and 8♠.
 
 ### Phase 0 — Numbering, wasm, gating
 
-- [ ] **0a.** `ROADMAP.md:420` — record `EPIC-93 Faithful Replay` and move
+- [x] **0a.** `ROADMAP.md:420` — record `EPIC-93 Faithful Replay` and move
   "Next free pkcore number" to `EPIC-94`. Register **EPIC-110 through
   EPIC-119** for the new `bowery` repo under "EPIC Numbering Policy"
   (`ROADMAP.md:410-423`).
-- [ ] **0b.** Move `replay`, `replay_with`, `replay_all` from `bot-profiles`
+- [x] **0b.** Move `replay`, `replay_with`, `replay_all` from `bot-profiles`
   to `hand-histories` (`src/hand_history.rs:580`, `:624`, `:2877`, `:2972`);
   check nothing in them needs a bot.
-- [ ] **0c.** Extend the wasm32 step at `.github/workflows/basic.yaml:213`
+- [x] **0c.** Extend the wasm32 step at `.github/workflows/basic.yaml:213`
   to run `make check-wasm` (`Makefile:288-290`), adding the set bowery
   uses, `--no-default-features --features equity,hand-histories,bot-profiles`.
   Green before Phase 1.
-- [ ] **0d.** Write the decisions into the format's doc comments: seats are
+- [x] **0d.** Write the decisions into the format's doc comments: seats are
   0-based (`src/hand_history.rs:2571`, and `PlayerEntry::seat`), and what a
   recorded `amount` means (`:2585`). Add a `validate` test that a seat equal
   to `table.seats` is a `Seats` finding (off by one).
 
 ### Phase 1 — `validate()` and its failing tests
 
-- [ ] **1a.** `src/hand_history/check.rs` with `Finding`, `Rule`, and
+- [x] **1a.** `src/hand_history/check.rs` with `Finding`, `Rule`, and
   `validate` running the Cards and Seats rules.
-- [ ] **1b.** `the_hand_yaml__validates` (`tests/hand_history_validate.rs`) —
+- [x] **1b.** `the_hand_yaml__validates` (`tests/hand_history_validate.rs`) —
   **red**, and it stays red until 4c.
-- [ ] **1c.** One fixture per rule under `tests/defects/validate/`, each
+- [x] **1c.** One fixture per rule under `tests/defects/validate/`, each
   wrong in exactly one way, each asserting exactly one finding with that
   `Rule` and path.
 
 ### Phase 2 — Fidelity
 
-- [ ] **2a.** Antes in replay (`:735`); test: a 6-handed 400/800/200 hand's
+- [x] **2a.** Antes in replay (`:735`); test: a 6-handed 400/800/200 hand's
   preflop pot is 9,400 with both blinds folded.
-- [ ] **2b.** Recorded amounts checked (`:944-946`); test: the 205,000 call
+- [x] **2b.** Recorded amounts checked (`:944-946`); test: the 205,000 call
   with 201,700 behind is a `Rule::Amount` finding.
-- [ ] **2c.** Order, Legality (min-raise), Pot, Result and Money rules.
+- [x] **2c.** Order, Legality (min-raise), Pot, Result and Money rules.
   `validate` on today's the_hand.yaml reports at least one finding for each of
   DEFECT_040 items 2–7, asserted as a set of `(Rule, path)` pairs, not a count.
   Item 1 (swapped cards) is not machine-detectable, and the test says so in a
   comment.
+  *As built:* the before-file
+  (`tests/defects/validate/DEFECT_040_the_hand_before.yaml`) reports
+  {Seats, Result, Money}, asserted as a set of rules by
+  `the_hand_before__reports_defect_040`. The walk stops at its first action,
+  by a seat that is not listed and so cannot be played in turn, and Result and
+  Money run on the record alone. Items 4 (Amount), 6 (Pot) and 7 (Legality)
+  need the walk, so each is pinned by its own unit fixture in
+  `src/hand_history/check.rs`: `validate__unaffordable_call_is_an_amount_finding`,
+  `validate__street_pot_excluding_blinds_is_a_pot_finding` and
+  `validate__raise_below_minimum_is_a_legality_finding`. A recorded `call`
+  amount is accepted in either reading, the chips added or the caller's
+  street total (see `docs/TECHNICAL_DEBT.md`, "A recorded `call` amount has
+  two readings").
 
 ### Phase 3 — The cursor
 
-- [ ] **3a.** `ReplayEvent`, `Replay`, `HandHistory::cursor`.
-- [ ] **3b.** `replay_with` re-implemented on the cursor; existing replay
+- [x] **3a.** `ReplayEvent`, `Replay`, `HandHistory::cursor`.
+- [x] **3b.** `replay_with` re-implemented on the cursor; existing replay
   tests (`tests/replay_consistency.rs:168`) unchanged and green.
-- [ ] **3c.** Tests: `cursor__seek_back_equals_fresh_walk` (proptest over the
+- [x] **3c.** Tests: `cursor__seek_back_equals_fresh_walk` (proptest over the
   corpus: `seek(i)` after `seek(len-1)` gives the same `Table` as a fresh
   `seek(i)`); `cursor__all_in_preflop_deals_three_events`;
   `cursor__ends_on_award_with_empty_pot`.
 
 ### Phase 4 — Decks, the defect, the corpus
 
-- [ ] **4a.** `Cards` deal-order helper out of `TestData`; `stacked_deck`;
+- [x] **4a.** `Cards` deal-order helper out of `TestData`; `stacked_deck`;
   `start_hand_with_deck`. Test: dealing `stacked_deck()` from the recorded
   button reproduces every recorded hole card and board card.
-- [ ] **4b.** `tests/hand_history_corpus.rs`: every `.yaml` under
+- [x] **4b.** `tests/hand_history_corpus.rs`: every `.yaml` under
   `data/hands/` and `tests/defects/` validates clean. It excludes
   `tests/defects/validate/` (wrong on purpose) and `data/hands/legacy/`, which
   holds session collections recorded under the pre-dead-button blind rule and
   is "not a specification" by its own README.
-- [ ] **4c.** DEFECT_040 § Fix steps 2–5 (needs Open decision 2): fix
+- [x] **4c.** DEFECT_040 § Fix steps 2–5 (needs Open decision 2): fix
   `TestData`, regenerate `the_hand.yaml`, replace the inline `THE_HAND_YAML`
   (`src/hand_history.rs:3138-3220`) and its assertions (`:3236-3238`,
   `:3247-3250`). 1b goes green. Write DEFECT_040's Resolution.
-- [ ] **4e.** `examples/yaml_audit.rs` reads only a `HandCollection`
+- [x] **4e.** `examples/yaml_audit.rs` reads only a `HandCollection`
   (`:36`). Make it accept a single `HandHistory` too, and make it call
   `validate`.
-- [ ] **4d.** CHANGELOG; release `0.17.0` (the replay behaviour change in
+- [x] **4d.** CHANGELOG; release `0.17.0` (the replay behaviour change in
   Compatibility is why it is a minor bump).
+
+---
+
+## Implementation corrigendum
+
+Where the code that shipped in `0.17.0` differs from the design above. The
+design text is kept as written; these notes win.
+
+1. **DEFECT_040's file does not report items 2–7 (2c).** The before-file
+   reports {Seats, Result, Money}: its walk stops at the first action, by a
+   seat that is not in `players`, and only the rules that run on the record
+   alone report past it. Items 4 (Amount), 6 (Pot) and 7 (Legality) are each
+   pinned by their own unit fixture in `src/hand_history/check.rs` (see 2c).
+2. **A recorded `call` amount has two readings.** § Design says a call records
+   the chips added and a typed total is an `Amount` finding. The 13
+   hand-written `tests/defects/` fixtures record the caller's street total, so
+   `validate` and `replay` accept either, and a call matching neither is the
+   finding. The format stays ambiguous; that is debt
+   (`docs/TECHNICAL_DEBT.md`).
+3. **`replay_with` does not step a `Replay` (3b).** `replay_with` and
+   `cursor()` share one walk (`HandHistory::walk`,
+   `src/hand_history/replay.rs`), so the cursor's events are what `replay()`
+   did; neither is built on the other. `validate` has a walk of its own in
+   `check.rs`, because it repairs illegal actions and goes on where replay
+   stops; it shares the table builder (`replay_table`) and the amount
+   comparison with replay.
+4. **Recorded posts are not `ReplayEvent`s.** Blinds and antes, recorded or
+   not, are part of `Forced`; a recorded `post` action gets no `Action` event.
+   `ReplayEvent::Action` also carries the action's `street` and its `index` in
+   that street's `actions`, and `Deal` carries a `ReplayStreet`.
+5. **`at()` is the index of the last event applied.** The cursor starts on
+   event 0 (`Forced`), `seek(i)` applies events `0..=i`, and
+   `event(i)` returns `Option<&ReplayEvent>`, `None` past the end.
+6. **`stacked_deck` is Hold'em and Omaha only.** Stud, razz, Omaha hi-lo,
+   Kuhn and draw return `PKError::NotImplemented`.
+7. **`from_table_state` writes the flop in board order.** The engine's event
+   log carries the flop as a set, so a recorded file's flop came out in deck
+   order beside a board in dealt order and failed the Cards rule. Fixed with
+   DEFECT_040 (`87190520`).
+8. **The Seats rule accepts a dead button.** § Scope item 2 says "the button
+   is seated". TDA Rule 32 puts the button on an empty chair after an
+   elimination, and `DEFECT_013` records one, so the rule checks only that the
+   button is inside the table; a zero or amountless `post` by an empty chair
+   (the dead small blind) is not a finding either.
+9. **Smaller deltas.** `hand_history.rs` stayed a file, with `check.rs` and
+   `replay.rs` as child modules under `src/hand_history/` (Key Files says
+   `mod.rs`). `cursor__seek_back_equals_fresh_walk` walks every replayable
+   `tests/defects/` hand rather than a proptest. `Rule::Unsupported` is a rule,
+   not a `Finding` variant. Test names follow `validate__<case>`, not
+   `validate__<rule>__<case>`. The corpus test is
+   `corpus__every_hand_validates_clean` in `tests/hand_history_corpus.rs`
+   (`validate__clean_corpus` in the Test Plan).
+
+### Phase status summary
+
+| Phase | Items | Commits | Notes |
+|---|---|---|---|
+| 0 | 0a–0d | `38a58bc1`, `f2005f18` | CI's wasm32 job runs `make check-wasm` (three configurations); `0.17.0` |
+| 1 | 1a–1c | `f91487e2`, `0ec2c1d0` | red run in `f91487e2`'s message |
+| 2 | 2a–2c | `49f7c1b5`, `629a3000`, `3245e326` | corrigenda 1, 2 |
+| 3 | 3a–3c | `1356a11a` | corrigenda 3–5 |
+| 4 | 4a–4e | `b01f46ec`, `87190520`, close-out | corrigenda 6, 7; DEFECT_040 fixed |
 
 ---
 
@@ -450,7 +528,7 @@ cargo test --test hand_history_validate --features hand-histories
 cargo test --test hand_history_corpus --features hand-histories
 make check-wasm
 cargo clippy --all-features -- -D warnings
-cargo run --example yaml_audit -- data/hands/the_hand.yaml   # after 4e
+cargo run --features full --example yaml_audit -- data/hands/the_hand.yaml   # after 4e
 ```
 
 Exit criteria:

@@ -66,6 +66,47 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   bower's ```` ```bowery ```` blocks inherit the 0. Revisit if typed-in hands
   become common: a `seat_base` field, or a `format_version` 2 that is
   1-based. ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#open-decisions))
+- [ ] **A recorded `call` amount has two readings** — found 2026-10-20 closing
+  EPIC-93. The engine's log (`from_table_state`) records the chips a call
+  adds; the 13 hand-written `tests/defects/` fixtures record the caller's
+  street total after it. `validate` and `replay` accept either
+  (`src/hand_history/check.rs`, "What a recorded amount means"), so the
+  format stays ambiguous: a call whose two readings coincide cannot say which
+  it meant, and a third-party writer can pick either. One reading should win
+  (chips added, the engine's) and the fixtures be migrated, after which the
+  other reading becomes an `Amount` finding.
+  ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
+- [ ] **Suspected engine defect: a wrapping dead small blind lands on seat 0**
+  — found 2026-10-20 by EPIC-93. With the button on seat 4 of a six-chair
+  table, seats 0 and 1 occupied and the small blind owed by empty chair 5
+  (dead-button wraparound, TDA Rule 32), the engine puts the small blind on
+  seat 0, so `validate` reports the record's fold by seat 1 as "seat 1 acts
+  out of turn; seat 0 is next to act" (`Rule::Order`). Seen in
+  `validate__zero_or_amountless_post_by_an_unlisted_seat_is_not_a_finding`
+  (`src/hand_history/check.rs`), which asserts only the Seats rule for this
+  reason. Not confirmed against the TDA text and not fixed in EPIC-93; it
+  wants a defect record and a `tests/defects/` fixture.
+- [ ] **Legacy pkarena0 sessions do not validate** — `data/hands/legacy/`
+  is left out of the EPIC-93 corpus test (`tests/hand_history_corpus.rs`), by
+  design: its README calls the files a record, not a specification. Running
+  `examples/yaml_audit.rs` on them shows what that hides:
+  `pkarena0-session_2026-04-28.yaml` `pkarena0-hand-040` records a small
+  blind of 200 where the engine posts 300 (`Pot` and `Money` findings), many
+  hands record `table.seats` as the player count (`Seats`), their flops are
+  in a different order from `board` (`Cards`), and the pre-dead-button blind
+  rule moves the action (`Order`). Nothing to fix in the files; recorded so
+  nobody points the corpus at them and reads the failures as engine bugs.
+- [ ] **`validate()` rough edges** — found 2026-10-20 closing EPIC-93
+  (`src/hand_history/check.rs`). (1) A bet larger than the stack yields an
+  `Amount` finding, a `Legality` finding and the repair note on the one
+  action: three findings for one fault, against the module's "one fault, one
+  finding". (2) After any repair, pots, nets and amounts are not checked for
+  the rest of the hand, and after an `Amount` finding the walked Pot rule is
+  skipped for the whole hand, earlier streets' pots included; a second,
+  independent fault can hide behind the first. (3) A `mucked: true` results
+  entry turns off the best-hand-must-win check for the whole hand, so once
+  any seat mucks, nothing checks that the best of the hands shown was the one
+  marked `win`.
 - [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:626`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
@@ -275,7 +316,7 @@ _The 2026-08-18 line "the whole bot / decision layer returned zero findings" is 
 - [ ] 🤖 **`Pile::clean` is `unimplemented!()` on `Six` and `Seven`**; `Cards::the_nuts`, `CardsCell::the_nuts` and `Bard::the_nuts` are not on the deliberate list; `grep should_panic src/arrays` returns 0, so the "should_panic-tested" premise holds only for `Card`, `Bard`, `Cards`. (`src/arrays/six.rs:170-172`, `src/arrays/seven.rs:225-227`, `src/cards.rs:1014`, `src/cards_cell.rs:445`)
 - [x] ~~🤖 **`Cards` breaks Hash/Eq**~~ — **FIXED 2026-10-18** in `0.16.0`: Hash/Eq in [`DEFECT_037`](defects/DEFECT_037_cards_hash_disagrees_with_eq.md); `blanks`, `is_dealt`, `contains`/`deck_minus` and the `sort_in_place` doctest in [`DEFECT_039`](defects/DEFECT_039_cards_is_dealt_and_contains.md). Original finding: derived `Eq` via `IndexSet` ignores order, hand-written `Hash` hashes in order; docs promise "saved in order" and "no blanks" but `blanks(n)` inserts one BLANK and ignores `n`, `is_dealt` is hard-coded `true`; `CardsCell::sort_in_place` doctest calls `shuffle_in_place()` and passes because `==` is order-blind. `Cards` does not override `Pile::contains`, so `deck_minus` clones the `IndexSet` 52 times. (`src/cards.rs:41`, `:57-63`, `:92-94`, `:949-997`; `src/cards_cell.rs:294-346`)
 - [ ] 🤖 **`sliced.rs`** — `Boxes::are_unique` is false for any blank slot; `box_up_horizontal` silently discards leftover cards (`let _ = boxes.deal(...)`); `BoxedCards::from_str` turns a typo into a BLANK slot. (`src/arrays/sliced.rs:248-261`, `:373-388`, `:449-451`)
-- [ ] 🤖 **`HandHistory`** — `format_version` is never checked; `HandVariant::Other(String)` is not a catch-all under serde; `Outcome::Tie` is never produced; seat docs say 1-indexed but `replay` indexes 0-based; chip `f64 as usize` truncates 0.5 blinds to 0. (`src/hand_history.rs:85`, `:142`, `:357-363`, `:597-598`, `:1436-1458`)
+- [ ] 🤖 **`HandHistory`** — `format_version` is never checked; `HandVariant::Other(String)` is not a catch-all under serde; `Outcome::Tie` is never produced; ~~seat docs say 1-indexed but `replay` indexes 0-based~~ (docs fixed in `0.17.0`: seats are 0-based, see Tracked debt); chip `f64 as usize` truncates 0.5 blinds to 0. (`src/hand_history.rs:85`, `:142`, `:357-363`, `:597-598`, `:1436-1458`)
 - [ ] 🤖 **`Six`/`Seven` do not guard `is_dealt()`** (duplicate cards rank as a straight); six copy-pasted `(best == 0) || hrv != 0 && hrv < best` loops. (`src/arrays/six.rs:106-151`, `src/arrays/seven.rs:161-206`)
 - [ ] 🤖 **`rank.rs`** — `rank_bit_flags_pretty_format` uses `{bits:13}` (decimal) not `{bits:013b}`; `Rank::BLANK` shares `bits()`/`number()` with `DEUCE`, so a blank card sets the deuce bit in `Two::rank_mask`. (`src/rank.rs:48-69`, `:193-205`)
 - [ ] 🤖 **House-rule panics beyond the deliberate list** — `SortedHeadsUp::try_from(hup).unwrap()` with an `allow`; unchecked caller indices in `HandRanker::five_from_permutation`, `Four::two_from_permutation`, `Cards::as_chunks(0)`, `Cards::by_x(0)` (`0/0`); `StartingHands::bcm_mpsc_case_evals` spawns a thread per 5-card board (~1.7M). (`src/arrays/matchups/masked.rs:480-485`, `src/arrays/mod.rs:12-19`, `src/arrays/four.rs:99-101`, `src/cards.rs:119`, `:223-237`, `src/arrays/hole_cards/twos.rs:86-107`)
