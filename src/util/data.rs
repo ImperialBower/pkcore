@@ -314,33 +314,6 @@ impl TestData {
         Vec::from(&TestData::the_hand_players()[2..5])
     }
 
-    /// Re-orders a stacked dealing list built for `TableCelled` so the plain
-    /// [`Table`] deals the same cards to the same seats.
-    ///
-    /// The two engines start dealing from different seats. `TableCelled` begins
-    /// **at** the button (`src/casino/table_celled.rs`, via
-    /// `DrainableBintCell::new_with_value(.., button)`); `Table` begins **one
-    /// seat to its left** (`(button + 1 + step) % seat_count`), which is the
-    /// actual poker rule. Each dealing pass therefore rotates left by one; the
-    /// burn and board cards that follow the hole cards are untouched.
-    #[must_use]
-    fn rotated_for_plain_deal(dealable: &Cards, seat_count: usize, cards_per: usize) -> Cards {
-        let all: Vec<Card> = dealable.iter().copied().collect();
-        let hole_count = seat_count * cards_per;
-        let mut out: Vec<Card> = Vec::with_capacity(all.len());
-
-        for pass in 0..cards_per {
-            let start = pass * seat_count;
-            let end = (start + seat_count).min(all.len());
-            let mut slice: Vec<Card> = all[start..end].to_vec();
-            slice.rotate_left(1);
-            out.extend(slice);
-        }
-        out.extend_from_slice(&all[hole_count.min(all.len())..]);
-
-        Cards::from(out)
-    }
-
     /// cargo run --example calc -- -d "A♦ Q♣ 6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
     ///
     /// ```shell
@@ -356,7 +329,7 @@ impl TestData {
         // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
         // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
-        let primed = TestData::rotated_for_plain_deal(&primed, 3, 2);
+        let primed = primed.rotated_for_plain_deal(3, 2);
         Table::nlh_primed_with_id(
             Seats::new(TestData::min_players()),
             &Cards::deck_primed(&primed),
@@ -368,7 +341,7 @@ impl TestData {
     /// "The Hand" fixture on the plain [`Table`] engine.
     #[must_use]
     pub fn the_hand_table() -> Table {
-        let primed = TestData::rotated_for_plain_deal(&TestData::the_hand_cards_dealable(), 8, 2);
+        let primed = TestData::the_hand_cards_dealable().rotated_for_plain_deal(8, 2);
         Table::nlh_primed_with_id(
             Seats::new(TestData::the_hand_players()),
             &Cards::deck_primed(&primed),

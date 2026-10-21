@@ -82,6 +82,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `replay()` reports. `cursor()` fails wherever `replay()` does, a mismatched
   amount included, because `replay_with` and the cursor share one walk. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`HandHistory::stacked_deck` and `PokerSession::start_hand_with_deck`**
+  (`stacked_deck` needs `hand-histories`). A recorded hand's cards are a deal
+  from a deck, and `stacked_deck` builds that deck: 52 cards in the order the
+  engine draws them (hole cards one a pass from the seat after the button,
+  skipping empty chairs, as many passes as the game has hole cards, then a
+  burn, the flop, a burn, the turn, a burn, the river), so the engine deals the
+  record's hole cards to the record's seats and its board on the streets.
+  Whatever the record leaves open (a folded player's cards, the burns, an
+  undealt river) comes from the unused cards in deck order. Duplicate recorded
+  cards are `DuplicateCard`, a wrong card count `InvalidCardCount`, and any
+  game but hold'em and Omaha (stud, razz, Omaha hi-lo, Kuhn, draw)
+  `NotImplemented`. `start_hand_with_deck(deck)` is `start_hand_with`
+  without the shuffle, so play can carry on from a recorded hand ("take over
+  from here"); a deck that is not exactly 52 cards is refused with
+  `InvalidCardCount` and the session is left as it was. `start_hand` and
+  `start_hand_with` behave as before. See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
 ### Changed
 
