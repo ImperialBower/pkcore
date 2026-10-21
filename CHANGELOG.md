@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   folded; a gap between seats is fine, and so are a dead button (on an empty
   chair) and a zero `post` by an empty chair (the dead small blind). Stud, stud hi-lo and razz return one
   `Rule::Unsupported` finding. Absent optional fields are not findings. The
-  order, legality, amount, pot, result and money rules follow in this EPIC.
+  order, legality, amount, pot, result and money rules follow below.
   `tests/defects/validate/` holds hands that are wrong on purpose, starting with
   `data/hands/the_hand.yaml` as it stood (DEFECT_040). See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
@@ -42,6 +42,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   49200 behind"). A seat that acts without being listed is
   seated with the largest listed stack so the walk can continue past the Seats
   finding. See [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`validate` checks pots, results and money: the Pot, Result and Money
+  rules** (`hand-histories`). **Pot**: each street's recorded `pot` is the
+  engine's pot after the street's last action, antes, blinds and the street's
+  bets included ("records a pot of 8200; the engine's pot after the preflop is
+  9400"). When everyone else folds, three readings are accepted: that full
+  pot, the pot once the uncalled bet is returned, and the pot without the
+  winner's street bet, as the engine's own log writes it. A street the walk did
+  not finish, or that ends after a repair, is not checked. **Result** (Hold'em, on the
+  record alone, so it reports even when the walk stops early): `best_hand` is a
+  best five of the seat's hole cards and the board, `hand_rank`'s `value`,
+  `name` and `class` are pkcore's, and at showdown the best hand is marked
+  `win` (or `tie` when split) and a weaker hand that a best hand covers is not.
+  **Money**: no seat loses more than its starting stack, and the nets sum to
+  zero when every seat that put chips in has one; when the walk played every
+  action without a repair, each `net` is the seat's chips after the engine's
+  showdown less its starting stack. One fault, one finding: a hand whose walk
+  reports an Amount finding gets no walked Pot or Money findings. A
+  `results` entry marked `fold` is not ranked at showdown. `DEFECT_040`'s file now reports its wrong
+  winner, its rank value outside its class (117 for quad fives; pkcore says
+  124) and its loss larger than the stack. See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`PKError::ReplayAmountMismatch { seat, recorded, engine }`**, the error
   `replay` returns for a recorded amount the engine disagrees with.
 

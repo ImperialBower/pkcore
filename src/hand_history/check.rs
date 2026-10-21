@@ -43,6 +43,22 @@
 //! after the action. The comparison is one
 //! function that `validate` and `replay_with` share, so a history `validate`
 //! passes on amounts is one `replay` accepts.
+//!
+//! # Pots, results and money
+//!
+//! A street's `pot` is checked by the walk, at the end of the street: it is
+//! the engine's pot with the street's bets in it, antes and blinds included.
+//! The Result rule and most of the Money rule need no walk, so they run on the
+//! record alone and still report on a file whose walk stopped at its first
+//! action: `best_hand` and `hand_rank` against pkcore's evaluation, `outcome`
+//! against the ranking at showdown, no loss larger than the stack, and nets
+//! that sum to zero. Each `net` is compared with the engine's only when the
+//! walk played every action without a repair.
+//!
+//! One fault, one finding: when the walk reports an Amount finding, the
+//! engine has moved chips the record did not, so the walked Pot and Money
+//! rules are skipped for that hand rather than repeat the same fault in every
+//! pot and net. The record-only Money checks still run.
 
 use std::fmt;
 
@@ -147,10 +163,22 @@ impl crate::hand_history::HandHistory {
     /// Stud, stud hi-lo and razz are not checked: they return one
     /// [`Rule::Unsupported`] finding at `hand.game` and nothing else. For every
     /// other game the rules run in turn (cards, seats, then a walk through the
-    /// engine for order, legality and amounts) and each appends its findings,
-    /// so one file's several faults come back together. Absent optional fields
-    /// (`board`, `streets`, hole cards, `table.seats`, `table.button`) are not
+    /// engine for order, legality, amounts and pots, then results and money)
+    /// and each appends its findings, so one file's several faults come back
+    /// together. Absent optional fields (`board`, `streets`, hole cards,
+    /// `table.seats`, `table.button`, `pot`, `results`, `net`) are not
     /// findings.
+    ///
+    /// A street's `pot` is the engine's pot after the street's last action,
+    /// antes, blinds and the street's bets included. Results are checked on
+    /// the record alone, for Hold'em: `best_hand` is a best five of the seat's
+    /// hole cards and the board, `hand_rank` is pkcore's rank of it, and at
+    /// showdown the best hand is marked `win` (or `tie`, when it is split).
+    /// Money is checked on the record alone (no loss larger than the starting
+    /// stack; nets sum to zero when every seat that put chips in has one) and,
+    /// when the walk played every action without a repair, against the
+    /// engine: each `net` is the seat's chips after the engine's showdown less
+    /// its starting stack.
     ///
     /// The walk stops at an action out of turn, which the engine cannot apply.
     /// An illegal bet, raise or check is repaired so the walk goes on, and the
@@ -207,6 +235,33 @@ impl crate::hand_history::HandHistory {
     /// assert_eq!("streets.preflop.actions[1].amount", findings[0].path);
     /// # }
     /// ```
+    ///
+    /// A winner whose hand is weaker is a [`Rule::Result`] finding, found
+    /// without playing the hand. Seat 1's quad fives (124) beat seat 0's sixes
+    /// full (271); lower is stronger:
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::{HandHistory, Rule};
+    ///
+    /// let hand = HandHistory::from_yaml(r"
+    /// hand: { id: ex, game: holdem }
+    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0, hole_cards: '6♠ 6♥' }
+    ///   - { seat: 1, name: B, stack: 1000.0, hole_cards: '5♦ 5♣' }
+    /// board: '9♣ 6♦ 5♥ 5♠ 8♠'
+    /// results:
+    ///   - { seat: 0, outcome: win }
+    ///   - { seat: 1, outcome: lose }
+    /// ").unwrap();
+    ///
+    /// let findings = hand.validate();
+    /// assert!(findings.iter().all(|finding| finding.rule == Rule::Result));
+    /// assert!(findings.iter().any(|finding| finding.path == "results[1].outcome"));
+    /// # }
+    /// ```
     #[cfg(feature = "hand-histories")]
     #[must_use]
     pub fn validate(&self) -> Vec<Finding> {
@@ -216,7 +271,10 @@ impl crate::hand_history::HandHistory {
         let mut findings = Vec::new();
         passes::cards(self, &mut findings);
         passes::seats(self, &mut findings);
-        passes::walk(self, &mut findings);
+        let walk = passes::walk(self, &mut findings);
+        passes::results(self, &mut findings);
+        passes::money(self, &mut findings);
+        passes::walked_money(self, &walk, &mut findings);
         findings
     }
 }
@@ -314,10 +372,16 @@ fn whole_chips(amount: f64) -> usize {
 #[cfg(feature = "hand-histories")]
 mod passes {
     use super::{Finding, Rule, amount_mismatch, is_whole_chips, whole_chips};
+    use crate::analysis::eval::Eval;
+    use crate::arrays::HandRanker;
+    use crate::arrays::five::Five;
     use crate::card::Card;
+    use crate::cards::Cards;
     use crate::casino::action::PlayerAction;
     use crate::casino::table::Table;
-    use crate::hand_history::{Action, ActionType, HandHistory, HandVariant, PlayerEntry, ReplayStreet};
+    use crate::hand_history::{
+        Action, ActionType, HandHistory, HandVariant, Outcome, PlayerEntry, ReplayStreet, ResultEntry,
+    };
     use crate::util::terminal::Terminal;
     use std::borrow::Cow;
     use std::str::FromStr;
@@ -641,7 +705,6 @@ mod passes {
     pub(super) const REPAIRED: &str = "pots, nets and amounts after this point are not checked";
 
     /// What the walk leaves for the rules that read the engine's table.
-    #[allow(dead_code, reason = "read by the Pot and Money rules (EPIC-93 Task 6)")]
     pub(super) struct Walk {
         /// The table after the last action the walk applied; `None` when the
         /// starting table could not be built (the Cards rule says why).
@@ -650,6 +713,14 @@ mod passes {
         /// not the record's, so pots, nets and amounts compared with the engine
         /// say nothing.
         pub(super) repaired: bool,
+        /// True when the walk applied every recorded action: it did not stop
+        /// at an action out of turn, one the engine refused, or a street
+        /// whose cards do not parse.
+        pub(super) complete: bool,
+        /// True when the walk reported an amount: the engine then moved
+        /// chips the record did not, so its pots and nets would only repeat
+        /// that one fault.
+        pub(super) amount_found: bool,
     }
 
     /// The walk's running state.
@@ -658,6 +729,10 @@ mod passes {
         /// `.seat` paths the Seats rule already blamed.
         blamed: Vec<String>,
         repaired: bool,
+        stopped: bool,
+        amount_found: bool,
+        /// The largest street bet a seat held when it folded, this street.
+        folded_bet: usize,
     }
 
     /// Order, Legality and Amount rules: plays the hand through the engine,
@@ -676,14 +751,23 @@ mod passes {
     ///   engine's ([`amount_mismatch`]). After a repair the engine's numbers
     ///   are no longer the record's, so only the whole-chips check runs.
     ///
+    /// - **Pot**: at the end of each street the walk played through, the
+    ///   street's recorded `pot` is the engine's pot with the street's bets
+    ///   in it, antes and blinds included ([`check_pot`]). A street whose
+    ///   walk stopped, or that ends after a repair, is not checked, and no pot
+    ///   is reported for a hand with an Amount finding.
+    ///
     /// A seat that acts but is not listed is seated with the largest listed
     /// stack, so the walk can go on past the Seats finding.
     pub(super) fn walk(hand: &HandHistory, findings: &mut Vec<Finding>) -> Walk {
+        let recorded = hand;
         let hand = seat_unlisted_actors(hand);
         let Ok(mut table) = hand.replay_table() else {
             return Walk {
                 table: None,
                 repaired: false,
+                complete: false,
+                amount_found: false,
             };
         };
         let blamed = findings
@@ -695,22 +779,89 @@ mod passes {
             findings,
             blamed,
             repaired: false,
+            stopped: false,
+            amount_found: false,
+            folded_bet: 0,
         };
+        let mut pots: Vec<Finding> = Vec::new();
         // A street whose cards do not parse ends the walk; the Cards rule has
         // already reported it.
-        let _ = hand.play_streets(&mut table, |table, street, actions| {
+        let played = hand.play_streets(&mut table, |table, street, actions| {
             let prefix = street_prefix(street);
+            walker.folded_bet = 0;
             for (index, action) in actions.iter().enumerate() {
                 if !walker.step(table, &format!("{prefix}.actions[{index}]"), action) {
+                    walker.stopped = true;
                     return Ok(false);
                 }
             }
+            if !walker.repaired
+                && let Some(pot) = street_pot(recorded, street)
+                && let Some(finding) = check_pot(table, prefix, street, pot, walker.folded_bet)
+            {
+                pots.push(finding);
+            }
             Ok(true)
         });
+        // One fault, one finding: a wrong amount makes every later pot wrong.
+        if !walker.amount_found {
+            walker.findings.append(&mut pots);
+        }
         Walk {
             table: Some(table),
             repaired: walker.repaired,
+            complete: played.is_ok() && !walker.stopped,
+            amount_found: walker.amount_found,
         }
+    }
+
+    /// The `pot` recorded at the end of `street`, if any.
+    fn street_pot(hand: &HandHistory, street: ReplayStreet) -> Option<f64> {
+        let streets = hand.streets.as_ref()?;
+        match street {
+            ReplayStreet::Preflop => streets.preflop.as_ref()?.pot,
+            ReplayStreet::Flop => streets.flop.as_ref()?.pot,
+            ReplayStreet::Turn => streets.turn.as_ref()?.pot,
+            ReplayStreet::River => streets.river.as_ref()?.pot,
+        }
+    }
+
+    /// Pot rule: `recorded`, the pot at the end of `street`, is the engine's
+    /// pot with the street's bets in it ([`Table::effective_pot`]): antes,
+    /// blinds and every bet, called or not.
+    ///
+    /// A street that ends with everyone else folding has three accepted
+    /// readings: that full pot; the pot less the uncalled bet (the winner's
+    /// street bet above `folded_bet`, the largest street bet a seat folded
+    /// to), which is returned; and `Table::pot`, the pot without the winner's
+    /// street bet, which is what the engine's own log writes, so a history
+    /// the engine wrote passes.
+    fn check_pot(
+        table: &Table,
+        prefix: &str,
+        street: ReplayStreet,
+        recorded: f64,
+        folded_bet: usize,
+    ) -> Option<Finding> {
+        let engine = table.effective_pot();
+        let chips = whole_chips(recorded);
+        let accepted = if let [winner] = table.seats.active_in_hand().as_slice() {
+            let bet = table.seats.get_seat(*winner).map_or(0, |seat| seat.player.bet);
+            let uncalled = bet.saturating_sub(folded_bet);
+            vec![engine, engine.saturating_sub(uncalled), table.pot]
+        } else {
+            vec![engine]
+        };
+        if is_whole_chips(recorded) && accepted.contains(&chips) {
+            return None;
+        }
+        Some(Finding {
+            path: format!("{prefix}.pot"),
+            rule: Rule::Pot,
+            message: format!(
+                "records a pot of {recorded}; the engine's pot after the {street} is {engine}, antes and blinds included"
+            ),
+        })
     }
 
     /// The path prefix of a street's actions.
@@ -758,6 +909,9 @@ mod passes {
 
     impl Walker<'_> {
         fn push(&mut self, path: String, rule: Rule, message: String) {
+            if rule == Rule::Amount {
+                self.amount_found = true;
+            }
             self.findings.push(Finding { path, rule, message });
         }
 
@@ -786,6 +940,11 @@ mod passes {
             if repaired && !self.repaired {
                 self.repaired = true;
                 self.push(at.to_string(), Rule::Legality, REPAIRED.to_string());
+            }
+            if play == PlayerAction::Fold
+                && let Some(folder) = table.seats.get_seat(seat)
+            {
+                self.folded_bet = self.folded_bet.max(folder.player.bet);
             }
             if let Err(error) = table.apply_action(seat, play) {
                 self.push(
@@ -935,6 +1094,350 @@ mod passes {
                     );
                     (call_or_check, true)
                 }
+            }
+        }
+    }
+
+    // ── Result ───────────────────────────────────────────────────────────────
+
+    /// A `results` entry that pkcore can rank: its seat's hole cards on a
+    /// five-card board.
+    struct Ranked<'a> {
+        index: usize,
+        entry: &'a ResultEntry,
+        eval: Eval,
+        /// The seat's starting stack, when the seat is listed.
+        stack: Option<f64>,
+    }
+
+    /// The seats that fold, by the record's actions.
+    fn folded_seats(hand: &HandHistory) -> Vec<u8> {
+        street_actions(hand)
+            .into_iter()
+            .flat_map(|(_, actions)| actions.iter())
+            .filter(|action| action.action == ActionType::Fold)
+            .map(|action| action.seat)
+            .collect()
+    }
+
+    /// Result rule, on the record alone (no walk): for every `results` entry
+    /// whose seat has hole cards on a five-card board, `best_hand` is a best
+    /// five of those seven cards and `hand_rank` is pkcore's rank of it, field
+    /// by field. Among the seats that reach showdown (not folded by the
+    /// record's actions or `outcome: fold`, not mucked), the best rank is
+    /// marked `win` (or `tie` when several share it), and a weaker hand is not
+    /// marked `win` or `tie` when a best hand covers its stack, so no side pot
+    /// can be its. The best hand must win only when every seat still in is
+    /// ranked: a seat without hole cards or result, or a `mucked: true` entry,
+    /// turns that check off for the hand.
+    ///
+    /// Hold'em only: `HandHistory::rank_seven` is a seven-card evaluation. A
+    /// hand with a Cards finding is not ranked; its cards are not to be
+    /// trusted.
+    pub(super) fn results(hand: &HandHistory, findings: &mut Vec<Finding>) {
+        if hand.hand.game != HandVariant::Holdem || findings.iter().any(|finding| finding.rule == Rule::Cards) {
+            return;
+        }
+        let (Some(results), Some(board)) = (&hand.results, &hand.board) else {
+            return;
+        };
+        // Folded by the record's actions, or marked `fold` in the results (a
+        // history may record the outcome without the action).
+        let mut folded = folded_seats(hand);
+        folded.extend(
+            results
+                .iter()
+                .filter(|entry| entry.outcome == Outcome::Fold)
+                .map(|entry| entry.seat),
+        );
+        let mut showdown: Vec<Ranked> = Vec::new();
+        for (index, entry) in results.iter().enumerate() {
+            let player = hand.players.iter().find(|player| player.seat == entry.seat);
+            let Some(hole) = player.and_then(|player| player.hole_cards.as_deref()) else {
+                continue;
+            };
+            let Some(eval) = HandHistory::rank_seven(hole, board) else {
+                continue;
+            };
+            check_best_hand(index, entry, hole, board, &eval, findings);
+            check_hand_rank(index, entry, &eval, findings);
+            if !folded.contains(&entry.seat) && entry.mucked != Some(true) {
+                showdown.push(Ranked {
+                    index,
+                    entry,
+                    eval,
+                    stack: player.map(|player| player.stack),
+                });
+            }
+        }
+        // The best hand is known only when every seat still in has been ranked.
+        // A mucked seat is still in but unranked, so a `mucked: true` entry
+        // turns the best-hand-must-win check off for the whole hand.
+        let everyone_ranked = hand
+            .players
+            .iter()
+            .filter(|player| !folded.contains(&player.seat))
+            .all(|player| showdown.iter().any(|ranked| ranked.entry.seat == player.seat));
+        check_outcomes(&showdown, everyone_ranked, findings);
+    }
+
+    fn check_best_hand(
+        index: usize,
+        entry: &ResultEntry,
+        hole: &str,
+        board: &str,
+        eval: &Eval,
+        findings: &mut Vec<Finding>,
+    ) {
+        let Some(text) = &entry.best_hand else {
+            return;
+        };
+        let path = format!("results[{index}].best_hand");
+        let Ok(five) = Five::from_str(text) else {
+            findings.push(Finding {
+                path,
+                rule: Rule::Result,
+                message: format!("{text:?} is not five cards"),
+            });
+            return;
+        };
+        // More than one five can be best (a pair from three on the board), so
+        // the record's five is checked for where its cards come from and for
+        // its rank, not compared card for card with pkcore's.
+        let seven = Cards::from_str(&format!("{hole} {board}")).unwrap_or_default();
+        let drawn = five.to_arr().iter().all(|card| seven.0.contains(card));
+        if drawn && five.hand_rank().value == eval.hand_rank.value {
+            return;
+        }
+        let reason = if drawn {
+            format!("ranks {}", five.hand_rank().value)
+        } else {
+            format!("is not drawn from {hole} and {board}")
+        };
+        findings.push(Finding {
+            path,
+            rule: Rule::Result,
+            message: format!(
+                "records {text}, which {reason}; the best five is {} at {}",
+                eval.hand, eval.hand_rank.value
+            ),
+        });
+    }
+
+    fn check_hand_rank(index: usize, entry: &ResultEntry, eval: &Eval, findings: &mut Vec<Finding>) {
+        let Some(recorded) = entry.hand_rank else {
+            return;
+        };
+        let engine = eval.hand_rank;
+        let five = &eval.hand;
+        let mut push = |field: &str, message: String| {
+            findings.push(Finding {
+                path: format!("results[{index}].hand_rank.{field}"),
+                rule: Rule::Result,
+                message,
+            });
+        };
+        if recorded.value != engine.value {
+            push(
+                "value",
+                format!(
+                    "records {}; pkcore ranks {five} ({:?}) at {}",
+                    recorded.value, engine.class, engine.value
+                ),
+            );
+        }
+        if recorded.name != engine.name {
+            push(
+                "name",
+                format!("records {:?}; pkcore names {five} {:?}", recorded.name, engine.name),
+            );
+        }
+        if recorded.class != engine.class {
+            push(
+                "class",
+                format!("records {:?}; pkcore classes {five} {:?}", recorded.class, engine.class),
+            );
+        }
+    }
+
+    /// The outcomes of the seats that reach showdown. Lower values are
+    /// stronger.
+    fn check_outcomes(showdown: &[Ranked], everyone_ranked: bool, findings: &mut Vec<Finding>) {
+        let Some(best) = showdown.iter().map(|ranked| ranked.eval.hand_rank.value).min() else {
+            return;
+        };
+        let bests: Vec<&Ranked> = showdown
+            .iter()
+            .filter(|ranked| ranked.eval.hand_rank.value == best)
+            .collect();
+        let split = bests.len() > 1;
+        for ranked in showdown {
+            let path = format!("results[{}].outcome", ranked.index);
+            let outcome = &ranked.entry.outcome;
+            let (five, value) = (&ranked.eval.hand, ranked.eval.hand_rank.value);
+            let takes = matches!(outcome, Outcome::Win | Outcome::Tie);
+            if value == best {
+                let right = *outcome == Outcome::Win || (split && *outcome == Outcome::Tie);
+                if everyone_ranked && !right {
+                    findings.push(Finding {
+                        path,
+                        rule: Rule::Result,
+                        message: format!(
+                            "is {}, but {five} ({value}) is the best hand at showdown{}",
+                            outcome_name(outcome),
+                            if split { ", split" } else { "" }
+                        ),
+                    });
+                }
+            } else if takes
+                && let Some(cover) = bests.iter().find(|winner| {
+                    winner
+                        .stack
+                        .is_some_and(|stack| ranked.stack.is_some_and(|own| stack >= own))
+                })
+            {
+                findings.push(Finding {
+                    path,
+                    rule: Rule::Result,
+                    message: format!(
+                        "is {}, but {five} ({value}) loses to seat {}'s {} ({best}), which covers it; lower is stronger",
+                        outcome_name(outcome),
+                        cover.entry.seat,
+                        cover.eval.hand
+                    ),
+                });
+            }
+        }
+    }
+
+    fn outcome_name(outcome: &Outcome) -> &'static str {
+        match outcome {
+            Outcome::Win => "win",
+            Outcome::Lose => "lose",
+            Outcome::Tie => "tie",
+            Outcome::Fold => "fold",
+        }
+    }
+
+    // ── Money ────────────────────────────────────────────────────────────────
+
+    /// Money rule, on the record alone (no walk): a seat loses no more than
+    /// its starting stack, and when `results` gives a net for every seat that
+    /// put chips in, the nets sum to zero.
+    ///
+    /// The seats that put chips in are every listed seat when there is an
+    /// ante, the blinds the engine posts, and every seat that calls, bets,
+    /// raises, goes all in or posts chips.
+    pub(super) fn money(hand: &HandHistory, findings: &mut Vec<Finding>) {
+        let Some(results) = &hand.results else {
+            return;
+        };
+        for (index, entry) in results.iter().enumerate() {
+            if let Some(net) = entry.net
+                && let Some(player) = hand.players.iter().find(|player| player.seat == entry.seat)
+                && -net > player.stack
+            {
+                findings.push(Finding {
+                    path: format!("results[{index}].net"),
+                    rule: Rule::Money,
+                    message: format!(
+                        "records a loss of {}, more than the {} seat {} started with",
+                        -net, player.stack, entry.seat
+                    ),
+                });
+            }
+        }
+        let net_of = |seat: u8| {
+            results
+                .iter()
+                .find(|entry| entry.seat == seat)
+                .and_then(|entry| entry.net)
+        };
+        let covered = contributors(hand).into_iter().all(|seat| net_of(seat).is_some());
+        let sum: f64 = results.iter().filter_map(|entry| entry.net).sum();
+        if covered && sum.abs() >= 0.005 {
+            findings.push(Finding {
+                path: "results".to_string(),
+                rule: Rule::Money,
+                message: format!("the nets sum to {sum}, not 0; chips are won only from the other seats"),
+            });
+        }
+    }
+
+    /// The seats that put chips in: see [`money`]. Every listed seat when the
+    /// blinds cannot be placed.
+    fn contributors(hand: &HandHistory) -> Vec<u8> {
+        let listed = hand.players.iter().map(|player| player.seat);
+        let ante = hand.table.stakes.ante.is_some_and(|ante| ante > 0.0);
+        let mut seats: Vec<u8> = match hand.replay_table() {
+            Ok(table) if !ante => listed
+                .filter(|&seat| table.seats.get_seat(seat).is_some_and(|seat| seat.player.bet > 0))
+                .collect(),
+            _ => listed.collect(),
+        };
+        for (_, actions) in street_actions(hand) {
+            for action in actions {
+                let moves_chips = match action.action {
+                    ActionType::Call | ActionType::Bet | ActionType::Raise | ActionType::AllIn => true,
+                    ActionType::Post => action.amount.is_some_and(|amount| amount > 0.0),
+                    ActionType::Fold | ActionType::Check => false,
+                };
+                if moves_chips && !seats.contains(&action.seat) {
+                    seats.push(action.seat);
+                }
+            }
+        }
+        seats
+    }
+
+    /// Money rule, against the engine: when the walk applied every recorded
+    /// action without a repair or an Amount finding, each recorded `net` is
+    /// the seat's chips after
+    /// the engine's showdown, on a copy of the walked table, less its starting
+    /// stack. Not checked when the record stops before the hand is over, or
+    /// when a seat still in at showdown has no hole cards or the board is not
+    /// complete, since then the engine cannot know who won.
+    #[allow(clippy::cast_precision_loss)]
+    pub(super) fn walked_money(hand: &HandHistory, walk: &Walk, findings: &mut Vec<Finding>) {
+        let (Some(results), Some(walked)) = (&hand.results, &walk.table) else {
+            return;
+        };
+        if walk.repaired || !walk.complete || walk.amount_found {
+            return;
+        }
+        let mut table = walked.clone();
+        let still_in = table.seats.active_in_hand();
+        let has_cards = |seat: u8| {
+            hand.players
+                .iter()
+                .any(|player| player.seat == seat && player.hole_cards.is_some())
+        };
+        if still_in.len() > 1 && (table.board.len() < 5 || !still_in.iter().all(|&seat| has_cards(seat))) {
+            return;
+        }
+        if table.showdown().is_err() {
+            return;
+        }
+        for (index, entry) in results.iter().enumerate() {
+            let Some(net) = entry.net else {
+                continue;
+            };
+            let Some(player) = hand.players.iter().find(|player| player.seat == entry.seat) else {
+                continue;
+            };
+            let Some(seat) = table.seats.get_seat(entry.seat) else {
+                continue;
+            };
+            let engine = seat.player.chips as f64 - player.stack;
+            if (net - engine).abs() >= 0.005 {
+                findings.push(Finding {
+                    path: format!("results[{index}].net"),
+                    rule: Rule::Money,
+                    message: format!(
+                        "records a net of {net}; the engine's is {engine}, from {} to {} chips",
+                        player.stack, seat.player.chips
+                    ),
+                });
             }
         }
     }
@@ -1644,6 +2147,341 @@ streets:
                 .any(|finding| finding.path == "streets.preflop.actions[1]"),
             "{findings:?}"
         );
+    }
+
+    // ── Pot ──────────────────────────────────────────────────────────────────
+
+    /// Six seats at 400/800 with a 200 ante, button on seat 0: seats 1 and 2
+    /// post the blinds and fold, seat 4 raises to 3,500 and the button calls.
+    /// The pot is 2 × 3,500 + 400 + 800 + 6 × 200 = 9,400. `pot` is the
+    /// recorded preflop pot.
+    #[cfg(feature = "hand-histories")]
+    fn blinds_fold(pot: &str) -> String {
+        format!(
+            "
+hand: {{ id: blinds, game: holdem }}
+table: {{ seats: 6, button: 0, stakes: {{ small_blind: 400.0, big_blind: 800.0, ante: 200.0 }} }}
+players:
+  - {{ seat: 0, name: A, stack: 100000.0 }}
+  - {{ seat: 1, name: B, stack: 100000.0 }}
+  - {{ seat: 2, name: C, stack: 100000.0 }}
+  - {{ seat: 3, name: D, stack: 100000.0 }}
+  - {{ seat: 4, name: E, stack: 100000.0 }}
+  - {{ seat: 5, name: F, stack: 100000.0 }}
+streets:
+  preflop:
+    actions:
+      - {{ seat: 3, action: fold }}
+      - {{ seat: 4, action: raise, amount: 3500.0 }}
+      - {{ seat: 5, action: fold }}
+      - {{ seat: 0, action: call, amount: 3500.0 }}
+      - {{ seat: 1, action: fold }}
+      - {{ seat: 2, action: fold }}
+    pot: {pot}
+"
+        )
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__street_pot_including_blinds_and_antes_is_clean() {
+        assert_eq!(Vec::<Finding>::new(), hand(&blinds_fold("9400.0")).validate());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__street_pot_excluding_blinds_is_a_pot_finding() {
+        // DEFECT_040 item 6: 8,200 is the raise, the call and the antes, and
+        // leaves out the blinds of the two seats that folded.
+        let findings = hand(&blinds_fold("8200.0")).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Pot, findings[0].rule);
+        assert_eq!("streets.preflop.pot", findings[0].path);
+        assert!(findings[0].message.contains("9400"), "{}", findings[0].message);
+        assert!(findings[0].message.contains("8200"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__pots_after_a_repair_are_not_checked() {
+        // The preflop pot (1,600) is wrong and is checked. The flop's raise
+        // is repaired, so the flop's pot is not compared with the engine's.
+        let yaml = min_raise_then_call("104000.0")
+            .replace(
+                "      - { seat: 1, action: check }\n",
+                "      - { seat: 1, action: check }\n    pot: 1500.0\n",
+            )
+            .replace(
+                "      - { seat: 1, action: call, amount: 104000.0 }\n",
+                "      - { seat: 1, action: call, amount: 104000.0 }\n    pot: 1.0\n",
+            );
+        let findings = hand(&yaml).validate();
+        let pot = with_rule(&findings, Rule::Pot);
+        assert_eq!(1, pot.len(), "{findings:?}");
+        assert_eq!("streets.preflop.pot", pot[0].path);
+        assert!(pot[0].message.contains("1600"), "{}", pot[0].message);
+    }
+
+    /// The clean heads-up hand with a preflop `pot` and results that give
+    /// seat 0 `net0` and seat 1 `net1`.
+    #[cfg(feature = "hand-histories")]
+    fn folded_with_results(pot: &str, net0: &str, net1: &str) -> String {
+        format!(
+            "{CLEAN}    pot: {pot}
+results:
+  - {{ seat: 0, outcome: win, net: {net0} }}
+  - {{ seat: 1, outcome: fold, net: {net1} }}
+"
+        )
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__true_record_of_a_folded_hand_is_clean() {
+        // The pot with the uncalled raise (400), or the pot as the engine's
+        // log writes it when a fold ends the hand (100): both are accepted.
+        for pot in ["400.0", "100.0"] {
+            let findings = hand(&folded_with_results(pot, "100.0", "-100.0")).validate();
+            assert_eq!(Vec::<Finding>::new(), findings, "pot {pot}");
+        }
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__pot_of_a_folded_hand_matching_neither_reading_is_a_pot_finding() {
+        let findings = hand(&folded_with_results("300.0", "100.0", "-100.0")).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Pot, findings[0].rule);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__fold_out_pot_after_uncalled_bet_returned_passes() {
+        // Seat 0 raises to 300 and the big blind folds: the full pot is 400,
+        // 200 once the uncalled 200 is returned, 100 as the engine logs it.
+        for pot in ["400.0", "200.0", "100.0"] {
+            let findings = hand(&folded_with_results(pot, "100.0", "-100.0")).validate();
+            assert_eq!(Vec::<Finding>::new(), findings, "pot {pot}");
+        }
+        let findings = hand(&folded_with_results("250.0", "100.0", "-100.0")).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Pot, findings[0].rule);
+        assert!(findings[0].message.contains("250"), "{}", findings[0].message);
+        assert!(findings[0].message.contains("400"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__amount_finding_does_not_cascade_into_money() {
+        // The small blind's call of 75 is neither the 50 it adds nor the 100
+        // it brings its total to. The pot and nets follow the record's 75, so
+        // the engine's 400 and +/-100 would only repeat that one fault.
+        let yaml = r"
+hand: { id: cascade, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 75.0 }
+      - { seat: 1, action: raise, amount: 300.0 }
+      - { seat: 0, action: fold }
+    pot: 375.0
+results:
+  - { seat: 0, outcome: fold, net: -75.0 }
+  - { seat: 1, outcome: win, net: 75.0 }
+";
+        let findings = hand(yaml).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Amount, findings[0].rule);
+        assert_eq!("streets.preflop.actions[0].amount", findings[0].path);
+    }
+
+    // ── Result ───────────────────────────────────────────────────────────────
+
+    /// The Hand's cards heads-up, no action: seat 0 holds sixes full of fives
+    /// (271), seat 1 quad fives with a nine kicker (124). `results` is
+    /// appended as is.
+    #[cfg(feature = "hand-histories")]
+    fn quads_and_boat(results: &str) -> String {
+        format!(
+            "
+hand: {{ id: quads, game: holdem }}
+table: {{ stakes: {{ small_blind: 50.0, big_blind: 100.0 }} }}
+players:
+  - {{ seat: 0, name: Boat, stack: 1000.0, hole_cards: '6♠ 6♥' }}
+  - {{ seat: 1, name: Quads, stack: 1000.0, hole_cards: '5♦ 5♣' }}
+board: '9♣ 6♦ 5♥ 5♠ 8♠'
+results:
+{results}"
+        )
+    }
+
+    /// The `results` entry for seat 0 (the boat) with `outcome`.
+    #[cfg(feature = "hand-histories")]
+    fn boat(outcome: &str) -> String {
+        format!(
+            "  - {{ seat: 0, best_hand: '6♠ 6♥ 6♦ 5♥ 5♠', outcome: {outcome}, hand_rank: {{ value: 271, name: FullHouse, class: SixesOverFives }} }}\n"
+        )
+    }
+
+    /// The `results` entry for seat 1 (the quads) with `value` and `outcome`.
+    #[cfg(feature = "hand-histories")]
+    fn quads(value: &str, outcome: &str) -> String {
+        format!(
+            "  - {{ seat: 1, best_hand: '5♥ 5♠ 5♦ 5♣ 9♣', outcome: {outcome}, hand_rank: {{ value: {value}, name: FourOfAKind, class: FourFives }} }}\n"
+        )
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__true_results_are_clean() {
+        let yaml = quads_and_boat(&format!("{}{}", boat("lose"), quads("124", "win")));
+        assert_eq!(Vec::<Finding>::new(), hand(&yaml).validate());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__winner_with_weaker_rank_is_a_result_finding() {
+        // DEFECT_040 item 2: the full house (271) is marked the winner over
+        // the quads (124). Lower is stronger.
+        let yaml = quads_and_boat(&format!("{}{}", boat("win"), quads("124", "lose")));
+        let findings = hand(&yaml).validate();
+        assert!(!findings.is_empty(), "{findings:?}");
+        assert!(
+            findings.iter().all(|finding| finding.rule == Rule::Result),
+            "{findings:?}"
+        );
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.path == "results[1].outcome" && finding.message.contains("124")),
+            "{findings:?}"
+        );
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.path == "results[0].outcome" && finding.message.contains("271")),
+            "{findings:?}"
+        );
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__rank_value_not_matching_class_is_a_result_finding() {
+        // DEFECT_040 item 3: 117 is in the FourSixes range; quad fives with a
+        // nine kicker is 124.
+        let yaml = quads_and_boat(&format!("{}{}", boat("lose"), quads("117", "win")));
+        let findings = hand(&yaml).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Result, findings[0].rule);
+        assert_eq!("results[1].hand_rank.value", findings[0].path);
+        assert!(findings[0].message.contains("124"), "{}", findings[0].message);
+        assert!(findings[0].message.contains("117"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__best_hand_not_the_best_five_is_a_result_finding() {
+        let yaml = quads_and_boat(&format!(
+            "{}{}",
+            boat("lose").replace("6♠ 6♥ 6♦ 5♥ 5♠", "6♠ 6♥ 6♦ 9♣ 8♠"),
+            quads("124", "win")
+        ));
+        let findings = hand(&yaml).validate();
+        assert!(
+            findings
+                .iter()
+                .any(|finding| finding.rule == Rule::Result && finding.path == "results[0].best_hand"),
+            "{findings:?}"
+        );
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__split_pot_marks_both_best_hands_win() {
+        // The board plays: a royal flush for both.
+        let yaml = r"
+hand: { id: split, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0, hole_cards: '2♣ 3♦' }
+  - { seat: 1, name: B, stack: 1000.0, hole_cards: '4♣ 5♦' }
+board: 'A♠ K♠ Q♠ J♠ T♠'
+results:
+  - { seat: 0, outcome: win }
+  - { seat: 1, outcome: tie }
+";
+        assert_eq!(Vec::<Finding>::new(), hand(yaml).validate());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__fold_outcome_in_results_is_not_ranked_at_showdown() {
+        // No streets: seat 1's fold is in the results only. Its quads are
+        // stronger, but it is not at showdown.
+        let yaml = quads_and_boat("  - { seat: 0, outcome: win }\n  - { seat: 1, outcome: fold }\n");
+        let findings = hand(&yaml).validate();
+        assert!(with_rule(&findings, Rule::Result).is_empty(), "{findings:?}");
+    }
+
+    // ── Money ────────────────────────────────────────────────────────────────
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__net_larger_than_stack_is_a_money_finding() {
+        // DEFECT_040 item 5: a seat cannot lose more than it sat down with.
+        let yaml = r"
+hand: { id: net, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+results:
+  - { seat: 0, outcome: lose, net: -1500.0 }
+  - { seat: 1, outcome: win, net: 1500.0 }
+";
+        let findings = hand(yaml).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Money, findings[0].rule);
+        assert_eq!("results[0].net", findings[0].path);
+        assert!(findings[0].message.contains("1500"), "{}", findings[0].message);
+        assert!(findings[0].message.contains("1000"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__nets_that_do_not_sum_to_zero_are_a_money_finding() {
+        let yaml = r"
+hand: { id: sum, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+results:
+  - { seat: 0, outcome: lose, net: -500.0 }
+  - { seat: 1, outcome: win, net: 400.0 }
+";
+        let findings = hand(yaml).validate();
+        assert_eq!(1, findings.len(), "{findings:?}");
+        assert_eq!(Rule::Money, findings[0].rule);
+        assert_eq!("results", findings[0].path);
+        assert!(findings[0].message.contains("-100"), "{}", findings[0].message);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__net_not_the_engines_is_a_money_finding() {
+        // Seat 0 wins seat 1's big blind: +100 and -100, not +200 and -200.
+        let findings = hand(&folded_with_results("400.0", "200.0", "-200.0")).validate();
+        let money = with_rule(&findings, Rule::Money);
+        assert_eq!(2, money.len(), "{findings:?}");
+        assert_eq!("results[0].net", money[0].path);
+        assert!(money[0].message.contains("the engine's is 100"), "{}", money[0].message);
+        assert_eq!("results[1].net", money[1].path);
+        assert_eq!(2, findings.len(), "{findings:?}");
     }
 
     #[test]
