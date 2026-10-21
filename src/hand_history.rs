@@ -76,6 +76,10 @@ use uuid::Uuid;
 
 mod check;
 pub use check::{Finding, Rule};
+#[cfg(feature = "hand-histories")]
+mod replay;
+#[cfg(feature = "hand-histories")]
+pub use replay::{Replay, ReplayEvent};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Format version constant
@@ -816,27 +820,44 @@ impl HandHistory {
         F: FnMut(&ReplayStep<'_>, &Table),
     {
         let mut table = self.replay_table()?;
-        self.play_streets(&mut table, |table, street, actions| {
-            for (index, action) in actions.iter().enumerate() {
-                if let Some(pa) = Self::action_to_player_action(action) {
-                    // An out-of-turn action is left to `apply_action`, which
-                    // reports it as out of order.
-                    if action.seat == table.next_to_act()
-                        && let Some(mismatch) = check::amount_mismatch(table, action)
-                    {
-                        return Err(PKError::ReplayAmountMismatch {
-                            seat: action.seat,
-                            recorded: mismatch.recorded,
-                            engine: mismatch.engine,
-                        });
-                    }
-                    table.apply_action(action.seat, pa)?;
-                }
-                observe(&ReplayStep { street, index, action }, table);
+        self.walk(&mut table, |walked, table| {
+            if let replay::Walked::Acted { step, .. } = walked {
+                observe(&step, table);
             }
-            Ok(true)
         })?;
         Self::build_replay_result(table, &self.players, self.results.as_deref())
+    }
+
+    /// Applies one recorded `action` to `table`: checks the recorded amount
+    /// against the engine's, then applies it. Returns the [`PlayerAction`]
+    /// applied, or `None` for a `post`, which `act_forced_bets` already made.
+    ///
+    /// The one place a replay applies a recorded action, so
+    /// [`Self::replay_with`] and [`Self::cursor`] cannot disagree on it.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::ReplayAmountMismatch`] for an amount the engine disagrees
+    /// with (reported before the action is applied), and whatever
+    /// [`Table::apply_action`] returns.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn apply_recorded(table: &mut Table, action: &Action) -> Result<Option<PlayerAction>, PKError> {
+        let Some(pa) = Self::action_to_player_action(action) else {
+            return Ok(None);
+        };
+        // An out-of-turn action is left to `apply_action`, which reports it as
+        // out of order.
+        if action.seat == table.next_to_act()
+            && let Some(mismatch) = check::amount_mismatch(table, action)
+        {
+            return Err(PKError::ReplayAmountMismatch {
+                seat: action.seat,
+                recorded: mismatch.recorded,
+                engine: mismatch.engine,
+            });
+        }
+        table.apply_action(action.seat, pa)?;
+        Ok(Some(pa))
     }
 
     /// Plays the recorded streets on `table`, a table from
@@ -845,8 +866,8 @@ impl HandHistory {
     /// cards. It stops early when the hand is over (one player left) or when
     /// `street` returns `Ok(false)`.
     ///
-    /// The one street sequence that [`Self::replay_with`] and
-    /// [`Self::validate`] both walk.
+    /// The one street sequence that [`Self::replay_with`], [`Self::cursor`]
+    /// and [`Self::validate`] all walk.
     ///
     /// # Errors
     ///
@@ -857,10 +878,8 @@ impl HandHistory {
     where
         F: FnMut(&mut Table, ReplayStreet, &[Action]) -> Result<bool, PKError>,
     {
-        let streets = self.streets.as_ref();
-
         // ── Preflop ──────────────────────────────────────────────────────────
-        if let Some(pre) = streets.and_then(|streets| streets.preflop.as_ref())
+        if let Some(pre) = self.streets.as_ref().and_then(|streets| streets.preflop.as_ref())
             && !street(table, ReplayStreet::Preflop, &pre.actions)?
         {
             return Ok(());
@@ -868,53 +887,72 @@ impl HandHistory {
         if table.is_game_over() {
             return Ok(());
         }
-        table.bring_it_in()?;
 
-        // ── Flop ─────────────────────────────────────────────────────────────
-        let Some(flop) = streets.and_then(|streets| streets.flop.as_ref()) else {
-            return Ok(());
+        // ── Flop, turn, river ────────────────────────────────────────────────
+        for next in [ReplayStreet::Flop, ReplayStreet::Turn, ReplayStreet::River] {
+            table.bring_it_in()?;
+            let Some(actions) = self.lay_street(table, next)? else {
+                return Ok(());
+            };
+            if !street(table, next, actions)? || table.is_game_over() {
+                return Ok(());
+            }
+        }
+        Ok(())
+    }
+
+    /// Lays `street`'s recorded cards on `table` once the previous street's
+    /// bets are in: the flop replaces the board, the turn and river add a card,
+    /// and the phase moves to the street's deal. Returns the street's recorded
+    /// actions, or `None` (and touches nothing) when the street is not recorded
+    /// or is the preflop.
+    ///
+    /// [`Self::play_streets`] and [`Replay`]'s `Deal` event both call this, so
+    /// a seek deals exactly what the walk dealt.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError`] when the street's cards do not parse.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn lay_street(&self, table: &mut Table, street: ReplayStreet) -> Result<Option<&[Action]>, PKError> {
+        let streets = self.streets.as_ref();
+        let actions = match street {
+            ReplayStreet::Preflop => return Ok(None),
+            ReplayStreet::Flop => {
+                let Some(flop) = streets.and_then(|streets| streets.flop.as_ref()) else {
+                    return Ok(None);
+                };
+                table.board = Cards::from_str(&flop.cards)?;
+                table.phase = GamePhase::DealFlop;
+                &flop.actions
+            }
+            ReplayStreet::Turn => {
+                let Some(turn) = streets.and_then(|streets| streets.turn.as_ref()) else {
+                    return Ok(None);
+                };
+                table.board.insert(Card::from_str(&turn.card)?);
+                table.phase = GamePhase::DealTurn;
+                &turn.actions
+            }
+            ReplayStreet::River => {
+                let Some(river) = streets.and_then(|streets| streets.river.as_ref()) else {
+                    return Ok(None);
+                };
+                table.board.insert(Card::from_str(&river.card)?);
+                table.phase = GamePhase::DealRiver;
+                &river.actions
+            }
         };
-        table.board = Cards::from_str(&flop.cards)?;
-        table.phase = GamePhase::DealFlop;
         // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
         // run-out streets (frozen bring_it_in didn't exist yet). Reset
         // non-all-in players to YetToAct only when there are actions to
         // apply; an empty list means the current frozen behavior applies,
         // and the frozen state must be preserved so the next bring_it_in()
         // sees is_betting_complete() == true.
-        if !flop.actions.is_empty() {
+        if !actions.is_empty() {
             table.seats.reset_non_allin_to_yet_to_act();
         }
-        if !street(table, ReplayStreet::Flop, &flop.actions)? || table.is_game_over() {
-            return Ok(());
-        }
-        table.bring_it_in()?;
-
-        // ── Turn ─────────────────────────────────────────────────────────────
-        let Some(turn) = streets.and_then(|streets| streets.turn.as_ref()) else {
-            return Ok(());
-        };
-        table.board.insert(Card::from_str(&turn.card)?);
-        table.phase = GamePhase::DealTurn;
-        if !turn.actions.is_empty() {
-            table.seats.reset_non_allin_to_yet_to_act();
-        }
-        if !street(table, ReplayStreet::Turn, &turn.actions)? || table.is_game_over() {
-            return Ok(());
-        }
-        table.bring_it_in()?;
-
-        // ── River ────────────────────────────────────────────────────────────
-        let Some(river) = streets.and_then(|streets| streets.river.as_ref()) else {
-            return Ok(());
-        };
-        table.board.insert(Card::from_str(&river.card)?);
-        table.phase = GamePhase::DealRiver;
-        if !river.actions.is_empty() {
-            table.seats.reset_non_allin_to_yet_to_act();
-        }
-        street(table, ReplayStreet::River, &river.actions)?;
-        Ok(())
+        Ok(Some(actions))
     }
 
     /// Convert the [`board`] string field to a pkcore [`Board`].

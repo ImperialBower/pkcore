@@ -65,6 +65,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 - **`PKError::ReplayAmountMismatch { seat, recorded, engine }`**, the error
   `replay` returns for a recorded amount the engine disagrees with.
+- **`HandHistory::cursor`, `Replay` and `ReplayEvent`** (`hand-histories`): a
+  hand history replayed one step at a time, for a table control that steps
+  through a hand or scrubs back and forth. `cursor()` plays the hand once and
+  lists its events: `Forced` (the starting table, forced bets posted), each
+  recorded action the engine applies (`Action`, with its street and its index
+  in the street's `actions`; recorded posts are part of `Forced`), a `Deal`
+  before the flop, turn and river, `Showdown` when two or more seats are still
+  in after the river, and one `Award` per share of each pot as the engine's
+  showdown pays it (a split pot gives one per winner, a side pot one per pot
+  and winner, and a fold-win one award with no showdown). The cursor stands on
+  event 0; `step()` applies the next event (`Ok(false)` at the end), `seek(i)`
+  rebuilds the table and applies events `0..=i`, so scrubbing back gives the
+  same table as walking forward, and `at()` is the index of the last event
+  applied. After the last award the pot is empty and every stack is the one
+  `replay()` reports. `cursor()` fails wherever `replay()` does, a mismatched
+  amount included, because `replay_with` and the cursor share one walk. See
+  [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
 
 ### Changed
 
