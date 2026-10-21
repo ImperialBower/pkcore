@@ -40,10 +40,9 @@ fn the_hand_before__reports_defect_040() {
     }
 }
 
-/// The repaired `the_hand.yaml` must validate clean. It does not yet: the file
-/// is repaired in EPIC-93 Task 9.
+/// `DEFECT_040`: the repaired `the_hand.yaml`, recorded from the engine at
+/// the broadcast's stakes, validates clean.
 #[test]
-#[ignore = "DEFECT_040: red until EPIC-93 Task 9"]
 fn the_hand_yaml__validates() {
     let findings = load("data/hands/the_hand.yaml").validate();
     assert!(

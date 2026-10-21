@@ -226,6 +226,12 @@ required-features = ["json", "persistence"]
 name = "decon_dump"
 required-features = ["equity", "bot-profiles", "hand-histories", "player-stats"]
 
+# Records "The Hand" from the engine and prints it as YAML
+# (`data/hands/the_hand.yaml`, DEFECT_040). `to_yaml` needs `hand-histories`.
+[[example]]
+name = "record_the_hand"
+required-features = ["hand-histories"]
+
 # Storage-backed tools: SQLite HUP store + zstd binary card map (audit II.11 /
 # P7). Without `store`, `rusqlite`/`Sqlable`/`HUPResult` DB methods / BCM
 # generation are absent, so these must not build under `--no-default-features`.

@@ -10,8 +10,10 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::casino::action::PlayerAction;
 use crate::casino::table::Player;
 use crate::casino::table::Seat;
+use crate::hand_history::ReplayStreet;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
@@ -237,9 +239,18 @@ impl TestData {
         cards!("T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
+    /// "The Hand" in the order a dealer starting at the button deals it: the
+    /// hole cards seat 0 to seat 7, two passes, then burn, flop, burn, turn,
+    /// burn, river. The burns (A♠, Q♠, J♠) are not from the broadcast; they are
+    /// the first three cards of [`Cards::deck`] that the hand does not use,
+    /// which is what [`HandHistory::stacked_deck`](crate::hand_history::HandHistory::stacked_deck)
+    /// fills a burn with, so the recorded hand rebuilds this very deck.
+    ///
+    /// [`the_hand_table`](TestData::the_hand_table) rotates the hole cards for
+    /// [`Table`], which deals from the seat after the button.
     #[must_use]
     pub fn the_hand_cards_dealable() -> Cards {
-        cards!("T♠ 8♣ A♦ 5♦ 6♠ K♠ 4♦ 7♣ 2♥ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♦ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("T♠ 8♣ A♦ 5♦ 6♠ K♠ 4♦ 7♣ 2♥ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♣ A♠ 9♣ 6♦ 5♥ Q♠ 5♠ J♠ 8♠")
     }
 
     /// A full 52-card deck with [`TestData::the_hand_cards_dealable`] on top, in
@@ -256,34 +267,38 @@ impl TestData {
     /// their cards.
     #[must_use]
     pub fn the_hand_players() -> Vec<Seat> {
-        vec![
-            Seat::new_with_cards(
-                Self::fixture_player(1, "Doyle Brunson", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(Self::fixture_player(2, "Eli Elezra", 1_000_000), BoxedCards::blanks(2)),
-            Seat::new_with_cards(
-                Self::fixture_player(3, "Antonio Esfandari", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(Self::fixture_player(4, "Gus Hansen", 1_000_000), BoxedCards::blanks(2)),
-            Seat::new_with_cards(
-                Self::fixture_player(5, "Daniel Negreanu", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Self::fixture_player(6, "Cory Zeidman", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Self::fixture_player(7, "Barry Greenstein", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-            Seat::new_with_cards(
-                Self::fixture_player(8, "Amnon Filippi", 1_000_000),
-                BoxedCards::blanks(2),
-            ),
-        ]
+        Self::the_hand_players_with_stacks([1_000_000; 8])
+    }
+
+    /// The names of "The Hand"'s eight players, seat 0 first.
+    const THE_HAND_NAMES: [&'static str; 8] = [
+        "Doyle Brunson",
+        "Eli Elezra",
+        "Antonio Esfandiari",
+        "Gus Hansen",
+        "Daniel Negreanu",
+        "Cory Zeidman",
+        "Barry Greenstein",
+        "Amnon Filippi",
+    ];
+
+    /// The stacks "The Hand" was played with, seat 0 first: Hansen's 287,100
+    /// is the broadcast's (his river all in closes the 575,700 pot). The rest
+    /// are ESTIMATES that no source publishes: Negreanu 387,100 (he had to
+    /// cover Hansen) and 100,000 for each of the six who fold. They change no
+    /// pot, no action and no result (`DEFECT_040`).
+    const THE_HAND_BROADCAST_STACKS: [usize; 8] =
+        [100_000, 100_000, 100_000, 287_100, 387_100, 100_000, 100_000, 100_000];
+
+    fn the_hand_players_with_stacks(stacks: [usize; 8]) -> Vec<Seat> {
+        Self::THE_HAND_NAMES
+            .iter()
+            .zip(stacks)
+            .zip(1_u128..)
+            .map(|((name, stack), id)| {
+                Seat::new_with_cards(Self::fixture_player(id, name, stack), BoxedCards::blanks(2))
+            })
+            .collect()
     }
 
     /// The eight players of "The Hand", each already holding the two cards
@@ -292,8 +307,11 @@ impl TestData {
     pub fn the_hand_seats() -> Vec<Seat> {
         vec![
             Seat::new_with_cards(Self::fixture_player(1, "Doyle Brunson", 1_000_000), boxed!("T♠ 2♥")),
-            Seat::new_with_cards(Self::fixture_player(2, "Eli Elezra", 1_000_000), boxed!("8♠ 3♥")),
-            Seat::new_with_cards(Self::fixture_player(3, "Antonio Esfandari", 1_000_000), boxed!("A♦ Q♣")),
+            Seat::new_with_cards(Self::fixture_player(2, "Eli Elezra", 1_000_000), boxed!("8♣ 3♥")),
+            Seat::new_with_cards(
+                Self::fixture_player(3, "Antonio Esfandiari", 1_000_000),
+                boxed!("A♦ Q♣"),
+            ),
             Seat::new_with_cards(Self::fixture_player(4, "Gus Hansen", 1_000_000), boxed!("5♦ 5♣")),
             Seat::new_with_cards(Self::fixture_player(5, "Daniel Negreanu", 1_000_000), boxed!("6♠ 6♥")),
             Seat::new_with_cards(Self::fixture_player(6, "Cory Zeidman", 1_000_000), boxed!("K♠ J♦")),
@@ -350,6 +368,86 @@ impl TestData {
         )
     }
 
+    /// "The Hand" at the broadcast's stakes: $300/$600 with a $100 ante, the
+    /// button on seat 0 (Brunson), Elezra in the small blind and Esfandiari in
+    /// the big, dealt from the same stacked deck as
+    /// [`the_hand_table`](TestData::the_hand_table).
+    ///
+    /// Hansen (seat 3) has the broadcast's 287,100. The other seven stacks
+    /// are ESTIMATES, not read off the episode: Negreanu (seat 4) 387,100, the
+    /// six who fold 100,000 each. Play it with
+    /// [`the_hand_line`](TestData::the_hand_line).
+    ///
+    /// ```
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let table = TestData::the_hand_broadcast_table();
+    /// assert_eq!(0, table.button);
+    /// assert_eq!(100, table.forced.ante);
+    /// assert_eq!(287_100, table.seats.get_seat(3).unwrap().player.chips);
+    /// ```
+    #[must_use]
+    pub fn the_hand_broadcast_table() -> Table {
+        let primed = TestData::the_hand_cards_dealable().rotated_for_plain_deal(8, 2);
+        Table::nlh_primed_with_id(
+            Seats::new(Self::the_hand_players_with_stacks(Self::THE_HAND_BROADCAST_STACKS)),
+            &Cards::deck_primed(&primed),
+            ForcedBets::new_with_ante(300, 600, 100),
+            Uuid::nil(),
+        )
+    }
+
+    /// The nineteen voluntary actions of "The Hand", in order, as
+    /// `(street, seat, action)`, seats 0-based. `Bet(n)` and `Raise(n)` are
+    /// to `n` for the street, as [`Table::apply_action`] takes them.
+    ///
+    /// | Street  | Action |
+    /// |---------|--------|
+    /// | Preflop | Hansen (3) raises to 2,100, Negreanu (4) to 5,000, seats 5, 6, 7, 0, 1, 2 fold, Hansen calls |
+    /// | Flop    | Hansen checks, Negreanu bets 8,000, Hansen raises to 26,000, Negreanu calls |
+    /// | Turn    | Hansen bets 24,000, Negreanu calls |
+    /// | River   | Hansen checks, Negreanu bets 65,000, Hansen is all in, Negreanu calls |
+    ///
+    /// On [`the_hand_broadcast_table`](TestData::the_hand_broadcast_table) it
+    /// ends with a 575,700 pot.
+    ///
+    /// ```
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::hand_history::ReplayStreet;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let line = TestData::the_hand_line();
+    /// assert_eq!(19, line.len());
+    /// assert_eq!((ReplayStreet::Preflop, 3, PlayerAction::Raise(2_100)), line[0]);
+    /// assert_eq!((ReplayStreet::River, 4, PlayerAction::Call), line[18]);
+    /// ```
+    #[must_use]
+    pub fn the_hand_line() -> Vec<(ReplayStreet, u8, PlayerAction)> {
+        use PlayerAction::{AllIn, Bet, Call, Check, Fold, Raise};
+        use ReplayStreet::{Flop, Preflop, River, Turn};
+        vec![
+            (Preflop, 3, Raise(2_100)),
+            (Preflop, 4, Raise(5_000)),
+            (Preflop, 5, Fold),
+            (Preflop, 6, Fold),
+            (Preflop, 7, Fold),
+            (Preflop, 0, Fold),
+            (Preflop, 1, Fold),
+            (Preflop, 2, Fold),
+            (Preflop, 3, Call),
+            (Flop, 3, Check),
+            (Flop, 4, Bet(8_000)),
+            (Flop, 3, Raise(26_000)),
+            (Flop, 4, Call),
+            (Turn, 3, Bet(24_000)),
+            (Turn, 4, Call),
+            (River, 3, Check),
+            (River, 4, Bet(65_000)),
+            (River, 3, AllIn),
+            (River, 4, Call),
+        ]
+    }
+
     /// The three seats [`min_table`](TestData::min_table) uses, with cards.
     #[must_use]
     pub fn min_seats() -> Vec<Seat> {
@@ -400,6 +498,70 @@ mod util__data_tests {
 
         assert_eq!(hup.odds.wins as usize, first_wins - first_ties);
         assert_eq!(hup.odds.losses as usize, second_wins - second_ties);
+    }
+
+    /// `DEFECT_040` item 9: the burns are in the dealable list, so the plain
+    /// `Table` deals the board the broadcast showed. Item 8: no card is dealt
+    /// twice, and every seat holds what [`TestData::the_hand_seats`] says.
+    #[test]
+    fn the_hand_table__deals_the_broadcast_board() {
+        let mut table = TestData::the_hand_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        assert_eq!("9♣ 6♦ 5♥ 5♠ 8♠", table.board.to_string());
+
+        let mut dealt: Vec<Card> = table.board.iter().copied().collect();
+        for (seat, expected) in table.seats.iter().zip(TestData::the_hand_seats()) {
+            assert_eq!(
+                expected.cards.sorted_display(),
+                seat.cards.sorted_display(),
+                "{}",
+                seat.player.handle
+            );
+            dealt.extend(seat.cards.as_slice().iter().copied());
+        }
+        let unique: std::collections::HashSet<Card> = dealt.iter().copied().collect();
+        assert_eq!(21, dealt.len());
+        assert_eq!(dealt.len(), unique.len(), "a card was dealt twice: {dealt:?}");
+    }
+
+    /// The broadcast's numbers close: 2 × 287,100 + the six folders' 1,500 is
+    /// 575,700, Hansen's all in is all he has, and Negreanu keeps the 100,000
+    /// he did not need.
+    #[test]
+    fn the_hand_line__ends_at_575_700_for_hansen() {
+        use crate::casino::session::PokerSession;
+        use crate::hand_history::ReplayStreet;
+
+        let mut session = PokerSession::new(TestData::the_hand_broadcast_table());
+        let deck = session.table.deck.clone();
+        session.start_hand_with_deck(deck).unwrap();
+
+        let line = TestData::the_hand_line();
+        assert_eq!(19, line.len());
+        for (street, seat, action) in line {
+            assert_eq!(Some(seat), session.next_actor().unwrap(), "{street} {seat} {action}");
+            let board = match street {
+                ReplayStreet::Preflop => 0,
+                ReplayStreet::Flop => 3,
+                ReplayStreet::Turn => 4,
+                ReplayStreet::River => 5,
+            };
+            assert_eq!(board, session.table.board.len(), "{street} {seat} {action}");
+            session.apply_action(seat, action).unwrap();
+        }
+        assert_eq!(None, session.next_actor().unwrap());
+        assert_eq!(575_700, session.table.effective_pot());
+
+        session.end_hand().unwrap();
+
+        let chips = |seat: u8| session.table.seats.get_seat(seat).unwrap().player.chips;
+        assert_eq!(575_700, chips(3), "Gus Hansen");
+        assert_eq!(100_000, chips(4), "Daniel Negreanu");
     }
 
     #[test]

@@ -437,6 +437,7 @@ impl HandHistory {
                     .filter_map(|(seat, _, _, _, id)| id.map(|id| (*seat, id)))
                     .collect();
                 Streets::from_event_log_with_seat_ids(event_log, &seat_to_id)
+                    .map(|streets| streets.with_flop_in_board_order(board_str))
             },
             results: Some(results),
             analysis: None,
@@ -2036,6 +2037,26 @@ enum EventStreet {
 }
 
 impl Streets {
+    /// The flop in the order `board` lists it (`DEFECT_040`).
+    ///
+    /// The event log records the flop as a [`Bard`](crate::bard::Bard), a set,
+    /// so [`Streets::from_event_log`] writes it in deck order. The board
+    /// string keeps the order the cards were dealt in, and `validate` holds
+    /// the two to the same order. The flop is rewritten only when the board's
+    /// first three cards are the logged flop; any other disagreement is left
+    /// for `validate` to report.
+    fn with_flop_in_board_order(mut self, board: &str) -> Self {
+        if let Some(flop) = self.flop.as_mut()
+            && let (Ok(logged), Ok(board)) = (Cards::from_str(&flop.cards), Cards::from_str(board))
+        {
+            let dealt: Vec<Card> = board.iter().take(3).copied().collect();
+            if logged.len() == 3 && dealt.len() == 3 && dealt.iter().all(|card| crate::Pile::contains(&logged, card)) {
+                flop.cards = Cards::from(dealt).to_string();
+            }
+        }
+        self
+    }
+
     /// Build a [`Streets`] record by parsing a `Table` event log.
     ///
     /// Walks `log` in a single forward pass, partitioning player-action events
@@ -3230,126 +3251,91 @@ mod tests {
         assert!(matches!(HandHistoryError::from(yaml_err), HandHistoryError::Yaml(_)));
     }
 
-    // Embedded YAML for "The Hand" so tests run without filesystem access.
+    // "The Hand", as recorded from the engine (`DEFECT_040`).
     #[cfg(feature = "hand-histories")]
-    const THE_HAND_YAML: &str = r#"
-pkcore_version: "0.0.39"
-format_version: 1
+    const THE_HAND_YAML: &str = include_str!("../data/hands/the_hand.yaml");
 
-hand:
-  id: "hsp-s5-the-hand"
-  game: holdem
-  timestamp: "2008-03-01T21:00:00Z"
-  source: "High Stakes Poker S5"
-  description: "The Hand - Negreanu vs Hansen, Quads vs Full House"
-
-table:
-  name: "HSP Table 1"
-  seats: 6
-  button: 1
-  stakes:
-    small_blind: 400.0
-    big_blind: 800.0
-    ante: 200.0
-
-players:
-  - seat: 1
-    name: "Gus Hansen"
-    stack: 468200.0
-    hole_cards: "6s 6h"
-  - seat: 4
-    name: "Daniel Negreanu"
-    stack: 331400.0
-    hole_cards: "5d 5c"
-
-board: "9c 6d 5h 5s 8s"
-
-streets:
-  preflop:
-    actions:
-      - { seat: 2, action: fold }
-      - { seat: 3, action: fold }
-      - { seat: 4, action: raise, amount: 3500.0 }
-      - { seat: 5, action: fold }
-      - { seat: 6, action: fold }
-      - { seat: 1, action: call, amount: 3500.0 }
-    pot: 8200.0
-  flop:
-    cards: "9c 6d 5h"
-    actions:
-      - { seat: 1, action: check }
-      - { seat: 4, action: bet, amount: 8000.0 }
-      - { seat: 1, action: raise, amount: 26000.0 }
-      - { seat: 4, action: call, amount: 26000.0 }
-    pot: 60200.0
-  turn:
-    card: "5s"
-    actions:
-      - { seat: 1, action: check }
-      - { seat: 4, action: bet, amount: 52000.0 }
-      - { seat: 1, action: raise, amount: 100000.0 }
-      - { seat: 4, action: call, amount: 100000.0 }
-    pot: 260200.0
-  river:
-    card: "8s"
-    actions:
-      - { seat: 1, action: bet, amount: 205000.0 }
-      - { seat: 4, action: call, amount: 205000.0 }
-    pot: 670200.0
-
-results:
-  - seat: 1
-    best_hand: "6s 6h 6d 5h 5s"
-    hand_rank:
-      value: 271
-      name: FullHouse
-      class: SixesOverFives
-    outcome: win
-    net: 335100.0
-  - seat: 4
-    best_hand: "5h 5s 5d 5c 9c"
-    hand_rank:
-      value: 117
-      name: FourOfAKind
-      class: FourFives
-    outcome: lose
-    net: -335100.0
-
-analysis:
-  villain_range: "66+,AJs+,KQs,AJo+,KQo"
-  hero_equity_preflop: 0.5083
-  notes: "Hansen full house lost to Negreanu quads"
-"#;
-
+    /// `DEFECT_040`: the recorded hand, at the broadcast's stakes. Hansen
+    /// (seat 3) wins with quad fives, value 124; Negreanu (seat 4) loses with
+    /// sixes full, value 271.
     #[cfg(feature = "hand-histories")]
     #[test]
-    fn test_hand_history_deserialize_the_hand() {
+    fn the_hand_yaml__is_the_recorded_hand() {
+        use crate::analysis::class::HandRankClass;
+        use crate::analysis::name::HandRankName;
+
         let hh: HandHistory = HandHistory::from_yaml(THE_HAND_YAML).expect("Failed to parse The Hand YAML");
 
-        assert_eq!(hh.hand.id, "hsp-s5-the-hand");
+        assert_eq!(hh.hand.id, "hsp-s2e11-the-hand");
+        assert_eq!(
+            hh.hand.source.as_deref(),
+            Some("High Stakes Poker Season 2, Episode 11")
+        );
         assert_eq!(hh.hand.game, HandVariant::Holdem);
         assert_eq!(hh.format_version, FORMAT_VERSION);
-        assert_eq!(hh.players.len(), 2);
-        assert_eq!(hh.players[0].name, "Gus Hansen");
-        assert_eq!(hh.players[0].hole_cards.as_deref(), Some("6s 6h"));
-        assert_eq!(hh.players[1].hole_cards.as_deref(), Some("5d 5c"));
-        assert_eq!(hh.board.as_deref(), Some("9c 6d 5h 5s 8s"));
+        assert_eq!(hh.table.button, Some(0));
+        assert_eq!(hh.table.stakes.small_blind, 300.0);
+        assert_eq!(hh.table.stakes.big_blind, 600.0);
+        assert_eq!(hh.table.stakes.ante, Some(100.0));
+        assert_eq!(hh.players.len(), 8);
+        assert_eq!(hh.players[1].hole_cards.as_deref(), Some("8♣ 3♥"));
+        assert_eq!(hh.players[3].name, "Gus Hansen");
+        assert_eq!(hh.players[3].stack, 287_100.0);
+        assert_eq!(hh.players[3].hole_cards.as_deref(), Some("5♦ 5♣"));
+        assert_eq!(hh.players[4].name, "Daniel Negreanu");
+        assert_eq!(hh.players[4].hole_cards.as_deref(), Some("6♠ 6♥"));
+        assert_eq!(hh.board.as_deref(), Some("9♣ 6♦ 5♥ 5♠ 8♠"));
 
         let streets = hh.streets.as_ref().unwrap();
-        assert_eq!(streets.flop.as_ref().unwrap().cards, "9c 6d 5h");
-        assert_eq!(streets.turn.as_ref().unwrap().card, "5s");
-        assert_eq!(streets.river.as_ref().unwrap().card, "8s");
+        assert_eq!(streets.turn.as_ref().unwrap().card, "5♠");
+        assert_eq!(streets.river.as_ref().unwrap().card, "8♠");
 
         let results = hh.results.as_ref().unwrap();
-        assert_eq!(results.len(), 2);
-        assert_eq!(results[0].outcome, Outcome::Win);
-        assert_eq!(results[0].hand_rank.unwrap().value, 271);
-        assert_eq!(results[1].hand_rank.unwrap().value, 117);
-        assert_eq!(results[1].outcome, Outcome::Lose);
+        assert_eq!(results.len(), 8);
+        let hansen = results.iter().find(|result| result.seat == 3).unwrap();
+        let hansen_rank = hansen.hand_rank.unwrap();
+        assert_eq!(hansen.outcome, Outcome::Win);
+        assert_eq!(hansen_rank.name, HandRankName::FourOfAKind);
+        assert_eq!(hansen_rank.class, HandRankClass::FourFives);
+        assert_eq!(hansen_rank.value, 124);
+        assert_eq!(hansen.pot_won, Some(575_700.0));
 
-        let analysis = hh.analysis.as_ref().unwrap();
-        assert_eq!(analysis.villain_range.as_deref(), Some("66+,AJs+,KQs,AJo+,KQo"));
-        assert_eq!(analysis.hero_equity_preflop, Some(0.5083));
+        let negreanu = results.iter().find(|result| result.seat == 4).unwrap();
+        let negreanu_rank = negreanu.hand_rank.unwrap();
+        assert_eq!(negreanu.outcome, Outcome::Lose);
+        assert_eq!(negreanu_rank.name, HandRankName::FullHouse);
+        assert_eq!(negreanu_rank.class, HandRankClass::SixesOverFives);
+        assert_eq!(negreanu_rank.value, 271);
+        assert_eq!(negreanu.net, Some(-287_100.0));
+
+        assert!(hh.analysis.is_none());
+    }
+
+    /// The recorded hand's stacked deck deals it again: the same hole cards
+    /// to the same seats, and the same board.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn the_hand_yaml__stacked_deck_deals_it_again() {
+        use crate::casino::session::PokerSession;
+
+        let hh: HandHistory = HandHistory::from_yaml(THE_HAND_YAML).expect("Failed to parse The Hand YAML");
+        let table = crate::util::data::TestData::the_hand_broadcast_table();
+        // The fixture's burns are the ones `stacked_deck` picks, so the
+        // rebuilt deck is the deck the hand was recorded from, card for card.
+        assert_eq!(table.deck, hh.stacked_deck().unwrap());
+
+        let mut session = PokerSession::new(table);
+        session.start_hand_with_deck(hh.stacked_deck().unwrap()).unwrap();
+
+        for player in &hh.players {
+            let seat = session.table.seats.get_seat(player.seat).unwrap();
+            assert_eq!(player.hole_cards.as_deref(), Some(seat.cards.to_string().as_str()));
+        }
+        for (street, seat, action) in crate::util::data::TestData::the_hand_line() {
+            assert_eq!(Some(seat), session.next_actor().unwrap(), "{street}");
+            session.apply_action(seat, action).unwrap();
+        }
+        assert_eq!(hh.board.as_deref(), Some(session.table.board.to_string().as_str()));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -3458,7 +3444,14 @@ results:
         assert!(results[0].to_five().is_ok());
         assert!(results[1].to_five().is_ok());
 
-        assert!(hh.analysis.as_ref().unwrap().to_villain_combos().is_ok());
+        // The recorded hand carries no analysis block (`DEFECT_040`: the
+        // engine records what happened, not a range read). The villain range
+        // the typed file used still converts.
+        let analysis = AnalysisContext {
+            villain_range: Some("66+,AJs+,KQs,AJo+,KQo".to_string()),
+            ..AnalysisContext::default()
+        };
+        assert!(analysis.to_villain_combos().is_ok());
     }
 
     #[test]
@@ -3893,7 +3886,7 @@ hands:
     fn test_hand_history_standalone_unaffected() {
         let hh: HandHistory =
             HandHistory::from_yaml(THE_HAND_YAML).expect("Existing single-hand YAML should still parse correctly");
-        assert_eq!(hh.hand.id, "hsp-s5-the-hand");
+        assert_eq!(hh.hand.id, "hsp-s2e11-the-hand");
         assert_eq!(hh.hand.game, HandVariant::Holdem);
     }
 
@@ -4743,6 +4736,64 @@ hands:
             !yaml_no_deck.contains("shuffled_deck"),
             "YAML should omit shuffled_deck when None"
         );
+    }
+
+    /// `DEFECT_040`: the event log records the flop as a `Bard`, a set, so
+    /// the street came out in deck order (`5♥ 6♦ 9♣`) while the board kept
+    /// the order it was dealt in (`9♣ 6♦ 5♥`), and `validate` reported the
+    /// recorder's own file. The board's order wins.
+    #[test]
+    fn from_table_state__records_the_flop_in_board_order() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "9♣ 6♦ 5♥ 5♠ 8♠",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("9♣ 6♦ 5♥", hh.streets.unwrap().flop.unwrap().cards);
+    }
+
+    /// A board that disagrees with the logged flop is left to disagree:
+    /// `validate` is the one to say so, not the recorder.
+    #[test]
+    fn from_table_state__keeps_a_flop_the_board_does_not_hold() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "A♠ K♠ Q♠",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("5♥ 6♦ 9♣", hh.streets.unwrap().flop.unwrap().cards);
     }
 
     /// Passing a deck string to `from_table_state` wires it into the `HandHistory`.

@@ -134,6 +134,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before. The table construction moved to one private builder, `replay_table`,
   so later checks and a step-by-step replay start from the same table. See
   [EPIC-93](docs/epics/EPIC-93_Faithful_Replay.md).
+- **`data/hands/the_hand.yaml` is recorded from the engine, not typed**
+  ([DEFECT_040](docs/defects/DEFECT_040_the_hand_yaml.md)). The file had the
+  wrong season, stakes and table, swapped the hole cards, crowned the full
+  house over the quads, and bet amounts no stack could pay. It is now the
+  output of `cargo run --features full --example record_the_hand` (new,
+  `hand-histories`): High Stakes Poker Season 2, Episode 11, $300/$600 with a
+  $100 ante, all eight players, the button on Brunson, Hansen's 287,100 all in
+  on the river, a 575,700 pot, and Hansen's quad fives (124) over Negreanu's
+  sixes full (271). It passes `HandHistory::validate` clean. Negreanu's
+  387,100 and the six folders' 100,000 are estimates and the file's header
+  says so. New fixtures: `TestData::the_hand_broadcast_table` and
+  `TestData::the_hand_line` (the 19 actions); `examples/the_hand.rs` plays
+  them too, at the broadcast's stakes instead of 50/100.
+- **The Hand's fixtures deal the broadcast's cards** (DEFECT_040 items 8 and
+  9). `TestData::the_hand_seats` gave Eli Elezra the river card `8♠`; he held
+  `8♣ 3♥`. `TestData::the_hand_cards_dealable` had Amnon Filippi's second card
+  missing and one burn card where the plain `Table` burns three, so
+  `TestData::the_hand_table` dealt `6♦ 5♥ 5♠ A♠ J♠`; it now deals
+  `9♣ 6♦ 5♥ 5♠ 8♠`. The burns are the ones `HandHistory::stacked_deck` picks,
+  so the recorded hand rebuilds the fixture's deck card for card. "Antonio
+  Esfandari" is spelled Esfandiari.
+- **`HandHistory::from_table_state` writes the flop in the order it was
+  dealt** (DEFECT_040). The event log carries the flop as a set, so the flop
+  came out in deck order (`5♥ 6♦ 9♣`) beside a board in dealt order
+  (`9♣ 6♦ 5♥`), and `validate` reported a recorded hand's own cards. When the
+  board's first three cards are the logged flop, the flop now takes the
+  board's order.
 
 ## [0.16.0] - 2026-10-17
 
