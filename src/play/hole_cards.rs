@@ -568,7 +568,7 @@ mod play__hold_cards_tests {
     #[test]
     fn from__seats() {
         let seats = TestData::the_hand_dealt_seats();
-        let expected = "[T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
+        let expected = "[T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
 
         let hands = HoleCards::from(&seats);
 

@@ -13,7 +13,10 @@
 use pkcore::hand_history::{HandCollection, HandHistory};
 
 const PKARENA_SESSION_YAML: &str = include_str!("../data/hands/legacy/pkarena0-session_2026-04-15.yaml");
-const THE_HAND_YAML: &str = include_str!("../data/hands/the_hand.yaml");
+/// `DEFECT_040`: the hand-typed `the_hand.yaml` as it stood before EPIC-93
+/// recorded it from the engine. It is the single-hand file that predates
+/// `player_id`; the recorded one is new and proves nothing about legacy files.
+const THE_HAND_BEFORE_YAML: &str = include_str!("defects/validate/DEFECT_040_the_hand_before.yaml");
 
 #[test]
 fn legacy_collection_round_trips_without_player_id() {
@@ -60,7 +63,7 @@ fn legacy_collection_round_trips_without_player_id() {
 
 #[test]
 fn legacy_hand_history_round_trips_without_player_id() {
-    let original = HandHistory::from_yaml(THE_HAND_YAML).expect("legacy hand YAML should parse");
+    let original = HandHistory::from_yaml(THE_HAND_BEFORE_YAML).expect("legacy hand YAML should parse");
 
     for player in &original.players {
         assert!(player.player_id.is_none());

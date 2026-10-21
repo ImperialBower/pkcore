@@ -281,13 +281,16 @@ install-watch:
 	cargo install cargo-watch
 
 # Check that the library compiles for WebAssembly
-# Two configurations, because they fail differently. The default build is what
-# a plain browser dependency gets — since 0.15.0 it carries no `parallel`, so no
-# rayon thread pool it has no threads to run (see the Parallelism section in
-# src/lib.rs). The second adds the YAML surfaces the wasm apps turn on.
+# Three configurations, because they fail differently. The default build is
+# what a plain browser dependency gets — since 0.15.0 it carries no `parallel`,
+# so no rayon thread pool it has no threads to run (see the Parallelism section
+# in src/lib.rs). The second is pkarena0-web's set, the YAML surfaces plus
+# player-stats. The third is bowery's set (equity, hand-histories,
+# bot-profiles; EPIC-93). The crate has no binaries, so each checks the library.
 check-wasm:
 	cargo check --target wasm32-unknown-unknown
 	cargo check --target wasm32-unknown-unknown --no-default-features --features equity,bot-profiles,hand-histories,player-stats
+	cargo check --target wasm32-unknown-unknown --no-default-features --features equity,hand-histories,bot-profiles
 
 # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that neither the
 # `--no-default-features` build nor the plain default build (what `cargo add

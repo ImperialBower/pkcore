@@ -206,8 +206,10 @@ jobs:
           targets: wasm32-unknown-unknown
           components: rust-src
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      # Two production WASM apps (pkgto-web, pkkuhn-web) depend on pkcore
-      # building for wasm32; nothing else in CI checked it (audit VI.4). The
-      # store/terminal deps are target-gated off on wasm, so `--lib` is the
-      # meaningful surface. Runs under the global RUSTFLAGS=-Dwarnings.
-      - run: cargo check --target wasm32-unknown-unknown --lib
+      # Production WASM apps (pkgto-web, pkkuhn-web, pkarena0-web, and bowery)
+      # depend on pkcore building for wasm32; nothing else in CI checked it
+      # (audit VI.4). The store/terminal deps are target-gated off on wasm.
+      # `make check-wasm` checks the library in three configurations: the
+      # default features, pkarena0-web's set, and bowery's set (EPIC-93).
+      # Runs under the global RUSTFLAGS=-Dwarnings.
+      - run: make check-wasm

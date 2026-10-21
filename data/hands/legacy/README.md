@@ -48,9 +48,11 @@ one-time archive.
   its job.
 - **Do not add new fixtures here.** New recordings belong in `data/hands/`.
 
-`data/hands/the_hand.yaml` deliberately stayed put. It is a transcription of a
-real televised hand (Negreanu vs Hansen, High Stakes Poker S5) rather than
-pkcore output, so no engine change can invalidate it.
+`data/hands/the_hand.yaml` deliberately stayed put. It is a real televised hand
+(Negreanu vs Hansen, High Stakes Poker Season 2), recorded from the engine at
+the broadcast's stakes since `0.17.0` (`DEFECT_040`), and it is held to the
+current engine: `tests/hand_history_corpus.rs` validates it on every run.
+These files are left out of that test.
 
 ## Still referenced by tests
 

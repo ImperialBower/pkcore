@@ -1,15 +1,16 @@
-//! Recreation of "The Hand" (Negreanu vs. Hansen) using [`Table`].
-//!
-//! Every function receives `&mut Table`. The mutability contract is explicit at
-//! every call site: the compiler enforces exclusive access rather than hiding it
-//! behind `Cell`/`RefCell`, which is what the retired `TableCelled` engine did.
+//! Recreation of "The Hand" (Negreanu vs. Hansen) using [`Table`], driven by a
+//! [`PokerSession`] that deals each street as the betting closes.
 //!
 //! ```
 //! cargo run --example the_hand
 //! ```
 //!
 //! ## The Hand
-//! Season 2, Episode 11 of High Stakes Poker.
+//! Season 2, Episode 11 of High Stakes Poker, at the broadcast's stakes:
+//! $300/$600 with a $100 ante. The table is
+//! [`TestData::the_hand_broadcast_table`] and the moves are
+//! [`TestData::the_hand_line`], the same ones that record
+//! `data/hands/the_hand.yaml` (`examples/record_the_hand.rs`).
 //! <https://www.youtube.com/watch?v=vjM60lqRhPg>
 
 use pkcore::PKError;
@@ -20,9 +21,10 @@ use pkcore::analysis::gto::vs::Versus;
 use pkcore::analysis::pot_odds::PotOdds;
 use pkcore::analysis::range_equity::RangeEquity;
 use pkcore::arrays::two::Two;
-use pkcore::cards::Cards;
-use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::{Player, Seat, Seats, Table};
+use pkcore::casino::action::PlayerAction;
+use pkcore::casino::session::PokerSession;
+use pkcore::casino::table::Table;
+use pkcore::hand_history::ReplayStreet;
 use pkcore::play::board::Board;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::play::stages::river_eval::RiverEval;
@@ -33,20 +35,45 @@ use std::str::FromStr;
 fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let mut table = the_hand_table();
+    // The broadcast's table: $300/$600 with a $100 ante, Hansen on 287,100.
+    // The other stacks are estimates (see `TestData::the_hand_broadcast_table`).
+    let mut session = PokerSession::new(TestData::the_hand_broadcast_table());
+    let deck = session.table.deck.clone();
+    session.start_hand_with_deck(deck)?;
+    setup(&session.table);
 
-    setup(&mut table)?;
-    let preflop_pot = preflop(&mut table)?;
-    let flop_pot = flop(&mut table, preflop_pot)?;
-    let turn_pot = turn(&mut table, flop_pot)?;
-    river(&mut table, turn_pot)?;
+    let mut street = ReplayStreet::Preflop;
+    for (next_street, seat, action) in TestData::the_hand_line() {
+        // `next_actor` sweeps the bets in and deals the next street when the
+        // betting round is over.
+        if session.next_actor()? != Some(seat) {
+            return Err(PKError::InvalidAction);
+        }
+        if next_street != street {
+            street = next_street;
+            on_street(&session.table, street);
+        }
+        if street == ReplayStreet::River && seat == 3 && action == PlayerAction::AllIn {
+            gus_decision(&session.table);
+        }
+        session.apply_action(seat, action)?;
+        commentary_action_to(&session.table);
+    }
+    if session.next_actor()?.is_some() {
+        return Err(PKError::ActionIsntFinished);
+    }
+
+    let hand_result = session.end_hand()?;
+    commentary_action_to(&session.table);
+    println!("{hand_result}");
+    range_equity();
 
     println!("\nDump event logs? (y/n): ");
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
 
     if input.trim().eq_ignore_ascii_case("y") {
-        for action in &table.event_log {
+        for action in &session.table.event_log {
             println!("{action}");
         }
     }
@@ -54,38 +81,9 @@ fn main() -> Result<(), PKError> {
     Ok(())
 }
 
-/// Constructs a [`Table`] primed with the exact deck order used in The Hand.
-///
-/// The key difference from `Table::nlh_primed`: because `Table.deck` is a
-/// plain `pub` field, we can inject the pre-ordered deck with a direct assignment
-/// after construction rather than through a specialised constructor.
-fn the_hand_table() -> Table {
-    let seats = Seats::new(vec![
-        Seat::new(Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Eli Elezra".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Antonio Esfandiari".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Gus Hansen".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000)),
-        Seat::new(Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000)),
-    ]);
-
-    let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-
-    // Inject the pre-ordered deck so cards deal in the documented order.
-    // With Table, `deck` is a plain public field — no wrapper needed.
-    table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
-
-    table
-}
-
 // ── Phases ────────────────────────────────────────────────────────────────────
 
-fn setup(table: &mut Table) -> Result<(), PKError> {
-    table.act_forced_bets().expect("forced bets failed");
-    table.deal_cards_to_seats().expect("failed to deal hole cards");
-
+fn setup(table: &Table) {
     println!();
     // The event log is a plain Vec<TableAction>; walk it directly.
     for action in &table.event_log {
@@ -100,96 +98,36 @@ fn setup(table: &mut Table) -> Result<(), PKError> {
 
     println!("\n{table}");
     commentary_action_to(table);
-
-    Ok(())
 }
 
-fn preflop(table: &mut Table) -> Result<usize, PKError> {
-    let _gus = table.act_bet(3, 2_100)?;
-    commentary_action_to(table);
-
-    let _daniel = table.act_raise(4, 5_000)?;
-    commentary_action_to(table);
-
-    let _seat5 = table.act_fold(5)?;
-    commentary_action_to(table);
-
-    let _seat6 = table.act_fold(6)?;
-    commentary_action_to(table);
-
-    let _seat7 = table.act_fold(7)?;
-    commentary_action_to(table);
-
-    let _seat0 = table.act_fold(0)?;
-    commentary_action_to(table);
-
-    let _seat1 = table.act_fold(1)?;
-    commentary_action_to(table);
-
-    let _seat2 = table.act_fold(2)?;
-    commentary_action_to(table);
-
-    table.act_call(3)?;
-    commentary_action_to(table);
-
-    let pot = table.bring_it_in()?;
-    Ok(pot)
+/// What the new street means for the players, printed as it is dealt.
+fn on_street(table: &Table, street: ReplayStreet) {
+    let Ok(game) = table.build_game() else {
+        return;
+    };
+    match street {
+        ReplayStreet::Preflop => {}
+        ReplayStreet::Flop => {
+            if let Ok(fe) = FlopEval::try_from(game.clone()) {
+                println!("{fe}");
+            }
+            println!();
+            println!("The Nuts @ Flop:");
+            println!("{}", game.board.flop.evals());
+        }
+        ReplayStreet::Turn => {
+            if let Ok(te) = TurnEval::try_from(&game) {
+                println!("{te}");
+            }
+        }
+        ReplayStreet::River => river(&game),
+    }
 }
 
-fn flop(table: &mut Table, _preflop_pot: usize) -> Result<usize, PKError> {
-    table.deal_flop().expect("no flop");
+fn river(game: &pkcore::play::game::Game) {
+    game.river_display_results();
 
-    // Evaluation via build_game — the NoCell equivalent of table.eval_flop_display().
-    if let Ok(game) = table.build_game()
-        && let Ok(fe) = FlopEval::try_from(game)
-    {
-        println!("{fe}");
-    }
-
-    println!();
-    println!("The Nuts @ Flop:");
-    if let Ok(game) = table.build_game() {
-        println!("{}", game.board.flop.evals());
-    }
-
-    let _gus = table.act_check(3)?;
-    let _daniel = table.act_bet(4, 8_000)?;
-    let _gus = table.act_raise(3, 26_000)?;
-    let _daniel = table.act_call(4)?;
-    let pot = table.bring_it_in()?;
-
-    Ok(pot)
-}
-
-fn turn(table: &mut Table, _flop_pot: usize) -> Result<usize, PKError> {
-    table.deal_turn().expect("no turn");
-
-    // Evaluation via build_game — the NoCell equivalent of table.eval_turn_display().
-    if let Ok(game) = table.build_game()
-        && let Ok(te) = TurnEval::try_from(&game)
-    {
-        println!("{te}");
-    }
-
-    let _gus = table.act_bet(3, 24_000)?;
-    commentary_action_to(table);
-
-    let _daniel = table.act_call(4)?;
-    commentary_action_to(table);
-
-    let pot = table.bring_it_in()?;
-    Ok(pot)
-}
-
-fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
-    table.deal_river().expect("no river");
-
-    // Evaluation via build_game — the NoCell equivalent of table.eval_river_display().
-    if let Ok(game) = table.build_game() {
-        game.river_display_results();
-    }
-
-    // ── River hand breakdown (identical to the_hand.rs — independent of table type) ──
+    // ── River hand breakdown (independent of table type) ──
     let game = TestData::the_hand();
     if let Ok(re) = RiverEval::try_from(game) {
         println!("\n=== River Hand Breakdown ===");
@@ -204,17 +142,12 @@ fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
             println!("  Winner: {winner}");
         }
     }
+}
 
-    let _gus = table.act_check(3)?;
-    commentary_action_to(table);
-
-    // ── Pot odds & EV for Gus facing Daniel's 65k bet ────────────────────────
-    let daniel_bet: u64 = 65_000;
-    let _daniel = table.act_bet(4, daniel_bet as usize)?;
-    commentary_action_to(table);
-
-    let pot_after_bet = turn_pot as u64 + daniel_bet;
-    let pot_odds = PotOdds::new(pot_after_bet, daniel_bet);
+/// Pot odds and EV for Gus facing Daniel's 65,000 river bet.
+fn gus_decision(table: &Table) {
+    let daniel_bet = table.bet as u64;
+    let pot_odds = PotOdds::new(table.effective_pot() as u64, daniel_bet);
 
     let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
     let gus_vs_fullhouse = Versus::new_with_board(Two::HAND_5D_5C, Combos::from_str("66").unwrap_or_default(), board);
@@ -237,19 +170,11 @@ fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
             ev.is_positive()
         );
     }
+}
 
-    let _gus = table.act_all_in(3)?;
-    commentary_action_to(table);
-
-    let _daniel = table.act_call(4)?;
-    commentary_action_to(table);
-
-    let hand_result = table.end_hand()?;
-    commentary_action_to(table);
-
-    println!("{hand_result}");
-
-    // ── Range equity: sets vs overpairs ──────────────────────────────────────
+/// Range equity: sets vs overpairs on the final board.
+fn range_equity() {
+    let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
     let set_range = Combos::from_str("66,99").unwrap_or_default();
     let overpair_range = Combos::from_str("AA,KK,QQ,JJ,TT").unwrap_or_default();
     let range_equity = RangeEquity::new(set_range, overpair_range, board);
@@ -260,8 +185,6 @@ fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
             re_odds.win_percentage()
         );
     }
-
-    Ok(())
 }
 
 // ── Commentary helpers ────────────────────────────────────────────────────────

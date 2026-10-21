@@ -34,6 +34,7 @@
 //! ```
 
 use crate::PKError;
+use crate::cards::Cards;
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::principal::Principal;
@@ -349,11 +350,69 @@ impl PokerSession {
     /// assert_eq!(session.hand_number, 1);
     /// ```
     pub fn start_hand_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) -> Result<(), PKError> {
+        self.table.deck.shuffle_in_place_with(rng);
+        self.begin_hand()
+    }
+
+    /// [`Self::start_hand_with`] without the shuffle: the hand is dealt from
+    /// `deck` exactly as given, the first card on top.
+    ///
+    /// Use it to deal a chosen hand, such as the stacked deck of a recorded
+    /// one ([`HandHistory::stacked_deck`](crate::hand_history::HandHistory::stacked_deck)),
+    /// so that play can carry on from it. The deck becomes the table's deck and
+    /// [`shuffled_deck_str`](PokerSession::shuffled_deck_str). Everything after
+    /// that is [`Self::start_hand_with`]: the pending forced bets are applied,
+    /// the blinds and antes are posted, the hole cards are dealt, and
+    /// [`hand_number`](PokerSession::hand_number) goes up.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::InvalidCardCount`] if `deck` does not hold exactly 52 cards.
+    ///   A [`Cards`] cannot hold the same card twice, so 52 cards are a full
+    ///   deck. The session is left untouched.
+    /// - Otherwise as [`Self::start_hand`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::cards::Cards;
+    /// use uuid::Uuid;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::with_id(Uuid::from_u128(1), "A".to_string(), 1_000)),
+    ///     Seat::new(Player::with_id(Uuid::from_u128(2), "B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     Table::nlh_from_seats_with_id(seats, ForcedBets::new(10, 20), Uuid::nil())
+    /// );
+    ///
+    /// // The deck as it comes out of the box. The button (seat 0) deals from
+    /// // seat 1, two passes: seat 1 gets A♠ and Q♠, seat 0 gets K♠ and J♠.
+    /// session.start_hand_with_deck(Cards::deck()).unwrap();
+    /// assert_eq!("A♠ Q♠", session.table.seats.get_seat(1).unwrap().cards.to_string());
+    /// assert_eq!(1, session.hand_number);
+    ///
+    /// // Not a full deck.
+    /// assert!(session.start_hand_with_deck(Cards::default()).is_err());
+    /// ```
+    pub fn start_hand_with_deck(&mut self, deck: Cards) -> Result<(), PKError> {
+        if deck.len() != Cards::DECK_SIZE {
+            return Err(PKError::InvalidCardCount);
+        }
+        self.table.deck = deck;
+        self.begin_hand()
+    }
+
+    /// Everything a hand start does once the deck is in place: apply the
+    /// pending forced bets, note the deck, post the forced bets, deal.
+    fn begin_hand(&mut self) -> Result<(), PKError> {
         if let Some(pending) = self.pending_forced.take() {
             self.table.forced = pending;
         }
         self.forced_at_hand_start = self.table.forced;
-        self.table.deck.shuffle_in_place_with(rng);
         self.shuffled_deck_str = Some(self.table.deck.to_string());
         self.table.act_forced_bets()?;
         // EPIC-32 Phase 6: dispatch on family. Hold'em-family games deal
@@ -1064,6 +1123,7 @@ pub struct SessionView {
 #[allow(non_snake_case)]
 mod tests {
     use super::*;
+    use crate::Pile;
     use crate::casino::game::ForcedBets;
     use crate::casino::table::{Player, Seat, Seats};
 
@@ -1134,6 +1194,62 @@ mod tests {
             .unwrap();
         assert_eq!(1, session.hand_number);
         assert!(session.table.seats.are_dealt());
+    }
+
+    #[test]
+    fn start_hand_with_deck__does_not_shuffle() {
+        let deck: Cards = Cards::deck().iter().rev().copied().collect();
+        let order: Vec<_> = deck.iter().copied().collect();
+        let mut session = seeded_two_player_session();
+
+        session.start_hand_with_deck(deck.clone()).unwrap();
+
+        // The button (seat 0) deals from seat 1, one card per seat per pass.
+        let held = |seat: u8| -> Vec<_> {
+            session
+                .table
+                .seats
+                .get_seat(seat)
+                .unwrap()
+                .cards
+                .cards()
+                .iter()
+                .copied()
+                .collect()
+        };
+        assert_eq!(vec![order[0], order[2]], held(1));
+        assert_eq!(vec![order[1], order[3]], held(0));
+        assert_eq!(48, session.table.deck.len());
+        assert_eq!(Some(deck.to_string()), session.shuffled_deck_str);
+        assert_eq!(1, session.hand_number);
+    }
+
+    #[test]
+    fn start_hand_with_deck__a_deck_that_is_not_52_cards_is_refused_and_changes_nothing() {
+        let mut session = seeded_two_player_session();
+        let before = session.table.clone();
+
+        let short: Cards = Cards::deck().iter().take(51).copied().collect();
+        assert_eq!(Err(PKError::InvalidCardCount), session.start_hand_with_deck(short));
+        assert_eq!(
+            Err(PKError::InvalidCardCount),
+            session.start_hand_with_deck(Cards::default())
+        );
+
+        assert_eq!(before, session.table);
+        assert_eq!(0, session.hand_number);
+        assert_eq!(None, session.shuffled_deck_str);
+    }
+
+    #[test]
+    fn start_hand_with_deck__applies_pending_blinds_like_start_hand_with() {
+        let mut session = seeded_two_player_session();
+        session.set_blinds(ForcedBets::new(100, 200));
+
+        session.start_hand_with_deck(Cards::deck()).unwrap();
+
+        assert_eq!(ForcedBets::new(100, 200), session.table.forced);
+        assert_eq!(ForcedBets::new(100, 200), session.forced_at_hand_start);
     }
 
     // ── EPIC-88: snapshot / restore ───────────────────────────────────────

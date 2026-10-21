@@ -1,27 +1,29 @@
-//! Audit a [`HandCollection`] YAML file for structural validity and game-engine
-//! consistency.
+//! Audit a hand-history YAML file — one [`HandHistory`] or a
+//! [`HandCollection`] — for structural validity and game-engine consistency.
 //!
 //! Two validation layers are applied to every hand:
 //!
-//! 1. **Bridge checks** — card string fields (`hole_cards`, `board`, `best_hand`)
-//!    are parsed through pkcore's card types.  A failure here means the YAML
-//!    contains a malformed card string.
+//! 1. **Validate** — [`HandHistory::validate`] plays the hand through the
+//!    engine and reports every claim it gets wrong: card strings, seats, turn
+//!    order, legality, amounts, pots, results and money. Each finding prints
+//!    as `path: message (Rule)`.
 //!
-//! 2. **Replay** — the full action sequence is replayed through the game engine
-//!    and the resulting chip counts are compared against the recorded `net` values.
-//!    A failure here means the engine disagrees with what was recorded — the most
-//!    common symptom of action-logging bugs in pkdealer / pkarena0-web.
+//! 2. **Replay** — when validate is clean, the hand is replayed and the
+//!    resulting chip counts are compared against the recorded `net` values.
+//!    A clean `validate` already promises the replay succeeds; this layer
+//!    shows the per-seat chip delta when a recorded `net` is off.
 //!
 //! **Usage:**
 //! ```text
 //! # audit a specific file
-//! cargo run --features hand-histories --example yaml_audit -- path/to/session.yaml
+//! cargo run --features hand-histories,bot-profiles --example yaml_audit -- data/hands/the_hand.yaml
 //!
 //! # audit the most recent YAML in generated/
-//! cargo run --features hand-histories --example yaml_audit
+//! cargo run --features hand-histories,bot-profiles --example yaml_audit
 //! ```
 //!
-//! Exits 0 if every hand passes both layers, 1 if any hand fails.
+//! Exits 0 if every hand passes both layers, 1 if any hand fails or the file
+//! holds no hands (nothing checked is not a pass).
 
 use pkcore::hand_history::{HandCollection, HandHistory, PlayerEntry};
 use std::path::PathBuf;
@@ -33,7 +35,7 @@ fn main() {
         eprintln!("error: cannot read {}: {e}", path.display());
         process::exit(1);
     });
-    let collection = HandCollection::from_yaml(&yaml).unwrap_or_else(|e| {
+    let collection = parse(&yaml).unwrap_or_else(|e| {
         eprintln!("error: cannot parse YAML in {}: {e}", path.display());
         process::exit(1);
     });
@@ -58,14 +60,41 @@ fn main() {
     }
 
     println!();
-    if passed == n {
+    if n == 0 {
+        println!("=== Summary: no hands in the file — nothing was checked ===");
+    } else if passed == n {
         println!("=== Summary: {passed}/{n} passed ✓ ===");
     } else {
         println!("=== Summary: {passed}/{n} passed — {} FAILED ===", n - passed);
     }
 
-    if passed < n {
-        process::exit(1);
+    process::exit(exit_code(passed, n));
+}
+
+/// The process exit code: 0 when every one of `total` hands passed, 1 when
+/// any failed or when there were no hands, since a clean run must mean
+/// something was checked.
+fn exit_code(passed: usize, total: usize) -> i32 {
+    i32::from(total == 0 || passed < total)
+}
+
+/// Reads a [`HandCollection`] (a file with a `hands:` list), or a single
+/// [`HandHistory`] wrapped in a collection of one.
+fn parse(yaml: &str) -> Result<HandCollection, String> {
+    match HandCollection::from_yaml(yaml) {
+        Ok(collection) => Ok(collection),
+        Err(as_collection) => match HandHistory::from_yaml(yaml) {
+            Ok(hand) => {
+                let mut collection = HandCollection::new();
+                if let Some(version) = &hand.pkcore_version {
+                    collection.pkcore_version.clone_from(version);
+                }
+                collection.format_version = hand.format_version;
+                collection.push(hand);
+                Ok(collection)
+            }
+            Err(as_hand) => Err(format!("not a hand ({as_hand}) or a collection ({as_collection})")),
+        },
     }
 }
 
@@ -74,45 +103,10 @@ fn main() {
 /// Returns `true` if the hand passes both validation layers.
 fn audit_hand(hand: &HandHistory) -> bool {
     let id = &hand.hand.id;
-    let mut failures: Vec<String> = Vec::new();
 
-    // ── Layer 1: bridge checks ────────────────────────────────────────────────
+    // ── Layer 1: validate ─────────────────────────────────────────────────────
 
-    // Board
-    if hand.board.is_some()
-        && let Err(e) = hand.to_board()
-    {
-        failures.push(format!("board: invalid card string — {e}"));
-    }
-
-    // Hole cards
-    for p in &hand.players {
-        if p.hole_cards.is_some()
-            && let Err(e) = p.to_two()
-        {
-            failures.push(format!(
-                "seat {} ({}): invalid hole_cards {:?} — {e}",
-                p.seat,
-                p.name,
-                p.hole_cards.as_deref().unwrap_or("")
-            ));
-        }
-    }
-
-    // Best hands in results
-    if let Some(results) = &hand.results {
-        for r in results {
-            if r.best_hand.is_some()
-                && let Err(e) = r.to_five()
-            {
-                failures.push(format!(
-                    "seat {} result: invalid best_hand {:?} — {e}",
-                    r.seat,
-                    r.best_hand.as_deref().unwrap_or("")
-                ));
-            }
-        }
-    }
+    let mut failures: Vec<String> = hand.validate().iter().map(ToString::to_string).collect();
 
     // ── Layer 2: replay ───────────────────────────────────────────────────────
 
@@ -264,6 +258,25 @@ mod tests {
     fn format_mismatch_no_recorded_net_returns_none() {
         let player = make_player(0, "Alice", 1000.0);
         assert!(format_mismatch(&player, 1000, None).is_none());
+    }
+
+    #[test]
+    fn parse_reads_a_single_hand_and_a_collection() {
+        let single = "hand: { id: one, game: holdem }\n\
+                      table: { name: t, seats: 2, button: 0, stakes: { small_blind: 1.0, big_blind: 2.0 } }\n\
+                      players: []\n";
+        let collection = format!("hands:\n- {}", single.replace('\n', "\n  ").trim_end());
+
+        assert_eq!(parse(single).map(|c| c.len()), Ok(1));
+        assert_eq!(parse(&collection).map(|c| c.len()), Ok(1));
+        assert!(parse("not: [a, hand").is_err());
+    }
+
+    #[test]
+    fn exit_code_fails_a_file_that_checked_nothing() {
+        assert_eq!(1, exit_code(0, 0));
+        assert_eq!(0, exit_code(2, 2));
+        assert_eq!(1, exit_code(1, 2));
     }
 
     #[test]

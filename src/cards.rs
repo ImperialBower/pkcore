@@ -42,6 +42,9 @@ use strum::IntoEnumIterator;
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
+    /// The cards in a full deck.
+    pub(crate) const DECK_SIZE: usize = 52;
+
     /// ```
     /// use pkcore::cards::Cards;
     /// use pkcore::deck;
@@ -71,6 +74,36 @@ impl Cards {
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
         Cards::deck().into_iter().filter(|c| !cards.contains(c)).collect()
+    }
+
+    /// Re-orders a stacked dealing list built for `TableCelled` so the plain
+    /// [`Table`](crate::casino::table::Table) deals the same cards to the same
+    /// seats.
+    ///
+    /// The two engines start dealing from different seats. `TableCelled` begins
+    /// **at** the button (`src/casino/table_celled.rs`, via
+    /// `DrainableBintCell::new_with_value(.., button)`); `Table` begins **one
+    /// seat to its left** (`(button + 1 + step) % seat_count`), which is the
+    /// actual poker rule. Each dealing pass therefore rotates left by one; the
+    /// burn and board cards that follow the hole cards are untouched.
+    #[must_use]
+    pub(crate) fn rotated_for_plain_deal(&self, seat_count: usize, cards_per: usize) -> Cards {
+        let all: Vec<Card> = self.iter().copied().collect();
+        let hole_count = seat_count * cards_per;
+        let mut out: Vec<Card> = Vec::with_capacity(all.len());
+
+        for pass in 0..cards_per {
+            let start = (pass * seat_count).min(all.len());
+            let end = (start + seat_count).min(all.len());
+            let mut slice: Vec<Card> = all[start..end].to_vec();
+            if !slice.is_empty() {
+                slice.rotate_left(1);
+            }
+            out.extend(slice);
+        }
+        out.extend_from_slice(&all[hole_count.min(all.len())..]);
+
+        Cards::from(out)
     }
 
     /// A Deck primed, is one where the initial cards are the ones passed in. This is to facilitate
@@ -1175,6 +1208,27 @@ mod cards_tests {
     }
 
     #[test]
+    fn rotated_for_plain_deal__rotates_each_pass_and_leaves_the_rest() {
+        let celled = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠");
+
+        // Three seats, two cards each: both passes rotate left; the two
+        // trailing cards are untouched.
+        // `Cards` equality ignores order, so compare the text.
+        assert_eq!(
+            "K♠ Q♠ A♠ T♠ 9♠ J♠ 8♠ 7♠",
+            celled.rotated_for_plain_deal(3, 2).to_string()
+        );
+    }
+
+    #[test]
+    fn rotated_for_plain_deal__short_list_does_not_panic() {
+        let celled = cards!("A♠ K♠");
+
+        assert_eq!("K♠ A♠", celled.rotated_for_plain_deal(3, 2).to_string());
+        assert_eq!(Cards::default(), Cards::default().rotated_for_plain_deal(3, 2));
+    }
+
+    #[test]
     fn deck_minus() {
         // let mut cards = Cards::from_str("Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣").unwrap();
         let mut cards = Cards::from_str("A♦ K♦ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥").unwrap();
@@ -1205,7 +1259,7 @@ mod cards_tests {
     #[test]
     fn deck_primed() {
         let deck_minus = TestData::the_hand_cards();
-        let expected = "T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣ 2♣";
+        let expected = "T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣";
 
         let primed = Cards::deck_primed(&deck_minus);
 

@@ -58,21 +58,28 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::casino::action::PlayerAction;
 use crate::casino::action::TableAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::position::Position;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::casino::table::{Player, Seat, Seats, Table};
 use crate::casino::winnings::Winnings;
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::str::FromStr;
 use uuid::Uuid;
+
+mod check;
+pub use check::{Finding, Rule};
+#[cfg(feature = "hand-histories")]
+mod replay;
+#[cfg(feature = "hand-histories")]
+pub use replay::{Replay, ReplayEvent};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Format version constant
@@ -430,6 +437,7 @@ impl HandHistory {
                     .filter_map(|(seat, _, _, _, id)| id.map(|id| (*seat, id)))
                     .collect();
                 Streets::from_event_log_with_seat_ids(event_log, &seat_to_id)
+                    .map(|streets| streets.with_flop_in_board_order(board_str))
             },
             results: Some(results),
             analysis: None,
@@ -515,7 +523,13 @@ impl HandHistory {
     /// # Errors
     ///
     /// Returns [`PKError`] if table construction, card injection, action
-    /// application, or hand-end processing fails.
+    /// application, or hand-end processing fails, and
+    /// [`PKError::ReplayAmountMismatch`] when a `call`, `bet`, `raise` or
+    /// `all_in` records an amount the engine disagrees with (a call records the
+    /// chips it adds or the caller's street total after it; the others the
+    /// seat's street total after the action), or an amount that is not a whole
+    /// number of chips (`recorded` is then rounded down).
+    /// The mismatch is reported before the action is applied.
     ///
     /// # Examples
     ///
@@ -577,62 +591,56 @@ impl HandHistory {
     /// assert!(result.is_ok());
     /// assert!(result.unwrap().is_consistent);
     /// ```
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     pub fn replay(&self) -> Result<ReplayResult, PKError> {
         self.replay_with(|_, _| {})
     }
 
-    /// Replays this hand like [`Self::replay`], and calls `observe` after each
-    /// recorded action with the [`ReplayStep`] and the table as it stands.
+    /// Builds the table a replay starts from: seats placed, forced bets posted
+    /// (blinds and ante), hole cards injected, and, for stud and razz, card
+    /// visibility restored and the bring-in posted. It is the table as it stands
+    /// before the first recorded action.
     ///
-    /// Every entry in a street's `actions` list is observed, posts included, so
-    /// [`ReplayStep::index`] is the entry's position in that list. Use it to
-    /// check table state in the middle of a hand, which the final
-    /// [`ReplayResult`] cannot show.
+    /// [`Self::replay_with`] plays the recorded actions on it. The Hold'em
+    /// and Omaha branches post the recorded ante (`DEFECT_040`).
+    ///
+    /// For Hold'em and Omaha the deck is the hand's own: the part of
+    /// [`Self::stacked_deck`] the hole cards did not take, burns and board in
+    /// the order the engine deals them, so a table taken from any point of
+    /// the replay deals the record's next cards. When the record cannot be
+    /// stacked (a card recorded twice, say) the deck is the full box deck, as
+    /// it is for every other game.
     ///
     /// # Errors
     ///
-    /// The same as [`Self::replay`]. Actions observed before the error were
-    /// applied; the failing action is not observed.
+    /// Returns [`PKError`] if the table cannot be dealt (a stud hand with too
+    /// many chairs), a forced bet cannot be posted, or a hole card string does
+    /// not parse.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn replay_table(&self) -> Result<Table, PKError> {
+        let mut table = self.seated_table()?;
+        if matches!(self.hand.game, HandVariant::Holdem | HandVariant::Omaha)
+            && let Ok((deck, holes)) = self.stack_on(&table)
+        {
+            table.deck = deck.iter().skip(holes).copied().collect();
+        }
+        Ok(table)
+    }
+
+    /// [`Self::replay_table`] without the hand's deck: the engine's table
+    /// with the record's seats, forced bets and hole cards, and the box deck.
+    /// [`Self::stacked_deck`] stacks its deck from this table.
     ///
-    /// # Examples
+    /// # Errors
     ///
-    /// ```
-    /// # #[cfg(feature = "hand-histories")]
-    /// # {
-    /// use pkcore::hand_history::{HandHistory, ReplayStreet};
-    ///
-    /// let hand = HandHistory::from_yaml(r"
-    /// hand: { id: ex, game: holdem }
-    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
-    /// players:
-    ///   - { seat: 0, name: A, stack: 1000.0 }
-    ///   - { seat: 1, name: B, stack: 1000.0 }
-    /// streets:
-    ///   preflop:
-    ///     actions:
-    ///       - { seat: 0, action: raise, amount: 300.0 }
-    ///       - { seat: 1, action: fold }
-    /// ").unwrap();
-    ///
-    /// let mut bets = Vec::new();
-    /// hand.replay_with(|step, table| bets.push((step.street, step.index, table.bet)))
-    ///     .unwrap();
-    /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
-    /// # }
-    /// ```
-    #[cfg(feature = "bot-profiles")]
+    /// As [`Self::replay_table`].
+    #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
-        clippy::cast_possible_truncation,
-        clippy::too_many_lines
+        clippy::cast_possible_truncation
     )]
-    pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
-    where
-        F: FnMut(&ReplayStep<'_>, &Table),
-    {
-        // ── Build table ──────────────────────────────────────────────────────
+    fn seated_table(&self) -> Result<Table, PKError> {
         let sb = self.table.stakes.small_blind as usize;
         let bb = self.table.stakes.big_blind as usize;
         let button = self.table.button.unwrap_or(0);
@@ -724,15 +732,25 @@ impl HandHistory {
                 Table::stud_hi_from_seats_with_id(seats, ante, bring_in, small_bet, big_bet, table_id)?
             }
         } else if self.hand.game == HandVariant::Omaha {
-            Table::plo_from_seats_with_id(seats, (sb, bb), table_id)
+            // EPIC-93: Omaha posts the recorded ante, as Hold'em does.
+            let ante = self.table.stakes.ante.map_or(0, |amount| amount as usize);
+            let mut table = Table::plo_from_seats_with_id(seats, (sb, bb), table_id);
+            table.forced = ForcedBets::new_with_ante(sb, bb, ante);
+            table
         } else {
-            match self.table.betting_structure {
-                crate::games::betting_structure::BettingStructure::FixedLimit {
-                    small_bet,
-                    big_bet,
-                    raise_cap,
-                } => Table::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, table_id),
-                _ => Table::nlh_from_seats_with_id(seats, ForcedBets::new(sb, bb), table_id),
+            // `DEFECT_040`: the recorded ante is posted, as stud's always was.
+            // Fixed-limit Hold'em takes its blinds from the bet sizes and posts
+            // no ante (EPIC-93 corrigendum).
+            let ante = self.table.stakes.ante.map_or(0, |amount| amount as usize);
+            if let crate::games::betting_structure::BettingStructure::FixedLimit {
+                small_bet,
+                big_bet,
+                raise_cap,
+            } = self.table.betting_structure
+            {
+                Table::limit_holdem_from_seats_with_id(seats, small_bet, big_bet, raise_cap, table_id)
+            } else {
+                Table::nlh_from_seats_with_id(seats, ForcedBets::new_with_ante(sb, bb, ante), table_id)
             }
         };
         table.button = button;
@@ -784,83 +802,215 @@ impl HandHistory {
             table.act_bring_in()?;
         }
 
-        // ── Street replay helper ─────────────────────────────────────────────
-        let mut replay_actions = |table: &mut Table, street: ReplayStreet, actions: &[Action]| -> Result<(), PKError> {
-            for (index, action) in actions.iter().enumerate() {
-                if let Some(pa) = Self::action_to_player_action(action) {
-                    table.apply_action(action.seat, pa)?;
-                }
-                observe(&ReplayStep { street, index, action }, table);
+        Ok(table)
+    }
+
+    /// Replays this hand like [`Self::replay`], and calls `observe` after each
+    /// recorded action with the [`ReplayStep`] and the table as it stands.
+    ///
+    /// Every entry in a street's `actions` list is observed, posts included, so
+    /// [`ReplayStep::index`] is the entry's position in that list. Use it to
+    /// check table state in the middle of a hand, which the final
+    /// [`ReplayResult`] cannot show.
+    ///
+    /// # Errors
+    ///
+    /// The same as [`Self::replay`], including
+    /// [`PKError::ReplayAmountMismatch`] for a recorded amount the engine
+    /// disagrees with or that is not a whole number of chips. Actions observed
+    /// before the error were applied; the failing action is not observed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::{HandHistory, ReplayStreet};
+    ///
+    /// let hand = HandHistory::from_yaml(r"
+    /// hand: { id: ex, game: holdem }
+    /// table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+    /// players:
+    ///   - { seat: 0, name: A, stack: 1000.0 }
+    ///   - { seat: 1, name: B, stack: 1000.0 }
+    /// streets:
+    ///   preflop:
+    ///     actions:
+    ///       - { seat: 0, action: raise, amount: 300.0 }
+    ///       - { seat: 1, action: fold }
+    /// ").unwrap();
+    ///
+    /// let mut bets = Vec::new();
+    /// hand.replay_with(|step, table| bets.push((step.street, step.index, table.bet)))
+    ///     .unwrap();
+    /// assert_eq!(vec![(ReplayStreet::Preflop, 0, 300), (ReplayStreet::Preflop, 1, 300)], bets);
+    /// # }
+    /// ```
+    #[cfg(feature = "hand-histories")]
+    pub fn replay_with<F>(&self, mut observe: F) -> Result<ReplayResult, PKError>
+    where
+        F: FnMut(&ReplayStep<'_>, &Table),
+    {
+        let mut table = self.replay_table()?;
+        self.walk(&mut table, |walked, table| {
+            if let replay::Walked::Acted { step, .. } = walked {
+                observe(&step, table);
             }
-            Ok(())
+        })?;
+        Self::build_replay_result(table, &self.players, self.results.as_deref())
+    }
+
+    /// Applies one recorded `action` to `table`: checks the recorded amount
+    /// against the engine's, then applies it. Returns the [`PlayerAction`]
+    /// applied, or `None` for a `post`, which `act_forced_bets` already made.
+    ///
+    /// The one place a replay applies a recorded action, so
+    /// [`Self::replay_with`] and [`Self::cursor`] cannot disagree on it.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::ReplayAmountMismatch`] for an amount the engine disagrees
+    /// with (reported before the action is applied), and whatever
+    /// [`Table::apply_action`] returns.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn apply_recorded(table: &mut Table, action: &Action) -> Result<Option<PlayerAction>, PKError> {
+        let Some(pa) = Self::action_to_player_action(action) else {
+            return Ok(None);
         };
+        // An out-of-turn action is left to `apply_action`, which reports it as
+        // out of order.
+        if action.seat == table.next_to_act()
+            && let Some(mismatch) = check::amount_mismatch(table, action)
+        {
+            return Err(PKError::ReplayAmountMismatch {
+                seat: action.seat,
+                recorded: mismatch.recorded,
+                engine: mismatch.engine,
+            });
+        }
+        table.apply_action(action.seat, pa)?;
+        Ok(Some(pa))
+    }
 
+    /// Plays the recorded streets on `table`, a table from
+    /// [`Self::replay_table`]: calls `street` with each street's actions in
+    /// order, and between streets gathers the bets and deals the street's
+    /// cards. It stops early when the hand is over (one player left) or when
+    /// `street` returns `Ok(false)`.
+    ///
+    /// The one street sequence that [`Self::replay_with`], [`Self::cursor`]
+    /// and [`Self::validate`] all walk.
+    ///
+    /// # Errors
+    ///
+    /// Whatever `street` returns, and [`PKError`] when a street's cards do not
+    /// parse or the bets cannot be gathered.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn play_streets<F>(&self, table: &mut Table, mut street: F) -> Result<(), PKError>
+    where
+        F: FnMut(&mut Table, ReplayStreet, &[Action]) -> Result<bool, PKError>,
+    {
         // ── Preflop ──────────────────────────────────────────────────────────
-        if let Some(ref streets) = self.streets
-            && let Some(ref pre) = streets.preflop
+        if let Some(pre) = self.streets.as_ref().and_then(|streets| streets.preflop.as_ref())
+            && !street(table, ReplayStreet::Preflop, &pre.actions)?
         {
-            replay_actions(&mut table, ReplayStreet::Preflop, &pre.actions)?;
+            return Ok(());
         }
-
         if table.is_game_over() {
-            return Self::build_replay_result(table, &self.players, self.results.as_deref());
+            return Ok(());
         }
 
-        table.bring_it_in()?;
-
-        // ── Flop ─────────────────────────────────────────────────────────────
-        if let Some(ref streets) = self.streets
-            && let Some(ref flop) = streets.flop
-        {
-            table.board = Cards::from_str(&flop.cards)?;
-            table.phase = GamePhase::DealFlop;
-            // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
-            // run-out streets (frozen bring_it_in didn't exist yet). Reset
-            // non-all-in players to YetToAct only when there are actions to
-            // apply; an empty list means the current frozen behavior applies,
-            // and the frozen state must be preserved so the next bring_it_in()
-            // sees is_betting_complete() == true.
-            if !flop.actions.is_empty() {
-                table.seats.reset_non_allin_to_yet_to_act();
-            }
-            replay_actions(&mut table, ReplayStreet::Flop, &flop.actions)?;
-
-            if table.is_game_over() {
-                return Self::build_replay_result(table, &self.players, self.results.as_deref());
-            }
-
+        // ── Flop, turn, river ────────────────────────────────────────────────
+        for next in [ReplayStreet::Flop, ReplayStreet::Turn, ReplayStreet::River] {
             table.bring_it_in()?;
+            let Some(actions) = self.lay_street(table, next)? else {
+                return Ok(());
+            };
+            if !street(table, next, actions)? || table.is_game_over() {
+                return Ok(());
+            }
+        }
+        Ok(())
+    }
 
-            // ── Turn ─────────────────────────────────────────────────────
-            if let Some(ref turn) = streets.turn {
+    /// Lays `street`'s recorded cards on `table` once the previous street's
+    /// bets are in: the flop replaces the board, the turn and river add a card,
+    /// and the phase moves to the street's deal. Returns the street's recorded
+    /// actions, or `None` (and touches nothing) when the street is not recorded
+    /// or is the preflop.
+    ///
+    /// [`Self::play_streets`] and [`Replay`]'s `Deal` event both call this, so
+    /// a seek deals exactly what the walk dealt.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError`] when the street's cards do not parse.
+    #[cfg(feature = "hand-histories")]
+    pub(crate) fn lay_street(&self, table: &mut Table, street: ReplayStreet) -> Result<Option<&[Action]>, PKError> {
+        let streets = self.streets.as_ref();
+        let actions = match street {
+            ReplayStreet::Preflop => return Ok(None),
+            ReplayStreet::Flop => {
+                let Some(flop) = streets.and_then(|streets| streets.flop.as_ref()) else {
+                    return Ok(None);
+                };
+                table.board = Cards::from_str(&flop.cards)?;
+                let laid: Vec<Card> = table.board.iter().copied().collect();
+                Self::draw_laid(table, &laid);
+                table.phase = GamePhase::DealFlop;
+                &flop.actions
+            }
+            ReplayStreet::Turn => {
+                let Some(turn) = streets.and_then(|streets| streets.turn.as_ref()) else {
+                    return Ok(None);
+                };
                 let card = Card::from_str(&turn.card)?;
                 table.board.insert(card);
+                Self::draw_laid(table, &[card]);
                 table.phase = GamePhase::DealTurn;
-                if !turn.actions.is_empty() {
-                    table.seats.reset_non_allin_to_yet_to_act();
-                }
-                replay_actions(&mut table, ReplayStreet::Turn, &turn.actions)?;
-
-                if table.is_game_over() {
-                    return Self::build_replay_result(table, &self.players, self.results.as_deref());
-                }
-
-                table.bring_it_in()?;
-
-                // ── River ─────────────────────────────────────────────────
-                if let Some(ref river) = streets.river {
-                    let card = Card::from_str(&river.card)?;
-                    table.board.insert(card);
-                    table.phase = GamePhase::DealRiver;
-                    if !river.actions.is_empty() {
-                        table.seats.reset_non_allin_to_yet_to_act();
-                    }
-                    replay_actions(&mut table, ReplayStreet::River, &river.actions)?;
-                }
+                &turn.actions
             }
+            ReplayStreet::River => {
+                let Some(river) = streets.and_then(|streets| streets.river.as_ref()) else {
+                    return Ok(None);
+                };
+                let card = Card::from_str(&river.card)?;
+                table.board.insert(card);
+                Self::draw_laid(table, &[card]);
+                table.phase = GamePhase::DealRiver;
+                &river.actions
+            }
+        };
+        // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
+        // run-out streets (frozen bring_it_in didn't exist yet). Reset
+        // non-all-in players to YetToAct only when there are actions to
+        // apply; an empty list means the current frozen behavior applies,
+        // and the frozen state must be preserved so the next bring_it_in()
+        // sees is_betting_complete() == true.
+        if !actions.is_empty() {
+            table.seats.reset_non_allin_to_yet_to_act();
         }
+        Ok(Some(actions))
+    }
 
-        Self::build_replay_result(table, &self.players, self.results.as_deref())
+    /// Takes a street's burn and `laid`, the cards [`Self::lay_street`] just
+    /// laid, off the top of `table`'s deck, the burn to the muck, as the
+    /// engine's `deal_flop`, `deal_turn` and `deal_river` do. Only the hand's
+    /// own deck from [`Self::replay_table`] is drawn from: the hole cards have
+    /// left it short of 52, and it holds the laid cards there, under the burn.
+    /// The full box deck a hand that cannot be stacked keeps is left whole.
+    #[cfg(feature = "hand-histories")]
+    fn draw_laid(table: &mut Table, laid: &[Card]) {
+        let next: Vec<Card> = table.deck.iter().skip(1).take(laid.len()).copied().collect();
+        if table.deck.len() == Cards::DECK_SIZE || next.as_slice() != laid {
+            return;
+        }
+        if let Ok(burn) = table.deck.draw_one() {
+            table.muck.insert(burn);
+        }
+        for card in laid {
+            table.deck.remove(card);
+        }
     }
 
     /// Convert the [`board`] string field to a pkcore [`Board`].
@@ -915,7 +1065,7 @@ impl HandHistory {
 
     /// The id a replayed player gets: the one the record carries, or, for a legacy
     /// record without one, a UUID v5 of the player's name.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn replay_player_id(entry: &PlayerEntry) -> Uuid {
         entry
             .player_id
@@ -937,7 +1087,7 @@ impl HandHistory {
     /// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
     /// game engine.  Returns `None` for `Post` entries (handled by
     /// `act_forced_bets`).
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         match action.action {
@@ -957,7 +1107,7 @@ impl HandHistory {
     /// fractional blinds), but represent whole-chip counts in practice.  The casts
     /// here are intentional: stacks fit in `usize` and net values are bounded by the
     /// starting stack.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,
@@ -1625,7 +1775,8 @@ pub struct TableInfo {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub seats: Option<u8>,
 
-    /// Seat number of the dealer button (1-indexed).
+    /// Seat number of the dealer button (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub button: Option<u8>,
 
@@ -1706,7 +1857,7 @@ pub struct Stakes {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct PlayerEntry {
-    /// Seat number (1-indexed).
+    /// Seat number (**0-based**, the engine's seat index; see `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Player name or alias.
@@ -1943,6 +2094,26 @@ enum EventStreet {
 }
 
 impl Streets {
+    /// The flop in the order `board` lists it (`DEFECT_040`).
+    ///
+    /// The event log records the flop as a [`Bard`](crate::bard::Bard), a set,
+    /// so [`Streets::from_event_log`] writes it in deck order. The board
+    /// string keeps the order the cards were dealt in, and `validate` holds
+    /// the two to the same order. The flop is rewritten only when the board's
+    /// first three cards are the logged flop; any other disagreement is left
+    /// for `validate` to report.
+    fn with_flop_in_board_order(mut self, board: &str) -> Self {
+        if let Some(flop) = self.flop.as_mut()
+            && let (Ok(logged), Ok(board)) = (Cards::from_str(&flop.cards), Cards::from_str(board))
+        {
+            let dealt: Vec<Card> = board.iter().take(3).copied().collect();
+            if logged.len() == 3 && dealt.len() == 3 && dealt.iter().all(|card| crate::Pile::contains(&logged, card)) {
+                flop.cards = Cards::from(dealt).to_string();
+            }
+        }
+        self
+    }
+
     /// Build a [`Streets`] record by parsing a `Table` event log.
     ///
     /// Walks `log` in a single forward pass, partitioning player-action events
@@ -2568,7 +2739,8 @@ pub struct AgentFidelity {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Action {
-    /// Seat number of the acting player (1-indexed).
+    /// Seat number of the acting player (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Stable per-player identity stamped from `TableAction::PlayerSeated`.
@@ -2582,7 +2754,9 @@ pub struct Action {
     /// The action taken.
     pub action: ActionType,
 
-    /// Amount wagered (for `bet`, `raise`, `call`). Omit for `check`/`fold`.
+    /// For `call`, the chips this action adds, or the caller's street total after
+    /// it — both are accepted. For `bet`, `raise` and `all_in`, the total this
+    /// player has bet on the street after the action. Omit for `check`/`fold`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub amount: Option<f64>,
 
@@ -2669,7 +2843,8 @@ pub enum ActionType {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ResultEntry {
-    /// Seat number of this player (1-indexed).
+    /// Seat number of this player (**0-based**, the engine's seat index; see
+    /// `docs/TECHNICAL_DEBT.md`).
     pub seat: u8,
 
     /// Best 5-card hand string (e.g., `"6♠ 6♥ 6♦ 5♥ 5♠"`).
@@ -2874,7 +3049,7 @@ impl AnalysisContext {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Namespace for the UUID v5 ids [`HandHistory::replay`] derives.
-#[cfg(feature = "bot-profiles")]
+#[cfg(feature = "hand-histories")]
 const REPLAY_ID_NAMESPACE: Uuid = Uuid::from_u128(0x9b7e_2a41_c3d5_4f68_8e19_a0b2_c4d6_e8f0);
 
 /// The betting round a [`ReplayStep`] belongs to.
@@ -2969,7 +3144,7 @@ impl HandCollection {
     /// let results = collection.replay_all();
     /// assert!(results.is_empty());
     /// ```
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     pub fn replay_all(&self) -> Vec<Result<ReplayResult, PKError>> {
         self.hands.iter().map(HandHistory::replay).collect()
     }
@@ -2984,7 +3159,7 @@ impl HandCollection {
 mod tests {
     use super::*;
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     fn id_entry(name: &str, player_id: Option<Uuid>) -> PlayerEntry {
         PlayerEntry {
             seat: 1,
@@ -2998,14 +3173,14 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_player_id__uses_the_recorded_id() {
         let id = Uuid::from_u128(9);
         assert_eq!(id, HandHistory::replay_player_id(&id_entry("Alice", Some(id))));
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_player_id__without_a_recorded_id_derives_one_from_the_name() {
         assert_eq!(
@@ -3025,7 +3200,7 @@ mod tests {
     /// therefore dead, and recorded as a zero post. `seats: 5` is the
     /// old-style player count these records used to carry, kept here so the
     /// tests exercise a pre-`with_table_size` record.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     const DEAD_BUTTON_HAND: &str = r"
 - format_version: 1
   hand:
@@ -3133,126 +3308,91 @@ mod tests {
         assert!(matches!(HandHistoryError::from(yaml_err), HandHistoryError::Yaml(_)));
     }
 
-    // Embedded YAML for "The Hand" so tests run without filesystem access.
+    // "The Hand", as recorded from the engine (`DEFECT_040`).
     #[cfg(feature = "hand-histories")]
-    const THE_HAND_YAML: &str = r#"
-pkcore_version: "0.0.39"
-format_version: 1
+    const THE_HAND_YAML: &str = include_str!("../data/hands/the_hand.yaml");
 
-hand:
-  id: "hsp-s5-the-hand"
-  game: holdem
-  timestamp: "2008-03-01T21:00:00Z"
-  source: "High Stakes Poker S5"
-  description: "The Hand - Negreanu vs Hansen, Quads vs Full House"
-
-table:
-  name: "HSP Table 1"
-  seats: 6
-  button: 1
-  stakes:
-    small_blind: 400.0
-    big_blind: 800.0
-    ante: 200.0
-
-players:
-  - seat: 1
-    name: "Gus Hansen"
-    stack: 468200.0
-    hole_cards: "6s 6h"
-  - seat: 4
-    name: "Daniel Negreanu"
-    stack: 331400.0
-    hole_cards: "5d 5c"
-
-board: "9c 6d 5h 5s 8s"
-
-streets:
-  preflop:
-    actions:
-      - { seat: 2, action: fold }
-      - { seat: 3, action: fold }
-      - { seat: 4, action: raise, amount: 3500.0 }
-      - { seat: 5, action: fold }
-      - { seat: 6, action: fold }
-      - { seat: 1, action: call, amount: 3500.0 }
-    pot: 8200.0
-  flop:
-    cards: "9c 6d 5h"
-    actions:
-      - { seat: 1, action: check }
-      - { seat: 4, action: bet, amount: 8000.0 }
-      - { seat: 1, action: raise, amount: 26000.0 }
-      - { seat: 4, action: call, amount: 26000.0 }
-    pot: 60200.0
-  turn:
-    card: "5s"
-    actions:
-      - { seat: 1, action: check }
-      - { seat: 4, action: bet, amount: 52000.0 }
-      - { seat: 1, action: raise, amount: 100000.0 }
-      - { seat: 4, action: call, amount: 100000.0 }
-    pot: 260200.0
-  river:
-    card: "8s"
-    actions:
-      - { seat: 1, action: bet, amount: 205000.0 }
-      - { seat: 4, action: call, amount: 205000.0 }
-    pot: 670200.0
-
-results:
-  - seat: 1
-    best_hand: "6s 6h 6d 5h 5s"
-    hand_rank:
-      value: 271
-      name: FullHouse
-      class: SixesOverFives
-    outcome: win
-    net: 335100.0
-  - seat: 4
-    best_hand: "5h 5s 5d 5c 9c"
-    hand_rank:
-      value: 117
-      name: FourOfAKind
-      class: FourFives
-    outcome: lose
-    net: -335100.0
-
-analysis:
-  villain_range: "66+,AJs+,KQs,AJo+,KQo"
-  hero_equity_preflop: 0.5083
-  notes: "Hansen full house lost to Negreanu quads"
-"#;
-
+    /// `DEFECT_040`: the recorded hand, at the broadcast's stakes. Hansen
+    /// (seat 3) wins with quad fives, value 124; Negreanu (seat 4) loses with
+    /// sixes full, value 271.
     #[cfg(feature = "hand-histories")]
     #[test]
-    fn test_hand_history_deserialize_the_hand() {
+    fn the_hand_yaml__is_the_recorded_hand() {
+        use crate::analysis::class::HandRankClass;
+        use crate::analysis::name::HandRankName;
+
         let hh: HandHistory = HandHistory::from_yaml(THE_HAND_YAML).expect("Failed to parse The Hand YAML");
 
-        assert_eq!(hh.hand.id, "hsp-s5-the-hand");
+        assert_eq!(hh.hand.id, "hsp-s2e11-the-hand");
+        assert_eq!(
+            hh.hand.source.as_deref(),
+            Some("High Stakes Poker Season 2, Episode 11")
+        );
         assert_eq!(hh.hand.game, HandVariant::Holdem);
         assert_eq!(hh.format_version, FORMAT_VERSION);
-        assert_eq!(hh.players.len(), 2);
-        assert_eq!(hh.players[0].name, "Gus Hansen");
-        assert_eq!(hh.players[0].hole_cards.as_deref(), Some("6s 6h"));
-        assert_eq!(hh.players[1].hole_cards.as_deref(), Some("5d 5c"));
-        assert_eq!(hh.board.as_deref(), Some("9c 6d 5h 5s 8s"));
+        assert_eq!(hh.table.button, Some(0));
+        assert_eq!(hh.table.stakes.small_blind, 300.0);
+        assert_eq!(hh.table.stakes.big_blind, 600.0);
+        assert_eq!(hh.table.stakes.ante, Some(100.0));
+        assert_eq!(hh.players.len(), 8);
+        assert_eq!(hh.players[1].hole_cards.as_deref(), Some("8♣ 3♥"));
+        assert_eq!(hh.players[3].name, "Gus Hansen");
+        assert_eq!(hh.players[3].stack, 287_100.0);
+        assert_eq!(hh.players[3].hole_cards.as_deref(), Some("5♦ 5♣"));
+        assert_eq!(hh.players[4].name, "Daniel Negreanu");
+        assert_eq!(hh.players[4].hole_cards.as_deref(), Some("6♠ 6♥"));
+        assert_eq!(hh.board.as_deref(), Some("9♣ 6♦ 5♥ 5♠ 8♠"));
 
         let streets = hh.streets.as_ref().unwrap();
-        assert_eq!(streets.flop.as_ref().unwrap().cards, "9c 6d 5h");
-        assert_eq!(streets.turn.as_ref().unwrap().card, "5s");
-        assert_eq!(streets.river.as_ref().unwrap().card, "8s");
+        assert_eq!(streets.turn.as_ref().unwrap().card, "5♠");
+        assert_eq!(streets.river.as_ref().unwrap().card, "8♠");
 
         let results = hh.results.as_ref().unwrap();
-        assert_eq!(results.len(), 2);
-        assert_eq!(results[0].outcome, Outcome::Win);
-        assert_eq!(results[0].hand_rank.unwrap().value, 271);
-        assert_eq!(results[1].hand_rank.unwrap().value, 117);
-        assert_eq!(results[1].outcome, Outcome::Lose);
+        assert_eq!(results.len(), 8);
+        let hansen = results.iter().find(|result| result.seat == 3).unwrap();
+        let hansen_rank = hansen.hand_rank.unwrap();
+        assert_eq!(hansen.outcome, Outcome::Win);
+        assert_eq!(hansen_rank.name, HandRankName::FourOfAKind);
+        assert_eq!(hansen_rank.class, HandRankClass::FourFives);
+        assert_eq!(hansen_rank.value, 124);
+        assert_eq!(hansen.pot_won, Some(575_700.0));
 
-        let analysis = hh.analysis.as_ref().unwrap();
-        assert_eq!(analysis.villain_range.as_deref(), Some("66+,AJs+,KQs,AJo+,KQo"));
-        assert_eq!(analysis.hero_equity_preflop, Some(0.5083));
+        let negreanu = results.iter().find(|result| result.seat == 4).unwrap();
+        let negreanu_rank = negreanu.hand_rank.unwrap();
+        assert_eq!(negreanu.outcome, Outcome::Lose);
+        assert_eq!(negreanu_rank.name, HandRankName::FullHouse);
+        assert_eq!(negreanu_rank.class, HandRankClass::SixesOverFives);
+        assert_eq!(negreanu_rank.value, 271);
+        assert_eq!(negreanu.net, Some(-287_100.0));
+
+        assert!(hh.analysis.is_none());
+    }
+
+    /// The recorded hand's stacked deck deals it again: the same hole cards
+    /// to the same seats, and the same board.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn the_hand_yaml__stacked_deck_deals_it_again() {
+        use crate::casino::session::PokerSession;
+
+        let hh: HandHistory = HandHistory::from_yaml(THE_HAND_YAML).expect("Failed to parse The Hand YAML");
+        let table = crate::util::data::TestData::the_hand_broadcast_table();
+        // The fixture's burns are the ones `stacked_deck` picks, so the
+        // rebuilt deck is the deck the hand was recorded from, card for card.
+        assert_eq!(table.deck, hh.stacked_deck().unwrap());
+
+        let mut session = PokerSession::new(table);
+        session.start_hand_with_deck(hh.stacked_deck().unwrap()).unwrap();
+
+        for player in &hh.players {
+            let seat = session.table.seats.get_seat(player.seat).unwrap();
+            assert_eq!(player.hole_cards.as_deref(), Some(seat.cards.to_string().as_str()));
+        }
+        for (street, seat, action) in crate::util::data::TestData::the_hand_line() {
+            assert_eq!(Some(seat), session.next_actor().unwrap(), "{street}");
+            session.apply_action(seat, action).unwrap();
+        }
+        assert_eq!(hh.board.as_deref(), Some(session.table.board.to_string().as_str()));
     }
 
     #[cfg(feature = "hand-histories")]
@@ -3361,7 +3501,14 @@ results:
         assert!(results[0].to_five().is_ok());
         assert!(results[1].to_five().is_ok());
 
-        assert!(hh.analysis.as_ref().unwrap().to_villain_combos().is_ok());
+        // The recorded hand carries no analysis block (`DEFECT_040`: the
+        // engine records what happened, not a range read). The villain range
+        // the typed file used still converts.
+        let analysis = AnalysisContext {
+            villain_range: Some("66+,AJs+,KQs,AJo+,KQo".to_string()),
+            ..AnalysisContext::default()
+        };
+        assert!(analysis.to_villain_combos().is_ok());
     }
 
     #[test]
@@ -3796,7 +3943,7 @@ hands:
     fn test_hand_history_standalone_unaffected() {
         let hh: HandHistory =
             HandHistory::from_yaml(THE_HAND_YAML).expect("Existing single-hand YAML should still parse correctly");
-        assert_eq!(hh.hand.id, "hsp-s5-the-hand");
+        assert_eq!(hh.hand.id, "hsp-s2e11-the-hand");
         assert_eq!(hh.hand.game, HandVariant::Holdem);
     }
 
@@ -3956,7 +4103,7 @@ hands:
     // HandHistory::replay
     // ─────────────────────────────────────────────────────────────────────────
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn test_hand_history_replay_preflop_fold() {
         // A 2-player hand where seat 0 folds preflop after posting SB.
@@ -4082,7 +4229,7 @@ hands:
         assert!(r.is_consistent);
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
@@ -4101,7 +4248,7 @@ hands:
     /// "out of order" because `Seats::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_flop_check_then_bet_then_fold() {
         let hh = HandHistory {
@@ -4295,7 +4442,7 @@ hands:
         assert_eq!(vec!["preflop", "flop", "turn", "river"], names);
     }
 
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn check_bet_fold_hand() -> HandHistory {
         HandHistory::from_yaml(
             r"
@@ -4325,7 +4472,7 @@ streets:
     }
 
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn replay_with__observes_every_recorded_action_in_order() {
         let mut seen = Vec::new();
         check_bet_fold_hand()
@@ -4347,15 +4494,203 @@ streets:
         );
     }
 
+    /// `DEFECT_040`: a 6-handed `400/800/200` hand, seats 3 and 0 play to the
+    /// flop. The ante is 6 x 200 = 1,200, the blinds 1,200, the two players
+    /// 3,500 each, so 9,400 in all: 8,200 if the ante is ignored.
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
+    fn replay__honours_ante() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: ante-1, game: holdem }
+table:
+  seats: 6
+  button: 0
+  stakes: { small_blind: 400.0, big_blind: 800.0, ante: 200.0 }
+players:
+  - { seat: 0, name: A, stack: 100000.0 }
+  - { seat: 1, name: B, stack: 100000.0 }
+  - { seat: 2, name: C, stack: 100000.0 }
+  - { seat: 3, name: D, stack: 100000.0 }
+  - { seat: 4, name: E, stack: 100000.0 }
+  - { seat: 5, name: F, stack: 100000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 3, action: raise, amount: 3500.0 }
+      - { seat: 4, action: fold }
+      - { seat: 5, action: fold }
+      - { seat: 0, action: call, amount: 3500.0 }
+      - { seat: 1, action: fold }
+      - { seat: 2, action: fold }
+  flop:
+    cards: 7♠ Q♦ 8♣
+    actions:
+      - { seat: 3, action: bet, amount: 1000.0 }
+      - { seat: 0, action: fold }
+",
+        )
+        .expect("fixture parses");
+
+        let mut last = None;
+        hand.replay_with(|step, table| {
+            if step.street == ReplayStreet::Preflop {
+                last = Some(table.effective_pot());
+            }
+        })
+        .expect("replay succeeds");
+
+        assert_eq!(Some(9_400), last);
+    }
+
+    /// EPIC-93 final review M1: Omaha posts the recorded ante, as Hold'em
+    /// does. A raise to 300 that takes the big blind and both antes nets 110.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn replay__omaha_honours_ante() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: plo-ante, game: omaha }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0, ante: 10.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 300.0 }
+      - { seat: 1, action: fold }
+results:
+  - { seat: 0, outcome: win, net: 110.0 }
+  - { seat: 1, outcome: fold, net: -110.0 }
+",
+        )
+        .expect("fixture parses");
+
+        // Blinds of 50 and 100, and two antes of 10.
+        assert_eq!(170, hand.replay_table().expect("table").effective_pot());
+        let result = hand.replay().expect("replay succeeds");
+        assert!(result.is_consistent, "{result:?}");
+        assert_eq!(vec![(0, 1_110), (1, 890)], result.final_stacks);
+        assert!(hand.validate().is_empty(), "{:?}", hand.validate());
+    }
+
+    /// EPIC-93: seat 1 has 49,200 behind after the big blind and records a call
+    /// of 100,000. The engine can only call 49,200, so replay refuses the hand.
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_unaffordable_call() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: short, game: holdem }
+table: { stakes: { small_blind: 400.0, big_blind: 800.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000000.0 }
+  - { seat: 1, name: B, stack: 50000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: raise, amount: 100000.0 }
+      - { seat: 1, action: call, amount: 100000.0 }
+",
+        )
+        .expect("fixture parses");
+
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 1,
+                recorded: 100_000,
+                engine: 49_200,
+            }),
+            hand.replay()
+        );
+    }
+
+    /// EPIC-93: chips are whole, so a non-integral amount is refused even when
+    /// its whole part agrees with the engine (the small blind completing 50).
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_a_non_integral_amount() {
+        let hand = HandHistory::from_yaml(
+            r"
+hand: { id: half, game: holdem }
+table: { stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0 }
+  - { seat: 1, name: B, stack: 1000.0 }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 50.5 }
+      - { seat: 1, action: check }
+",
+        )
+        .expect("fixture parses");
+
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 0,
+                recorded: 50,
+                engine: 50,
+            }),
+            hand.replay()
+        );
+    }
+
+    /// A call recorded as the chips it adds (18,000) or as the caller's street
+    /// total (26,000) is accepted; one that matches neither is not. (The hand
+    /// stops on the flop, so an accepted replay ends in `ActionIsntFinished`:
+    /// only the amount check is under test.)
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay__rejects_a_call_matching_neither_reading() {
+        let yaml = |call: &str| {
+            format!(
+                "
+hand: {{ id: calltotal, game: holdem }}
+table: {{ stakes: {{ small_blind: 400.0, big_blind: 800.0 }} }}
+players:
+  - {{ seat: 0, name: A, stack: 1000000.0 }}
+  - {{ seat: 1, name: B, stack: 1000000.0 }}
+streets:
+  preflop:
+    actions:
+      - {{ seat: 0, action: call, amount: 400.0 }}
+      - {{ seat: 1, action: check }}
+  flop:
+    cards: '9♣ 6♦ 5♥'
+    actions:
+      - {{ seat: 1, action: bet, amount: 8000.0 }}
+      - {{ seat: 0, action: raise, amount: 26000.0 }}
+      - {{ seat: 1, action: call, amount: {call} }}
+"
+            )
+        };
+        for accepted in ["18000.0", "26000.0"] {
+            let hand = HandHistory::from_yaml(&yaml(accepted)).expect("fixture parses");
+            assert_eq!(Err(PKError::ActionIsntFinished), hand.replay(), "call {accepted}");
+        }
+
+        let neither = HandHistory::from_yaml(&yaml("20000.0")).expect("fixture parses");
+        assert_eq!(
+            Err(PKError::ReplayAmountMismatch {
+                seat: 1,
+                recorded: 20_000,
+                engine: 18_000,
+            }),
+            neither.replay()
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "hand-histories")]
     fn replay_with__returns_the_same_result_as_replay() {
         let hand = check_bet_fold_hand();
         assert_eq!(hand.replay(), hand.replay_with(|_, _| {}));
     }
 
     #[test]
-    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
+    #[cfg(feature = "hand-histories")]
     fn replay_flop_check_then_bet_then_fold_from_yaml() {
         let yaml = r#"
 pkcore_version: "0.0.43"
@@ -4490,6 +4825,92 @@ hands:
             !yaml_no_deck.contains("shuffled_deck"),
             "YAML should omit shuffled_deck when None"
         );
+    }
+
+    /// `DEFECT_040`: the event log records the flop as a `Bard`, a set, so
+    /// the street came out in deck order (`5♥ 6♦ 9♣`) while the board kept
+    /// the order it was dealt in (`9♣ 6♦ 5♥`), and `validate` reported the
+    /// recorder's own file. The board's order wins.
+    #[test]
+    fn from_table_state__records_the_flop_in_board_order() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "9♣ 6♦ 5♥ 5♠ 8♠",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("9♣ 6♦ 5♥", hh.streets.unwrap().flop.unwrap().cards);
+    }
+
+    /// A board that disagrees with the logged flop is left to disagree:
+    /// `validate` is the one to say so, not the recorder.
+    #[test]
+    fn from_table_state__keeps_a_flop_the_board_does_not_hold() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "A♠ K♠ Q♠",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("5♥ 6♦ 9♣", hh.streets.unwrap().flop.unwrap().cards);
+    }
+
+    /// A board shorter than a flop has no flop order to give, so the logged
+    /// flop stays as the log wrote it.
+    #[test]
+    fn from_table_state__keeps_the_logged_flop_for_a_short_board() {
+        use crate::bard::Bard;
+        use crate::casino::game::ForcedBets;
+        use crate::casino::winnings::Winnings;
+
+        let log = [TableAction::DealtFlop(
+            Bard::NINE_CLUBS | Bard::SIX_DIAMONDS | Bard::FIVE_HEARTS,
+        )];
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "9♣ 6♦",
+            &Winnings::default(),
+            &log,
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+
+        assert_eq!("5♥ 6♦ 9♣", hh.streets.unwrap().flop.unwrap().cards);
     }
 
     /// Passing a deck string to `from_table_state` wires it into the `HandHistory`.
@@ -5088,8 +5509,8 @@ hands:
     /// replay-consistent hand used to prove replay ignores agent metadata.
     ///
     /// Gated with its sole consumer ([`replay_ignores_agent_fidelity`]) so it is
-    /// not dead code when `bot-profiles` (and thus `replay`) is disabled.
-    #[cfg(feature = "bot-profiles")]
+    /// not dead code when `hand-histories` (and thus `replay`) is disabled.
+    #[cfg(feature = "hand-histories")]
     fn af_replayable_preflop_fold() -> HandHistory {
         HandHistory {
             pkcore_version: None,
@@ -5156,7 +5577,7 @@ hands:
         }
     }
 
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn replay_ignores_agent_fidelity() {
         let mut hh = af_replayable_preflop_fold();
@@ -5178,7 +5599,7 @@ hands:
     /// 7-seat table and derived the small blind at `(6 + 1) % 7 == 0` instead
     /// of seat 7. Every blind and therefore every seat's turn shifted, and the
     /// first recorded voluntary action came back as out of order.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn dead_small_blind_past_the_last_occupied_seat_replays_in_order() {
         let yaml = DEAD_BUTTON_HAND;
@@ -5278,7 +5699,7 @@ hands:
     /// old player-count value of 5. Both must replay to the same result — the
     /// recorded size is a lower bound that agrees with the inference, not a
     /// second source of truth that can disagree with it.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn a_recorded_chair_count_replays_the_same_as_an_inferred_one() {
         let with_recorded_size = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 8");
@@ -5305,7 +5726,7 @@ hands:
     /// Seats 8 and 9 are empty and never appear in the action, so the big
     /// blind's walk from the dead small blind at seat 7 lands on seat 0 either
     /// way.
-    #[cfg(feature = "bot-profiles")]
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn trailing_empty_chairs_do_not_move_the_blinds() {
         let ten_seats = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 10");
