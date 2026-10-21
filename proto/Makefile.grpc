@@ -33,9 +33,11 @@ client-python:
 	@echo "🐍 Starting Python gRPC client..."
 	python3 examples/dealer_grpc_client.py
 
+# Install grpcio and grpcio-tools first (see proto/README.md); this target
+# only generates the stubs.
 setup-python:
-	@echo "🐍 Setting up Python environment..."
-	./scripts/setup_python_grpc.sh
+	@echo "🐍 Generating Python stubs from proto/dealer.proto..."
+	python3 -m grpc_tools.protoc -I./proto --python_out=. --grpc_python_out=. proto/dealer.proto
 
 clean-grpc:
 	@echo "🧹 Cleaning gRPC artifacts..."

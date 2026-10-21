@@ -60,16 +60,17 @@ Example Python client demonstrating cross-language support:
 - Includes a full game example
 - Demonstrates all major operations
 
-Setup: `./scripts/setup_python_grpc.sh`
+Setup: install `grpcio` and `grpcio-tools`, then `make -f proto/Makefile.grpc setup-python`
 Run: `python3 examples/dealer_grpc_client.py`
 
-### 7. Setup Script
-**File**: `scripts/setup_python_grpc.sh`
+### 7. Stub Generation
+**File**: `proto/Makefile.grpc` (`setup-python` target)
 
-Automated setup for Python clients:
-- Installs required packages
-- Generates Python stubs from proto
-- Provides usage instructions
+Generates the Python stubs from `proto/dealer.proto`. Package installation
+is a manual `pip install grpcio grpcio-tools` (see `proto/README.md`); the
+former `scripts/setup_python_grpc.sh` was removed in 0.17.2 because its
+unpinned `pip3 install` was the one unpinned dependency OpenSSF Scorecard
+flagged (EPIC-94).
 
 ### 8. Documentation
 **Files**: 
@@ -162,8 +163,8 @@ TableCelled Status:
 ### Using the Python Client
 
 ```bash
-# First time setup
-./scripts/setup_python_grpc.sh
+# First time setup (after pip install grpcio grpcio-tools)
+make -f proto/Makefile.grpc setup-python
 
 # Run the example
 python3 examples/dealer_grpc_client.py

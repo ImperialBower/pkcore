@@ -17,9 +17,8 @@ cargo run --example dealer_grpc_client --features grpc
 ## Connect with Python Client
 
 ### First time only:
-```bash
-./scripts/setup_python_grpc.sh
-```
+Install `grpcio` and `grpcio-tools`, then generate the stubs
+(steps in `proto/README.md`, or `make -f proto/Makefile.grpc setup-python`).
 
 ### Every time:
 ```bash
@@ -101,7 +100,7 @@ dealer❯ end
 - Try a different port (modify the examples)
 
 ### Python: "Module not found"
-- Run `./scripts/setup_python_grpc.sh`
+- Install `grpcio` and `grpcio-tools`, then run `make -f proto/Makefile.grpc setup-python`
 - Make sure you're in the project root directory
 
 ### Build errors
@@ -121,8 +120,6 @@ pkcore/
 │   ├── dealer_grpc_server.rs          # Server implementation
 │   ├── dealer_grpc_client.rs          # Rust client
 │   └── dealer_grpc_client.py          # Python client
-├── scripts/
-│   └── setup_python_grpc.sh           # Python setup script
 └── docs/
     ├── GRPC_DEALER.md                 # High-level guide
     └── GRPC_IMPLEMENTATION_SUMMARY.md # Implementation details
