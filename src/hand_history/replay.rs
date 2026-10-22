@@ -1900,6 +1900,77 @@ streets:
         assert_eq!(900, end.seats.get_seat(1).unwrap().player.chips);
     }
 
+    /// `DEFECT_041`: a replayed table logs the streets it lays, as the
+    /// engine's `deal_flop`, `deal_turn` and `deal_river` do.
+    #[test]
+    fn cursor__table_logs_the_streets_it_lays() {
+        use crate::bard::Bard;
+
+        let mut replay = hand(ALL_IN).cursor().unwrap();
+        replay.seek(replay.len() - 1).unwrap();
+
+        let dealt: Vec<&TableAction> = replay
+            .table()
+            .event_log
+            .iter()
+            .filter(|entry| {
+                matches!(
+                    entry,
+                    TableAction::DealtFlop(_) | TableAction::DealtTurn(_) | TableAction::DealtRiver(_)
+                )
+            })
+            .collect();
+        assert_eq!(
+            vec![
+                &TableAction::DealtFlop(Bard::from(Cards::from_str("K♠ K♣ 9♦").unwrap())),
+                &TableAction::DealtTurn(Bard::from(&Card::from_str("8♠").unwrap())),
+                &TableAction::DealtRiver(Bard::from(&Card::from_str("4♥").unwrap())),
+            ],
+            dealt
+        );
+    }
+
+    /// `DEFECT_041`: a hand taken over at the flop and played on by the
+    /// engine can be rebuilt from the table's own event log, and the rebuilt
+    /// hand validates.
+    #[test]
+    fn cursor__table_log_rebuilds_a_hand_played_on() {
+        use crate::casino::session::{PokerSession, SessionStep};
+
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/hands/the_hand.yaml");
+        let the_hand = hand(&std::fs::read_to_string(path).unwrap());
+        let mut replay = the_hand.cursor().unwrap();
+        let flop = (0..replay.len())
+            .find(|index| replay.event(*index) == Some(&ReplayEvent::Deal(ReplayStreet::Flop)))
+            .unwrap();
+        replay.seek(flop).unwrap();
+        let mut session = PokerSession::new(replay.table().clone());
+        loop {
+            match session.next_step() {
+                SessionStep::PlayerToAct(seat) => {
+                    let check = session.table.legal_actions(seat).contains(&PlayerAction::Check);
+                    let action = if check { PlayerAction::Check } else { PlayerAction::Call };
+                    session.apply_action(seat, action).unwrap();
+                }
+                SessionStep::StreetAdvanced => {}
+                SessionStep::HandComplete => break,
+                SessionStep::Failed(error) => panic!("{error:?}"),
+            }
+        }
+
+        let mut played_on = the_hand.clone();
+        played_on.streets = crate::hand_history::Streets::from_event_log(&session.table.event_log);
+        played_on.board = None;
+        played_on.results = None;
+
+        let findings = played_on.validate();
+        assert!(
+            findings.is_empty(),
+            "{}",
+            findings.iter().map(ToString::to_string).collect::<Vec<_>>().join("\n")
+        );
+    }
+
     #[test]
     fn replay_event__display() {
         assert_eq!("forced bets", ReplayEvent::Forced.to_string());
