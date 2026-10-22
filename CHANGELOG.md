@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.3] - 2026-10-22
+
+### Fixed
+
+- **A replayed table logs the streets it lays.** `HandHistory::lay_street`
+  set a recorded flop, turn or river on the replay's table without the
+  `DealtFlop`, `DealtTurn` or `DealtRiver` log entry the engine's `deal_*`
+  writes, so `Streets::from_event_log` could not read a replayed table's log
+  back as a hand: a hand taken over mid-replay and played on by the engine
+  could not be rebuilt. The entries are now logged; replays are otherwise
+  unchanged. See [DEFECT_041](docs/defects/DEFECT_041_replay_log_has_no_streets.md).
+
 ## [0.17.2] - 2026-10-21
 
 ### Removed

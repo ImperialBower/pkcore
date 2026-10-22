@@ -935,9 +935,11 @@ impl HandHistory {
 
     /// Lays `street`'s recorded cards on `table` once the previous street's
     /// bets are in: the flop replaces the board, the turn and river add a card,
-    /// and the phase moves to the street's deal. Returns the street's recorded
-    /// actions, or `None` (and touches nothing) when the street is not recorded
-    /// or is the preflop.
+    /// the phase moves to the street's deal, and the table's event log gets the
+    /// `DealtFlop`, `DealtTurn` or `DealtRiver` entry the engine's `deal_*`
+    /// would write (`DEFECT_041`), so a replayed table's log reads like a
+    /// played one's. Returns the street's recorded actions, or `None` (and
+    /// touches nothing) when the street is not recorded or is the preflop.
     ///
     /// [`Self::play_streets`] and [`Replay`]'s `Deal` event both call this, so
     /// a seek deals exactly what the walk dealt.
@@ -958,6 +960,9 @@ impl HandHistory {
                 let laid: Vec<Card> = table.board.iter().copied().collect();
                 Self::draw_laid(table, &laid);
                 table.phase = GamePhase::DealFlop;
+                table
+                    .event_log
+                    .push(TableAction::DealtFlop(crate::bard::Bard::from(table.board.clone())));
                 &flop.actions
             }
             ReplayStreet::Turn => {
@@ -968,6 +973,9 @@ impl HandHistory {
                 table.board.insert(card);
                 Self::draw_laid(table, &[card]);
                 table.phase = GamePhase::DealTurn;
+                table
+                    .event_log
+                    .push(TableAction::DealtTurn(crate::bard::Bard::from(&card)));
                 &turn.actions
             }
             ReplayStreet::River => {
@@ -978,6 +986,9 @@ impl HandHistory {
                 table.board.insert(card);
                 Self::draw_laid(table, &[card]);
                 table.phase = GamePhase::DealRiver;
+                table
+                    .event_log
+                    .push(TableAction::DealtRiver(crate::bard::Bard::from(&card)));
                 &river.actions
             }
         };
