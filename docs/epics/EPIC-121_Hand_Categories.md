@@ -156,6 +156,79 @@ possible.
 
 ---
 
+## Lessons Learned
+
+pkcore has named, scored and counted hands before. It did this in four places: `HandRankName` / `HandRankClass`, the decider's hand-rank proxy, `DrawEquity`'s out count, and the bit tricks in `Five`. Each one failed in a way this EPIC could repeat. A rule about hole cards was checked after the hole cards had been merged into the board. A bit mask lost a pair. A counting rule was never tested on the case that should give zero. A helper meant to be cheap allocated. A generated table drifted from its generator. An enum's order meant something that nothing tested. The lessons below map each failure to this EPIC's Scope, Design and Work Items. Line numbers are against `4d28ebb7` (pkcore `0.17.4`).
+
+### 1. Enforce "uses a hole card" while you still know which card is which
+
+- **Before:** `OmahaHigh::eval` picked two hole cards correctly. It then built a `Seven` of those two plus the whole board and let the best-5-of-7 search choose. The search can pick five board cards. `TheNuts` still builds a `Seven` per hole pair today (`src/arrays/five.rs:375`). The decider's proxy still scores the best five of hole and board together (`src/bot/decider.rs:579-587`, there since `4ecbfa10`, `0.0.49`), so a pair the board makes alone scores the same as a pocket pair.
+- **What it cost:** [DEFECT_017](../defects/DEFECT_017_omaha_eval_two_card_rule.md). Holding `2♣ 3♦ 4♥ 5♦` on a spade royal-flush board returned the board's royal flush. The right answer was ace-high. Fixed in `1f49da32`. The defect doc's own conclusion: "a rule spanning two inputs cannot be enforced on one of them."
+- **Lesson:** Check a rule about where cards came from in code that still knows their source, and build only candidates that pass it.
+- **In this EPIC:** Scope defines "uses a hole card", and Design ("How `classify` works") tests it on hole and board ranks kept apart ("removing the hole ranks breaks it"). **Gap:** Work Item 1c compares the category with `HandRankName` of the *overall* best five, and the board can win that alone. Take board `5♠ 6♠ 7♠ 8♠ 9♠` and a hole `T♥`. The best five is the board's straight flush. The category is `Straight`, because 6–T uses the hole card. Build the 1c oracle from five-card hands that contain at least one hole card, the way `OmahaHigh::permutations` builds only legal candidates (`src/games/omaha.rs:112`). State the check in one direction only: a category means the hand is at least that strong, not exactly that strong. **Applied 2026-10-24:** Work Item 1c and the Test Plan.
+
+### 2. Bit masks forget how many cards share a rank, so test the inputs that fool them
+
+- **Before:** `Five::is_straight` ORed the rank bits and measured the span from lowest to highest (`856ce01a`, 2022-05-25):
+  ```rust
+  (rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING
+  ```
+  `Masked for Two` ORs the ranks in the same way (`src/arrays/two.rs:1551-1553`), so a pocket pair becomes one bit.
+- **What it cost:** [DEFECT_034](../defects/DEFECT_034_paired_hand_is_a_straight.md). `9♠ 9♥ 9♦ 9♣ 5♠` was "a straight" for four years. It was fixed in `0.16.0` (`f39f5d77`) by adding `rank_bits.count_ones() == 5` (`src/arrays/five.rs:109`). Hand ranking was right the whole time, because it uses lookup tables.
+- **Lesson:** Every mask rule needs test cases with duplicate ranks: a pocket pair, a paired board, and trips on the board.
+- **In this EPIC:** Design builds per-rank and per-suit counts alongside the masks. **Gap:** Design says these are "the same masks `Masked` already exposes". They are not. `Masked` gives OR masks only, and `Two` is its only implementor (`src/arrays/two.rs:1550`). Nothing implements it for the `Cards` board. Build the counts from the cards directly. Add Phase 0a rows for a paired board that spans five ranks with no straight, a pocket pair on a paired board (Scope says it is not `TwoPair`), and a pocket pair plus a board pair of the same rank. Reuse also names `Five::is_straight` as a test cross-check. Prefer `HandRankName::from(hand_rank_value)` as the oracle, because the lookup tables were right while the bit trick was wrong.
+
+### 3. Test the case that should give zero
+
+- **Before:** `outs_against` (EPIC-39, `0ed358b2`, `0.12.0`) counted every card that lifted the hero past the range's median. It never checked that the hero was behind first:
+  ```rust
+  .filter(|improved| *improved < yardstick)
+  ```
+- **What it cost:** [DEFECT_032](../defects/DEFECT_032_outs_score_a_made_hand_as_the_nuts.md). Bottom set (`2♠2♦` on `2♥7♣K♦`) had 47 "outs", so the bot priced it as a sure winner. The tests covered only draws and air, so they passed. Fixed in `0.16.0` (`f39f5d77`, `src/bot/draw_equity.rs:81-85`).
+- **Lesson:** Test a counting rule on the case it should leave empty, not only on the cases it was written for.
+- **In this EPIC:** The Scope draw rule already suppresses a draw when the made hand is "already that strong or stronger", and Work Item 0a pins "river has no draws". **Gap:** Work Item 2b checks only that every *claimed* draw has its outs. A `classify` that never says `Gutshot` passes it. Make 2b check both directions: a flop or turn holding with a completing rank and no stronger made hand must carry the draw. Add 0a rows for the suppressions: a made flush plus a fourth suited card is not `FlushDraw`, a made straight is not `OpenEnded`, and a set is not `Overcards`. Do not use `DrawEquity::outs_against` as the 2b oracle. It counts cards that beat a range median (`src/bot/draw_equity.rs:38-45`), not cards that complete a hand.
+
+### 4. "No allocation" must be proven, because the convenient helpers allocate
+
+- **Before:** `Pile::is_dealt` copied the hand into a `Vec` twice per call (from `2f7a3985`, 2022-07-02). `Cards::contains` copied the whole set on each call. `DrawEquity` and the proxy build hands by formatting cards to text and parsing them back (`src/bot/draw_equity.rs:142`, `:152`; `src/bot/decider.rs:580`).
+- **What it cost:** [DEFECT_005](../defects/DEFECT_005_is_dealt_allocation.md): five-card evaluation was 7.9x slower and seven-card 2.7x slower than needed for four years. Every test passed, because nothing could observe allocation. It was fixed in `dac7f677` with the `alloc_probe` tests. [DEFECT_039](../defects/DEFECT_039_cards_is_dealt_and_contains.md): `deck.contains` made 3 allocations (fixed in `0.16.0`).
+- **Lesson:** A pure-looking helper can still allocate. Only an allocation-counting test proves it doesn't.
+- **In this EPIC:** Exit criterion 5 checks `classify` the way `hand_rank_value_does_not_allocate` does (`src/arrays/seven.rs:283`). **Gap:** The board arrives as `&Cards`, which is an `IndexSet` (`src/cards.rs:42`). Iterate it into fixed arrays. Do not call `ranks()`, `suits()` or `collapse()`: they still copy through `to_vec()` (`src/lib.rs:1059`, `:1070`, `:944`), and `Cards` does not override them. `suits()` also returns a `HashSet` that drops the counts lesson 2 needs. Never build a `Five` or `Six` from text: `Cards::from_str` puts cards in a set, so a repeated card disappears (`src/cards.rs:952`) and comes back as a count error, not `DuplicateCard`. Run the probe on boards of 3, 4 and 5 cards.
+
+### 5. A generated table must match its generator byte for byte and count every case
+
+- **Before:** EPIC-39 (`0ed358b2`, `0.12.0`) derived `HandOrder` at runtime. That pulled the 15.8 MB `hups.bin` into a WASM bundle (478 KB → 3.84 MB brotli). The derivation also looked matchups up with the wrong key and skipped the misses without a word: `72o` averaged 820 of its 1,225 matchups and read `0.3845` against a true `0.3469`. The same PR switched to a checked-in table and made a partial average return `None` (`src/bot/hand_order.rs:223`). Then the `0.12.5` lint pass (`018f3e26`) rewrote all 169 literals with digit separators. The generator still prints `{equity:?}` (`examples/export_hand_order.rs:48`).
+- **What it cost:** Regenerating today differs from `src/bot/hand_order_table.rs` on all 169 data lines (lines 17–185). `table_matches_the_chart` compares values, not text, so it stays green. It is also gated behind `hup-charts` (`src/bot/hand_order.rs:401`).
+- **Lesson:** The checked-in file must be exactly what the generator prints, and the derivation must cover every case or fail loudly.
+- **In this EPIC:** Design makes `FlopHitRates::derive` the source of truth. Work Item 4a pins the one-representative-per-class assumption, 4c re-derives the table, and Verification diffs the generator's output against the file. **Gap:** Make the generator print the lint-clean form, or put the needed `allow` in the generated header, so the Verification `diff` survives the next lint pass. Put that diff in `make generate-flop-hit-rates`. Add a test that each `derive` row's made-hand counts sum to exactly 19,600, since every flop has one made category. 4c's `#[ignore]` all-169 test would run nowhere. `make heavy` runs only `--test heavy_tests` (`Makefile:100`), and CI runs ignored tests only for `bot_marathon` and `replay_consistency` (`.github/workflows/ci.yml:63`, `:88`). Either keep it un-ignored (`derive` is pure, so no feature gate is needed) or wire it in.
+
+### 6. If an enum's order means something, say so and test it
+
+- **Before:** `CaliforniaHandRank`'s declaration order *was* the Razz ladder, and it was written from the wrong end. Elsewhere the direction is mixed. `HandRankName` derives `Ord` with `StraightFlush` first, so `StraightFlush < HighCard` (`src/analysis/name.rs:13-31`), and no test pins that order. `HandRank` writes its own `Ord`, where a lower value is `Greater` (`src/analysis/hand_rank.rs:66-84`). `draw_equity.rs:92` has to remind the reader that a lower `hand_rank_value` is stronger. `docs/FEATURE_BotProfile_HandStrengthDecisions.md:31` says "higher is better (1 = nut flush …)".
+- **What it cost:** [DEFECT_026](../defects/DEFECT_026_razz_ladder_ordered_from_the_wrong_end.md). A seven-low beat a six-low, and 329 of 1,286 adjacent unpaired lows were out of order. Fixed in `0.16.0` (`f39f5d77`). It was found by enumeration against an independent oracle, not by any existing test.
+- **Lesson:** When declaration order is meaning, write the direction down and test it against an oracle outside the enum.
+- **In this EPIC:** **Gap:** Design derives `Ord` and `PartialOrd` on `HandCategory`, which mixes made hands and draws, and never says what the order means. State it (made hands strongest first, so `made()` is the least made bit), or drop `Ord`. Add a 1a test that mapping each made category to its `HandRankName` never reverses the order.
+
+### Still alive today
+
+| Pattern | Where (file:line) | Touched by this EPIC? |
+|---|---|---|
+| `Masked` ORs ranks, so a pocket pair is one bit; only `Two` implements it | `src/arrays/two.rs:1550-1557`; trait `src/arrays/matchups/masks/mod.rs:23` | Yes. Design cites it as the source of counts |
+| Two different things named `Masked` (a trait and a struct) | `src/arrays/matchups/masks/mod.rs:23`, `src/arrays/matchups/masked.rs:86` | Yes. Reuse means the trait |
+| `Pile` helpers that copy through `to_vec()`; `Cards` overrides only `are_unique`, `contains`, `is_dealt` | `src/lib.rs:944`, `:1059`, `:1070`; `src/cards.rs:994`, `:1000`, `:1019` | Yes, if `classify` calls them on the `&Cards` board |
+| Hands built by `format!` then `parse` | `src/bot/draw_equity.rs:142`, `:152`; `src/bot/decider.rs:556`, `:580`, `:643` | No (no bot changes) |
+| A repeated card disappears silently when parsed into `Cards` | `src/cards.rs:952`; turned into `None` at `src/bot/draw_equity.rs:144` | No. Scope requires `DuplicateCard` |
+| Best five of hole and board together, with no record of which cards came from where | `src/arrays/five.rs:375` (`TheNuts`); `src/bot/decider.rs:579-587` (proxy) | No. The EPIC adds the hole-card-aware name beside them |
+| Out count measured against a range median | `src/bot/draw_equity.rs:76-96` | No. 2b must not use it as the oracle |
+| Derived `Ord` where the strongest is the least, with no test of the order | `src/analysis/name.rs:13-31` | Copied by `HandCategory` |
+| Generator prints the form the lint pass rewrote | `examples/export_hand_order.rs:48` vs `src/bot/hand_order_table.rs:17-185` | Pattern copied by Phase 4 |
+| Table drift test gated by a feature | `src/bot/hand_order.rs:401-403` | Pattern copied. `FlopHitRates` needs no gate |
+| Ignored lib tests that no target runs | `Makefile:100`; `.github/workflows/ci.yml:63`, `:88` | Yes. Work Item 4c |
+| `SuitShift` only rotates suits (4 of the 24 permutations) | `src/suit.rs:96-120`; trait `src/lib.rs:1146` | Yes, if 0b reuses it instead of real permutations |
+| `Five::is_straight` span test, fixed by DEFECT_034 | `src/arrays/five.rs:106-112` | Yes. Reuse lists it as a test cross-check |
+
+---
+
 ## Design
 
 ### `HandCategory` and `HandCategories`
@@ -281,9 +354,15 @@ the same way `examples/export_hand_order.rs` makes
   unit and doc tests for each method.
 - [ ] **1b.** The mask builder and made-hand rules. Un-ignore the made-hand
   tables.
-- [ ] **1c.** Cross-check: for random hands, the made category is consistent
-  with `HandRankName` of the best five (a `Flush` category implies a flush
-  best hand, and so on).
+- [ ] **1c.** Cross-check: for random hands, take the best five-card hand
+  among the subsets that contain **at least one hole card** (build only those
+  candidates, as `OmahaHigh::permutations` does, `src/games/omaha.rs:112`).
+  The made category must be no stronger than that hand's `HandRankName` (a
+  `Flush` category implies that hand is a flush or better, and so on). The
+  check runs in this one direction only. The overall best five is the wrong
+  oracle, because the board can win it alone: on `5♠ 6♠ 7♠ 8♠ 9♠` with a
+  hole `T♥`, the best five is the board's straight flush, and the category is
+  `Straight`. That case is a test row. See Lessons Learned 1.
 
 ### Phase 2 — Draws
 
@@ -326,7 +405,8 @@ the same way `examples/export_hand_order.rs` makes
 - `classify__river_has_no_draws`.
 - `classify__rejects_bad_board_size`, `classify__rejects_duplicate_card`.
 - `classify__is_suit_invariant` — property test.
-- `classify__made_agrees_with_best_five` — consistency with `HandRankName`.
+- `classify__made_agrees_with_best_five` — the made category is no stronger
+  than the `HandRankName` of the best five that uses a hole card.
 - `classify__draws_have_their_outs` — brute-force outs check.
 - `range_breakdown__*` — counts, fractions, filter.
 - `flop_hit_rates__same_class_same_counts`, `flop_hit_rates__table_matches_derive`.
