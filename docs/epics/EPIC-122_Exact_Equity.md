@@ -159,14 +159,128 @@ The rules this EPIC must keep:
 
 ---
 
+## Lessons Learned
+
+pkcore has computed equity at least four ways before this EPIC: brute force through `CaseEvals`, the `hups.bin` chart, `Versus`/`RangeEquity`, and `EquityEngine`. Each one left a mark. Preflop multi-way used to be exact. `DealEval` stored every `CaseEval` of a full enumeration, and `CaseEvals::from_holdem_at_deal` spawned one OS thread per runout (`15ca3ece`, 2023-04-03). `1b09d630` (2026-06-05, `0.1.4`) replaced the threads with `rayon` and added the engine. `36e44e95` (2026-06-18, first tagged `v0.1.5`) sent heads-up to the chart (6.38 s → 694 ns) and three or more seats to Monte Carlo. So three-plus seats lost exactness in exchange for speed, and Phase 3 restores it. The Goals line "the method follows the *work*, not the street or the seat type" already follows `docs/LESSONS_LEARNED.md` Lesson 5 (branching on a count). Each lesson below names the Scope rule, Design section or Work Item that already applies it. Where the EPIC does not cover it yet, it names the gap. Line numbers in code are against `4d28ebb7` (pkcore `0.17.4`).
+
+### 1. The caller's knobs are a contract
+
+- **Before:** since `1b09d630`, setting `exact_threshold: 0` is the only way to force Monte Carlo. The engine tests use it (`src/analysis/equity/engine.rs:544`, `:563`, `:586`), and so do the perf fixtures (`perf/src/catalog_equity.rs:70`, `:147`, `:173`). The perf guard asserts that every fixture not named `exact.` has `exact_threshold: 0` (`catalog_equity.rs:332-336`). The bot callers set only `max_samples` and `seed` and take everything else from `..EquityOptions::default()` (`src/bot/decider.rs:653-657`, `src/bot/preflop_equity.rs:242-246`).
+- **What it cost:** `0.11.0` cut the `max_samples` default from 100,000 to 25,000. That was "a **silent** change: nothing fails to compile" (`CHANGELOG.md:1124`), and `spec.rs:186-197` now pins the defaults because of it. After that, the preflop solver path ignored the profile's budget. A strong-tier bench asked for 500 samples, ran 25,000 per decision, and was killed after two hours (EPIC-39 corrigendum 18, `docs/epics/EPIC-39_Decider_Range_Model.md:549`).
+- **Lesson:** a new path must obey the knobs callers already use to choose a path and to cap its cost.
+- **In this EPIC:** Design §1 adds a second knob instead of changing what `exact_threshold` means. That is the right call. **Gap:**
+  - Design §1 step 1 says "no threshold applies" to isomorphic exact. Every request with all seats `Exact`, an empty board and `exact_threshold: 0` then goes exact, which breaks four things:
+    - `compute__aa_vs_kk_preflop_mc` (`engine.rs:542`) and `compute__seed_is_deterministic` (`:584`) fail their `Method::MonteCarlo` asserts.
+    - DEFECT_033's regression `compute__small_seeds_draw_different_samples` (`:574`) gets eight identical exact answers and fails.
+    - `equity.mc.three_way` (`catalog_equity.rs:61-75`) times the exact path under an `mc.` name, and its guard still passes, because the guard checks the knob and not the path.
+    - The result conflicts with exit criterion 5.
+
+    Fix: make `exact_threshold == 0` turn off step 1 as well.
+    **Applied 2026-10-24:** Design §1 step 0 and item 3d.
+  - Some existing code relies on the current routing and needs updating:
+    - `examples/two_tables.rs:137-149` samples preflop on default options and asserts `Method::MonteCarlo`. It needs `exact_threshold: 0`.
+    - `spec.rs:206` still asserts "preflop must fall to sampling". The assert will keep passing, but its message will no longer be true.
+    - The `hu_preflop` workload's doc says "this is true enumeration" (`catalog_equity.rs:37-42`). After Phase 3 that is false. Keep a brute-force workload under its own name if you want a brute-force baseline.
+  - Design §1 calibrates `exact_work_threshold` against the 25,000-sample default (202 ms). A caller who asked for 500 samples would still get exact work up to that size. Bound enumerated exact by the caller's own `max_samples` (for example, go exact only when `work_estimate` is no more than the evaluations `max_samples` would spend), or set the field explicitly in both bot callers. Add the new field to `default_options_are_pinned` (`spec.rs:192`).
+
+### 2. A dropped case is a biased case
+
+- **Before:** the code has repeatedly skipped what it could not compute.
+  - `Versus::hups_at_deal` returned a partial map on a chart miss until `4ad54d40` (2026-03-30).
+  - The first engine returned all-zero equities when every sample failed, until `165eb13b` (2026-06-05) made `count == 0` an error (`engine.rs:183-185`).
+  - The perf harness turned a failing `compute()` into checksum 0 with `Status::Ok` until `45913a72` (2026-08-14; `catalog_equity.rs:80-83`).
+- **What it cost:** the worst case was silent and selective. `equity_vs_field` built its own chart key, missed, and `continue`d. AA resolved all 1,225 matchups and `72o` resolved only 820, so `72o` scored `0.3845` against a true `0.3469` (EPIC-39 corrigendum 17, `EPIC-39_Decider_Range_Model.md:507-524`; fixed in `0ed358b2`, `v0.12.0`). The skipped matchups were mostly the ones the hand loses.
+- **Lesson:** "a partial average is worse than no answer, because it is silently biased" (`EPIC-39…:524`). Count what you drop, or fail.
+- **In this EPIC:** Scope rule 2 and items 3a–3b apply this to the exact paths (weights sum to `C(remaining, 5)`; flush assignments partition every board). The MATHS Phase 4 "second skew" covers `pick_range` giving up after 64 tries and `sample_once` dropping the sample (`engine.rs:268-273`, `:300-308`, `:234`). **Gap:**
+  - Design §5 reports dropped samples only if the bias turns out to be large. Count drops in 4a for every case, whatever the verdict.
+  - In 3e, a chart miss must fail the test, not be skipped. `HUP_CACHE` decodes to an empty map on error (`src/analysis/store/embedded/hup_cache.rs:23-26`), and no test pins its 812,175 entries. A sampled cross-check that skips misses can pass having compared nothing. Assert the chart's size.
+  - In 2c, assert that `samples` equals the number of compatible (tuple, runout) pairs.
+
+### 3. Integer tallies from an independent path are the oracle
+
+- **Before:** `84d432da` (2026-06-19) moved `DealEval`'s determinism test from `equity` to `wins`/`ties`. The reason was that float addition is not associative across rayon's reduce. The perf harness folds only integer counts for the same reason (`perf/src/catalog_equity.rs:3-6`). `Tally.equity` is still an `f64` sum (`engine.rs:406`; `docs/TECHNICAL_DEBT.md:311`).
+- **What it cost:** the chart's orientation has caused trouble twice. `HUPResult::lookup` ignores argument order and reports from the higher hand's side, so "read naively, every result is inverted for half of all callers" (EPIC-39 corrigendum 7, `:335-345`). The `72o` bug was "corrigendum 7's perspective trap in a second location" (`:522`), and "a structural test alone would not have caught this" (`:528-530`). The fix was checked against the equity engine as an independent path.
+- **Lesson:** compare integer tallies, and compare them against a path that shares no code with the one under test.
+- **In this EPIC:** Scope rules 3 and 6 and MATHS "Why the golden fixtures are integers" apply this. 3e compares against `hups.bin`, which is exact: 812,175 records, each summing to 1,712,304 (EPIC-39 corrigendum 8, `:347-357`). The 2026-07-31 brute-force AA vs KK run has checksum 1,721,612 (`docs/perf/results/aarch64-apple-darwin-all-features-2026-07-31.json`). That is 1,712,304 + 9,308 ties, which matches the 9,308 draws `src/analysis/gto/vs.rs:483` uses for the same matchup. **Gap:**
+  - 3e must go through `HUPResult::lookup` and call `flip_mode()` when `result.higher` is not the first seat's hand, as `DealEval::heads_up_report` does (`src/play/stages/deal_eval.rs:86-103`). Test both seat orders.
+  - 2c checks against a "hand-rolled loop". The repo already has an exact hand-vs-range path that returns integer `WinLoseDraw` counts: `Versus::combined_odds_at_river` (`vs.rs:197`) and `combined_odds_at_flop` (`:49`), which `RangeEquity::combined_odds` uses (`src/analysis/range_equity.rs:92`). Use it as the oracle. Assert its total first, because `vs.rs:70` also drops failures. `vs.rs:202` already scores the hero once per board, so Design §2's hero cache is a second copy of that idea. Say in Reuse whether `Versus` will delegate to the engine (`docs/LESSONS_LEARNED.md` Lesson 6: twins multiply bugs).
+  - 0c should call `exact_enumerate` directly, not `compute`. After Phase 3, a huge `exact_threshold` on an empty board routes to the isomorphic path, and the recompute would then check that path against itself.
+
+### 4. A check that never builds or runs a code path does not check it
+
+- **Before:**
+  - `9919b5ca` (2026-06-05, Copilot autofix) removed `engine.rs`'s `Pile` import as unused. `equity` was off by default and `make build`/`test`/`clippy` never enabled it, so the feature did not compile until `bbbfd74c` (2026-06-17).
+  - The engine has a serial path and a `parallel` path, and each build compiles only one of them. `exact_enumerate__counts_are_identical_serial_or_parallel` proves the two agree only because `make test-serial` runs it without `parallel` (`engine.rs:489-499`, `Makefile:239-245`).
+  - The 2023 suit-shift work left a defect marker with no description. Its only record was two `#[ignore]` tests. It sat from `4db372e4` (2023-09-15) until it was retired on 2026-08-21 (`docs/TECHNICAL_DEBT.md:138`).
+- **What it cost:** a feature build stayed broken for twelve days, and an unexplained marker sat for three years. `make heavy` runs ignored tests only in `tests/heavy_tests` (`Makefile:98-100`). CI runs them only for `bot_marathon` and `replay_consistency` (`.github/workflows/ci.yml:63`, `:88`). An `#[ignore]` test in `src/` runs only when someone remembers to run it.
+- **Lesson:** for every `cfg` branch and every `#[ignore]` test, name the command that runs it.
+- **In this EPIC:** Scope rule 6 extends the serial-vs-parallel test to every new path, and 3f runs `make check-wasm`. **Gap:**
+  - `make check-wasm` is `cargo check` only (`Makefile:290-293`). It never runs the serial code. Add `make test-serial` to Verification.
+  - The Verification line `cargo test --features full --lib -- analysis::equity -- --ignored` does not run ignored tests. libtest stops reading flags at the second `--` and treats `--ignored` as a filter. Write `-- analysis::equity --ignored`. **Applied 2026-10-24** in Verification.
+  - 3e is `#[cfg(feature = "hup-charts")]`, and `make test-serial` leaves that feature off (`Makefile:245`). Say that 3e runs only in the `full` build.
+
+### 5. Copying the parallel shape copies its flaw
+
+- **Before:** `CaseEvals::from_holdem_at_deal` spawned one thread per runout and cloned the hands into each one: 1,712,304 threads heads-up (`15ca3ece`, 2023-04-03). `1b09d630` (`0.1.4`) replaced that with `par_bridge()` over `combinations()`, and the engine copied the same shape (`engine.rs:207-210`; `src/analysis/case_evals.rs:48`, `:71`).
+- **What it cost:** the thread-per-runout code lived for three years. Its replacement is flagged too. `par_bridge` feeds items one at a time from a sequential iterator behind a mutex, with no chunking; the audit calls this "false parallelism" (`docs/PARALLELISM_AUDIT.md:121-127`, F2). TODO-PAR-5 is still open (`:281-286`). The measurements disagree:
+  - `docs/perf/PROFILING.md:348` shows `equity.exact.hu_preflop` 2.12× faster at 4 threads.
+  - The committed sweep (`docs/perf/results/aarch64-apple-darwin-sweep-2026-07-31.json`) shows it flat: 16.4 s on 1 thread and 16.6 s on 8.
+- **Lesson:** parallelise over an indexed source, and re-measure thread scaling whenever the cost per item changes.
+- **In this EPIC:** **Gap:**
+  - Design §3 says "Parallelise over runouts, as `exact_enumerate` does", which copies `par_bridge`. Use indexed `into_par_iter` instead: over runout indices with combination unranking (TODO-PAR-5), and over a `Vec` of the ≤ 6,188 rank patterns in Phase 3. Phase 1 makes each item several times cheaper, so the serial producer becomes a larger share of the time. That follows from the numbers; it has not been measured. Add a `--sweep` run to 0a and 5b.
+  - The default features do not include `parallel` (`Cargo.toml:52-57`), and `wasm32` is serial. The 202 ms that 2d calibrates against is "with the `parallel` feature on" (`spec.rs:83-85`). Measure 2d in a serial build too.
+
+### 6. Measure the function the engine actually calls
+
+- **Before:** `Pile::is_dealt` allocated twice per five-card evaluation from `2f7a3985` (2022-07-02) to `dac7f677` (2026-07-31). The fix made `Five::hand_rank_value` 7.9× faster and `Seven::hand_rank_value` 2.7× faster ([DEFECT_005](../defects/DEFECT_005_is_dealt_allocation.md)). An earlier side quest had optimised those same functions without a benchmark and found about 4% (DEFECT_005, "Coverage Gap").
+- **What it cost:** the engine calls neither of those functions. It calls `Eval::from(Seven)` (`engine.rs:200`, `:294`; `src/analysis/eval.rs:329-334`), which also runs `sort().clean()` on the winning hand (`src/arrays/seven.rs:205`). That path costs 5.25–5.5× the rank-only one. In PROFILING's words, "DEFECT_005 fixed a function the equity engine never calls" (`docs/perf/PROFILING.md:186-221`).
+- **Lesson:** benchmark, and test for allocations, the exact function the hot loop calls, and compare it with a cheap baseline function.
+- **In this EPIC:** Design §2 and item 1c move the engine to `HandRankValue`, which is the fix PROFILING points to. MATHS Phase 1 makes no speed promise before 1d measures. **Gap:**
+  - Add `*_does_not_allocate` tests with `crate::alloc_probe` (`src/lib.rs:474`), as DEFECT_005 did (`src/arrays/five.rs:463`, `seven.rs:283`), for `hand_rank_value_ignoring_suits`, `rank_value_ignoring_suits` and `hand_rank_value_beating`.
+  - Per-runout allocations remain after Phase 1: the `Vec<Card>` from `combinations` (`engine.rs:195`), the `ranks` `Vec` (`:198`), and three `Vec`s in each `Tally::zeroed` (`:335`, `:392-399`). The Phase 3 scoring loop should not repeat them.
+  - `Seven::hand_rank_value` ignores a subset value of 0, which means "not dealt" (`seven.rs:185`). `hand_rank_value_beating` must ignore it too, because 0 is below every threshold. Add that case to 1b's tests.
+
+### 7. Check how a number was measured before you rely on it
+
+- **Before:** from `1b09d630` until `0.16.0` (`f39f5d77`), the engine seeded sample `i` with `seed ^ i`. For seeds below 8 that only reorders a single set of samples ([DEFECT_033](../defects/DEFECT_033_small_monte_carlo_seeds_draw_the_same_samples.md)). The `two_tables` example (`53345346`, 2026-10-08) worked around this by spreading its seeds. The defect was filed only after the 2026-10-17 automated review found it. The example's comment still describes `seed ^ index` (`examples/two_tables.rs:135-136`).
+- **What it cost:** seeds 0–7 gave identical results, and `DEFAULT_SEED` 0 matched user seeds 1–7. The precision table on `max_samples` was "measured … 40 seeds" (`src/analysis/equity/spec.rs:71`). If those were small consecutive seeds, it came from about five distinct sample sets. The re-measurement is still open (`docs/TECHNICAL_DEBT.md:300`).
+- **Lesson:** before a measured number becomes a design input, check how it was measured. A workaround in an example is a defect report nobody filed.
+- **In this EPIC:** Phase 4a's 200-seed runs come after the fix, and `compute__small_seeds_draw_different_samples` (`engine.rs:574`) guards that seeds draw different samples. **Gap:** the Summary and MATHS Phase 0 treat the ~0.7 pp / ~0.3 pp table as measured truth. Re-measure it in Phase 0 and close the debt item, or cite only the SE bound. Fix the stale comment in `two_tables.rs` along with the change in lesson 1.
+
+### Still alive today
+
+| Pattern | Where (file:line) | Touched by this EPIC? |
+|---|---|---|
+| `exact_threshold: 0` is the only way to force Monte Carlo | `src/analysis/equity/engine.rs:544,563,586`; `perf/src/catalog_equity.rs:70,332-336` | Yes. Kept by Design §1 step 0 (lesson 1) |
+| Bot callers take every other option from the defaults | `src/bot/decider.rs:653-657`; `src/bot/preflop_equity.rs:242-246` | Yes. They inherit the new `exact_work_threshold` |
+| Range seats picked one after another, 64 tries, failed sample dropped | `engine.rs:268-273`, `:300-308`, `:234` | Yes. Phase 4 |
+| Average over the chart lookups that succeed, misses skipped | `src/bot/preflop_equity.rs:92-94` | No |
+| Failing cases dropped by `filter_map(.ok())` | `src/analysis/case_evals.rs:45`, `:65-68`; `src/analysis/gto/vs.rs:70` | No |
+| Chart decode error gives an empty map | `src/analysis/store/embedded/hup_cache.rs:23-26` | Read by 3e; not fixed |
+| `f64` equity summed in reduce order | `engine.rs:406` | No. Tests compare integers (Scope rule 6) |
+| `par_bridge()` over `combinations()` | `engine.rs:208`; `case_evals.rs:48`, `:71` | Copied by Design §3 unless changed |
+| `Eval::from(Seven)` (with sort and clean) in the hot loop | `engine.rs:200`, `:294`; `src/arrays/seven.rs:205` | Yes. Item 1c |
+| New `HashSet<Card>` per sample; several `Vec`s per runout | `engine.rs:262`; `:195-198`, `:335` | No (TODO-PAR-2) |
+| Stale `seed ^ index` comment | `examples/two_tables.rs:135-136` | No |
+| Unfinished suit-shift code | `src/arrays/matchups/sorted_heads_up.rs:145`; `src/arrays/matchups/shift.rs:40`; `src/analysis/store/db/hup.rs:106` | No. Design §4 takes a different route |
+| `#[ignore]` tests in `src/` that no make target or CI job runs | `Makefile:98-100` | Yes. 0c, 3e and 4a add more |
+| 40-seed precision table, re-measurement open | `src/analysis/equity/spec.rs:71`; `docs/TECHNICAL_DEBT.md:300` | Cited by the Summary and MATHS |
+| Preflop brute force collects 1.7M `CaseEval`s; nothing in the crate calls it | `src/analysis/case_evals.rs:63-76` | No |
+
+---
+
 ## Design
 
 ### 1. The decision, made on work
 
 `EquityEngine::compute` chooses in this order:
 
+0. **`exact_threshold == 0` → Monte Carlo**, as today. It is the one knob
+   callers use to force sampling (tests, perf fixtures; see Lessons Learned
+   1), so it turns off both exact paths below.
 1. **Isomorphic exact**: every seat `Exact`, board empty → Phase 3 path.
-   Cost is fixed and small (≤ 6,188 patterns), so no threshold applies.
+   Cost is fixed and small (≤ 6,188 patterns), so its size is not compared
+   with a threshold.
 2. **Enumerated exact**: `work_estimate(seats, runouts) ≤ exact_work_threshold`.
    Seats may be `Exact` or ranges.
 3. **Monte Carlo** otherwise.
@@ -814,7 +928,13 @@ No new math. Item 5a should link here rather than repeat it.
 - [ ] **3c.** Weighted `Tally::add`; the scoring loop.
 - [ ] **3d.** Route in `compute`. Tests: `compute__preflop_is_exact`
   (`Method::Exact`), `isomorphic__matches_brute_force_golden` (Phase 0c),
-  `isomorphic__counts_identical_serial_or_parallel`.
+  `isomorphic__counts_identical_serial_or_parallel`,
+  `compute__exact_threshold_zero_still_samples` (an all-`Exact` preflop
+  request and a range-seat request with `exact_threshold: 0` both return
+  `Method::MonteCarlo`). The existing `compute__aa_vs_kk_preflop_mc`,
+  `compute__small_seeds_draw_different_samples` and
+  `compute__seed_is_deterministic` (`engine.rs:542`, `:574`, `:584`) pass
+  unchanged.
 - [ ] **3e.** Cross-check against the chart, `#[cfg(feature = "hup-charts")]`:
   for a sample of heads-up matchups, the isomorphic tally equals the
   `hups.bin` win/lose/draw tally exactly. A full sweep of every chart entry
@@ -905,7 +1025,7 @@ No new math. Item 5a should link here rather than repeat it.
 make lint
 cargo test --features full --lib -- analysis::equity
 cargo test --features full --lib -- arrays::seven arrays::five
-cargo test --features full --lib -- analysis::equity -- --ignored   # golden + chart sweep, slow
+cargo test --features full --lib -- analysis::equity --ignored   # golden + chart sweep, slow
 cargo test --features full --doc -- equity
 make check-purity
 make check-wasm
@@ -914,8 +1034,10 @@ make perf-check && make perf-native
 
 Exit criteria:
 
-1. Any request with every seat exact and an empty board returns
-   `Method::Exact`, and matches the brute-force golden tallies exactly.
+1. Any request with every seat exact, an empty board and
+   `exact_threshold > 0` returns `Method::Exact`, and matches the brute-force
+   golden tallies exactly. With `exact_threshold: 0` it still returns
+   `Method::MonteCarlo`.
 2. Heads-up preflop isomorphic tallies equal the `hups.bin` tallies.
 3. Hand-vs-range on flop, turn and river returns `Method::Exact` under the
    default options.
