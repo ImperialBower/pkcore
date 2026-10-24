@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.5] - 2026-10-24
+
+### Added
+
+- **Reading notes for *The Mathematics of Poker*.** Bill Chen and Jerrod
+  Ankenman's book is the source
+  [EPIC-122](docs/epics/EPIC-122_Exact_Equity.md) cites for equity and card
+  removal. [docs/mop/README.md](docs/mop/README.md) indexes all 30 chapters
+  by print-edition page. Each note explains a page in our own words and
+  links the pkcore code that does the same thing. Chapter 1 is drafted.
+- **`tests/mop.rs` reproduces the book's worked numbers with pkcore.** The
+  Chapter 1 checks count real cards and ranges: pocket aces 1 in 221, heart
+  or ace 4 in 13, a suited hand flopping a flush 33 in 3920, the 34 hands in
+  {AA, KK, QQ, AKs, AKo}, and the book's coin and dice bets through `Ev`.
+  Every check compares exact ratios, so a disagreement between pkcore and
+  the book cannot pass by rounding. All 11 agree.
+
 ## [0.17.4] - 2026-10-24
 
 ### Added
