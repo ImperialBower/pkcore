@@ -247,10 +247,130 @@ pkcore has computed equity at least four ways before this EPIC: brute force thro
 - **Lesson:** before a measured number becomes a design input, check how it was measured. A workaround in an example is a defect report nobody filed.
 - **In this EPIC:** Phase 4a's 200-seed runs come after the fix, and `compute__small_seeds_draw_different_samples` (`engine.rs:574`) guards that seeds draw different samples. **Gap:** the Summary and MATHS Phase 0 treat the ~0.7 pp / ~0.3 pp table as measured truth. Re-measure it in Phase 0 and close the debt item, or cite only the SE bound. Fix the stale comment in `two_tables.rs` along with the change in lesson 1.
 
+### 8. Look outside before you optimise in place: a better evaluator already exists
+
+Lessons 1–7 come from pkcore's own history. This one comes from outside it.
+[`b-inary/holdem-hand-evaluator`](https://github.com/b-inary/holdem-hand-evaluator)
+by Wataru Inariba (MIT, last commit `d7b2a5bb`, 2022-06-02) solves the
+problem Phase 1 works on, and solves it a better way. Phase 1 makes pkcore's
+21-subset loop cheaper. That crate does not have the loop at all.
+
+- **Before (pkcore today).** A seven-card hand is ranked by building all 21
+  five-card subsets and ranking each one (`src/arrays/seven.rs:179-190`):
+
+  ```rust
+  for perm in Seven::FIVE_CARD_PERMUTATIONS {          // 21 times
+      let hand = self.five_from_permutation(perm);     // copy 5 cards
+      let hrv = hand.hand_rank_value();                // flush table, unique table,
+      if (best_hrv == 0) || hrv != 0 && hrv < best_hrv // or a binary search (≤ 13 steps)
+          { best_hrv = hrv; }
+  }
+  ```
+
+  And the engine rebuilds every hand from scratch for every runout
+  (`engine.rs:194-200`): it collects the runout into a `Vec`, builds a
+  `Board`, then builds a `Seven` per seat from the two hole cards and the five
+  board cards.
+
+- **The better way, part 1: a hand is a sum, and ranking it is two reads.**
+  The crate stores a hand as two `u64`s. Each card adds a fixed value to
+  both (`src/hand.rs:93-99`). The `key` sums rank values chosen so that every
+  multiset of 5–7 ranks has a different sum, plus a 4-bit counter per suit
+  that starts at 3 (`0x3333`), so the counter's high bit turns on at the
+  fifth card of a suit. The `mask` sets one bit per card. Ranking is then
+  about ten lines (`src/hand.rs:115-126`):
+
+  ```rust
+  pub fn evaluate(&self) -> u16 {
+      let is_flush = self.key & FLUSH_MASK;                 // any suit counter reached 8?
+      if is_flush > 0 {
+          let flush_key = (self.mask >> (4 * is_flush.leading_zeros())) as u16;
+          LOOKUP_FLUSH[flush_key as usize]                  // 8,129 entries
+      } else {
+          let rank_key = self.key as u32 as usize;          // the rank-multiset sum
+          let offset = OFFSETS[rank_key >> OFFSET_SHIFT] as usize;
+          LOOKUP[rank_key.wrapping_add(offset)]             // perfect hash, ≥ 73,775 entries
+      }
+  }
+  ```
+
+  No subsets, no sort, no search, no allocation. The tables are about
+  212 KB (`Readme.md`). The README claims ~1.2 G evaluations per second on
+  one Ryzen 9 5950X thread; that is the author's number and has not been
+  measured here.
+
+- **The better way, part 2: share the board, add cards one at a time.**
+  Because a hand is a sum, the crate adds each board card to both players'
+  hands once per loop level, not once per runout
+  (`src/heads_up.rs:129-160`):
+
+  ```rust
+  for i in 0..(len - 4) {
+      let hand1 = hand1.add_card(alive_cards[i]);           // two additions
+      let hand2 = hand2.add_card(alive_cards[i]);
+      for j in (i + 1)..(len - 3) {
+          // … three more levels …
+                      let rank1 = hand1.evaluate();         // then two reads each
+                      let rank2 = hand2.evaluate();
+  ```
+
+  The outer levels' additions are shared by every runout below them. There
+  is no `Vec`, no `Board` and no `Seven` per runout.
+
+- **The better way, part 3: test every hand against a naive evaluator.**
+  `src/hand_test.rs:103-147` walks all C(52, 7) = 133,784,560 seven-card
+  hands with the same nested loops. For each one it checks that the fast rank
+  maps to exactly one rank from a slow, obviously correct evaluator, and
+  then that the order of the two agrees. That is lesson 3's independent
+  oracle, made exhaustive.
+
+- **What it cost to not look.** Nothing yet: Phase 1 has not started. But
+  items 1a and 1b (`hand_rank_value_ignoring_suits`, `rank_value_ignoring_suits`,
+  `hand_rank_value_beating`) are new code that tunes the loop this design
+  removes. The early exit saves at most part of the 21 subsets; the crate
+  never has 21 subsets to save.
+
+- **Two things not to copy.** The crate checks nothing: `evaluate` "may
+  crush when `self.len() < 5 || self.len() > 7`" (`src/hand.rs:113`), it reads
+  tables with `unsafe { get_unchecked }`, and `heads_up_win_frequency` uses
+  `assert!`. pkcore's rules forbid all three in library code. And its order
+  is the opposite of pkcore's: a higher value is stronger
+  (`get_hand_category`, `src/hand.rs:22`), where pkcore's `HandRankValue` is
+  lower-is-stronger. Lesson 6 of EPIC-121 is what happens when that kind of
+  direction is left implicit.
+
+- **Lesson:** before you optimise a hot loop, look for published work that
+  removes the loop, and use its test pattern (a naive oracle over every
+  input) even if you keep your own code.
+
+- **In this EPIC:** **Gap.** Nothing in the EPIC mentions outside prior art.
+  - Keep item **1c** (score with `hand_rank_value`, not `Eval::from`). It is
+    worth doing first whatever comes next.
+  - Before items **1a** and **1b**, decide whether to vendor the crate's
+    evaluator instead, behind the existing `HandRanker` trait. Vendoring keeps
+    Scope rule 5 ("no new dependency"), and the crate is not on crates.io
+    anyway (its README uses a `git` dependency). Carry its MIT notice the way
+    `src/lookups/LICENSE` carries the pokereval-rs notice. Wrap it so that
+    the card count is checked, there is no `unsafe` on an unchecked index,
+    there is no `assert!`, and its higher-is-stronger value is mapped to
+    `HandRankValue` with a test that pins the direction.
+  - The proof for either choice is the crate's own pattern: an exhaustive
+    `#[ignore]` test over all 133,784,560 seven-card hands, comparing the new
+    path with `Seven::hand_rank_value`, named in Verification with the
+    command that runs it (lesson 4).
+  - Phase 3 maps directly onto the crate's two branches. A player's `v_rank`
+    on a rank pattern is one non-flush `LOOKUP` read on the rank sum of
+    their two hole cards plus the pattern's five ranks. Their `v_flush` on a
+    flush assignment (s, S) is one `LOOKUP_FLUSH` read on the 13-bit mask of
+    S plus their own suit-s ranks.
+  - Phase 2's loops can add cards incrementally, as in part 2, instead of
+    building a `Board` per runout.
+
 ### Still alive today
 
 | Pattern | Where (file:line) | Touched by this EPIC? |
 |---|---|---|
+| 21 five-card subsets per seven-card hand; every hand rebuilt per runout | `src/arrays/seven.rs:179-190`; `engine.rs:194-200` | Yes. Phase 1 tunes it; lesson 8 replaces it |
 | `exact_threshold: 0` is the only way to force Monte Carlo | `src/analysis/equity/engine.rs:544,563,586`; `perf/src/catalog_equity.rs:70,332-336` | Yes. Kept by Design §1 step 0 (lesson 1) |
 | Bot callers take every other option from the defaults | `src/bot/decider.rs:653-657`; `src/bot/preflop_equity.rs:242-246` | Yes. They inherit the new `exact_work_threshold` |
 | Range seats picked one after another, 64 tries, failed sample dropped | `engine.rs:268-273`, `:300-308`, `:234` | Yes. Phase 4 |
