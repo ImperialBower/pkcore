@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.4] - 2026-10-24
+
+### Added
+
+- **A guide to how pkcore reads card and range strings.**
+  [docs/ANALYSIS_String_Parsing.md](docs/ANALYSIS_String_Parsing.md) walks
+  both parser families: card strings (`AS KD 9C` → `Card`, `Cards`, `Two`,
+  `Board`, `HoleCards`, the Pluribus log form) and range strings
+  (`66+, AJo, JJ-99, AA:0.5` → `Combo`, `Combos`, `WeightedCombos`, `Twos`).
+  It records the accepted characters, separators and error for each step,
+  and lists current behaviour that surprises callers: range tokens split on
+  commas only (so `66+ AJo` fails), repeated cards are dropped silently, a
+  mismatched span such as `AKs-AJo` returns an empty range with no error,
+  and `KQ+` includes AK. No code changed.
+
+### Fixed
+
+- **Two OKF knowledge-bundle concepts described code that does not exist.**
+  `.okf/gto-combos.md` and `.okf/cactus-kev-lookup.md` were pasted chat
+  output. The first described a regex tokenizer. The second gave the wrong
+  `Card` bit layout, skipped the `UNIQUE_5` lookup step, and cited `ckc-rs`,
+  which pkcore does not use. Both now match the code. Agents that read the
+  bundle were being told the wrong thing.
+
 ## [0.17.3] - 2026-10-22
 
 ### Fixed

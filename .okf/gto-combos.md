@@ -1,91 +1,72 @@
 ---
 type: concept
-title: GTO Range Parser & Combinatorial Combos Matrix
-description: How poker range notation strings parse into combo sets and how hero blockers prune villain combinations.
-tags: [gto, math, parsing, solvers]
-references: [src/prelude.rs, examples/gto.rs, pkgto-web]
-timestamp: '2026-07-22T00:00:00Z'
+title: GTO Range Parser & Combos
+description: How range strings like "66+, AJo, JJ-99" parse into Combo sets, expand into exact hands, and lose hands to hero and board blockers.
+tags: [gto, parsing, ranges, blockers]
+references: [src/analysis/gto/combo.rs, src/analysis/gto/combos.rs, src/analysis/gto/combo_range.rs, src/analysis/gto/twos.rs, src/analysis/gto/weighted_combos.rs, src/analysis/gto/vs.rs, src/macros.rs]
+timestamp: '2026-10-24T00:00:00Z'
 ---
 
-# GTO Range Parser & Combinatorics Engine
+# GTO Range Parser & Combos
 
-## 🏗️ Architectural Paradigm
-The GTO engine in `pkcore` translates human-readable poker range notation strings (e.g., `66+,AJs+,KQs,AJo+,KQo`) into highly optimized, bitwise-comparable combination vectors. It evaluates complex ranges against hero hands, dynamically applying card blockers to isolate pure remaining equities.
+A range string names *kinds* of starting hand. pkcore holds it in four
+layers [1]:
 
-Here is the strict, fully compliant Open Knowledge Format (OKF) declaration file for the GTO combo system. It maps the range parsing architecture, combinatorial math, and blocker tracking mechanics used in pkcore.
-Create this file exactly at .okf/gto-combos.md.
+| Type | Holds | Example |
+|---|---|---|
+| `Combo` | one token: two ranks, a `plus` flag, a `Qualifier` (`s`, `o`, or none) | `AJo` |
+| `Combos` | a set of `Combo` | `66+, AJo` |
+| `WeightedCombos` | `Combo` → frequency | `AA:0.5, KK` |
+| `Twos` | the exact two-card hands | the 12 `AJo` hands |
 
----type: concept
-title: GTO Range Parser & Combinatorial Combos Matrix
-tags: [gto, math, parsing, solvers]
-references: [src/prelude.rs, examples/gto.rs, pkgto-web]
----
-# GTO Range Parser & Combinatorics Engine## 🏗️ Architectural ParadigmThe GTO engine in `pkcore` translates human-readable poker range notation strings (e.g., `66+,AJs+,KQs,AJo+,KQo`) into highly optimized, bitwise-comparable combination vectors. It evaluates complex ranges against hero hands, dynamically applying card blockers to isolate pure remaining equities.
+A `Combo` is not a hand list. It becomes hands only through
+`Twos::from(combo)`, which reads them from the `range!` macro.
 
+# Parsing
 
-+--------------------------------+
-| Human Range String |
-| "66+, AJs+, KQo" |
-+--------------------------------+
-|
-v
-+--------------------------------+
-| Regex & Tokenizer Stream |
-+--------------------------------+
-/ |
-v v v
-+------------+ +------------+ +------------+
-| Pocket | | Suited | | Offsuit |
-| Pairs (+) | | Connect (+)| | Connect (+)|
-+------------+ +------------+ +------------+
-\ | /
-v v v
-+--------------------------------+
-| Combos / Versus Solver |
-+--------------------------------+
-|
-+---------------------+---------------------+
-| |
-v v
-+-----------------------+ +-----------------------+
-| Pre-Blocker Matrix | | Post-Blocker Matrix |
-| (Raw Range Combos) | | (Hero Blockers Applied|
-+-----------------------+ +-----------------------+
+1. **`Combos::from_str`** removes every space, then splits on `,`. The comma
+   is the only separator, so `66+ AJo` fails as the single token `66+ajo`.
+2. Each token loses any `:weight` suffix. (`WeightedCombos::from_str` uses the
+   same rules but keeps the weight, in `[0.0, 1.0]`.)
+3. A token with `-` is a span. Both ends parse as `Combo`; `ComboRange` puts
+   the higher end first; `Combos::unwrap_range` fills in the middle.
+4. Any other token goes to **`Combo::from_str`**: lowercase, then a lookup in
+   one literal `match`. There is no tokenizer or regex. Unknown tokens print
+   `Unable to process …` to stdout and return `InvalidComboIndex`.
 
+`Twos::from_str` is a second, smaller parser: whitespace-separated, no spans,
+no weights.
 
-### 1. Range Syntax Tokenization Rules
-The parser splits and resolves complex range strings based on explicit poker combinatorics archetypes:
-* **Pocket Pairs (`XX+`)**: Denotes all pairs equal to or higher than `X`. `66+` expands to `66, 77, 88, 99, TT, JJ, QQ, KK, AA`.
-* **Suited Connectors (`XYs+`)**: Denotes suited cards where rank `X` is higher than `Y`, extending up to the same kicker beneath an Ace. `AJs+` expands to `AJs, AQs`.
-* **Offsuit Connectors (`XYo+`)**: Denotes unsuited variations matching the same progressive ladder logic as suited constraints. `KQo+` expands strictly to `KQo, AKo`.
+# Expansion counts
 
----
+Before blockers: a pair is 6 hands, a suited token 4, an offsuit token 12, and
+an unqualified token 16. `66+` is 54; `AJo+` (AJo, AQo, AKo) is 36.
 
-## 🎲 Combinatorial Generation Math
-Before factoring in card blockers, the underlying engine populates raw combinations based on static rank probabilities:
+# Blockers
 
-* **Pocket Pairs**: Each unblocked pair notation yields exactly **6 distinct combos** based on the 4 available suits.
-* **Suited Connectors**: Each suited notation yields exactly **4 distinct combos** (one per matching suit).
-* **Offsuit Connectors**: Each offsuit notation yields exactly **12 distinct combos** (all non-matching suit permutations).
+`Versus` (`src/analysis/gto/vs.rs`) holds a hero `Two`, a villain `Combos`
+and a `Board`. `Versus::remaining` expands the villain range and drops every
+hand that holds one of the hero's cards (`Twos::filter_on_not_card`).
+`remaining_at_flop`, `remaining_at_turn` and `remaining_at_river` also drop
+the board cards. With hero `K♠ K♥`, villain `KK` falls from 6 hands to 1
+(`K♦ K♣`) and `AKo` from 12 to 6.
 
----
+# Invariants and known quirks
 
-## 🚫 Dynamic Blocker Tracking Matrix (`Versus` Struct)
-The core `Versus` solver evaluates the intersection between Hero's isolated hand (`Two` struct) and Villain's complex `Combos` string.
+- **Order and case do not matter.** `Combos` is a set and every token is
+  lowercased: `AJs, 66+` equals `66+,ajs`.
+- **Higher rank first.** The lookup has no `ja` or `9t`.
+- **`+` on a connector climbs both ranks to AK.** `KQ+` is KQ and AK; `T9+`
+  is T9 through AK. Standard notation reads `KQ+` as KQ alone.
+- **A span whose ends differ in shape is empty, not an error.** `AKs-AJo`
+  returns `Ok` with zero hands; so does a king-x span such as `K9s-K6s`.
+- **The kernel build has no threads here.** Parsing and expansion are plain
+  loops, so the same code runs in `pkgto-web` on `wasm32-unknown-unknown`.
 
-### 2. The Blocker Pruning Sequence
-1. **Hero Isolation**: Hero's starting cards are extracted as dead cards from the operational matrix deck.
-2. **Combinatorial Intersection**: The engine sweeps Villain's raw range table, cross-checking every sub-combo against Hero's dead cards.
-3. **Dead Card Pruning**: If a Villain card bit-matches a Hero card, that specific combo is immediately dropped.
-    * *Example*: If Hero holds `K♠ K♥`, Villain's `AKo` combo count instantly drops from **12 down to 6** options, and Villain's `KK` pocket pair drops from **6 down to 1 single remaining combo** (`K♦ K♣`).
+The full walk-through, with checked input and output for every rule above and
+for the card-string parsers, is in [ANALYSIS_String_Parsing][1]. For the
+module around it, see [analysis](/modules/analysis.md).
 
----
+# Citations
 
-## ⚠️ Implementation Invariants (Do Not Break)
-When refactoring parsing pipelines or modifying range analysis loops inside `pkcore`, Claude must satisfy these execution constraints:
-* **Order Independence**: Range lists must parse identically regardless of spacing, casing, or sequence orientation (e.g., `AJs,66+` must yield identical mathematical objects to `66+, AJs`).
-* **Memory Safety Constraints**: Do not create dynamic infinite loops when parsing open-ended generic plus indicators (`+`). The ceiling limit must always hard-cap at `Ace` ranks natively.
-* **Wasm Compatibility**: Code blocks touching range metrics must compile natively to target targets (`wasm32-unknown-unknown`) without utilizing system-specific threading hooks to ensure zero crashes on `pkgto-web`.
-
-## 🏁 Next Steps
-Now that your structural .okf/ layer is defined, what would you like to do next?
+[1] [ANALYSIS_String_Parsing](https://github.com/ImperialBower/pkcore/blob/main/docs/ANALYSIS_String_Parsing.md)
