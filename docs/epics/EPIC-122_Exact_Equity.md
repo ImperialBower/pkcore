@@ -5,6 +5,8 @@
 > Companions:
 > [EPIC-121 Hand Categories](EPIC-121_Hand_Categories.md) and
 > [EPIC-120 Suit-Specific Ranges](EPIC-120_Suit_Specific_Ranges.md).
+> The [MATHS](#maths) section (added 2026-10-24) explains the math behind
+> each phase, with sources.
 
 ## Summary
 
@@ -327,6 +329,432 @@ exact value in units of standard error.
   independently, reject the whole tuple on any collision, retry. This is
   uniform over compatible tuples by construction. Report dropped samples in
   the result instead of hiding them.
+
+---
+
+## MATHS
+
+One subsection per Work Items phase. Each one breaks down the math the phase
+relies on, then lists where to learn more. Every number below was checked on
+2026-10-24 with a throwaway script, using brute force wherever brute force was
+possible. The worked matchup is **A♠ K♦ vs 7♣ 7♥**, preflop, unless stated.
+
+Notation: `C(n, k)` is "n choose k". `HandRankValue` is lower-is-stronger,
+1 = royal flush, 7462 = worst high card, 0 = not dealt
+(`src/analysis/hand_rank.rs:20-22`).
+
+### Foundations — one sum, three ways to compute it
+
+Every path in this EPIC computes the same number. Let Ω be the set of
+compatible assignments ω = (h₁, …, hₙ, B): one holding per seat plus one
+runout, no card used twice (Scope rule 1). For seat i:
+
+```text
+share_i(ω) = 1/k   if seat i is one of the k players with the best hand on ω
+           = 0     otherwise
+
+E_i = (1 / |Ω|) · Σ_{ω ∈ Ω} share_i(ω)          and  Σ_i E_i = 1
+```
+
+`tally_from_ranks` (`engine.rs:332`) is `share_i` for one ω: one winner gets
+1.0, k tied winners get 1/k each. The three methods differ only in how they
+evaluate the sum:
+
+| Method | How it evaluates the sum | Exact? |
+|---|---|---|
+| Enumerated exact | visit every ω once | yes |
+| Isomorphic exact | group ω into classes on which `share` is constant; add `weight × share` per class | yes |
+| Monte Carlo | draw ω at random, average `share` | only on average, and only if every ω is equally likely to be drawn |
+
+The last row is the whole of Phase 4: a sampler that draws some ω more often
+than others estimates a different sum.
+
+**Learn more**
+
+- [Expected value](https://en.wikipedia.org/wiki/Expected_value): E_i is the
+  expected pot share under the uniform distribution on Ω.
+- Bill Chen and Jerrod Ankenman, *The Mathematics of Poker* (ConJelCo, 2006),
+  Part I: equity, and card removal against ranges.
+
+### Phase 0 — Baseline and oracles
+
+**Counting runouts.** With b board cards still to come and m cards left in
+the deck, there are C(m, b) runouts. Heads-up, each seat removes 2 cards:
+
+| Request | Cards left | Runouts | Five-card lookups, brute force (runouts × seats × 21) |
+|---|---|---|---|
+| heads-up preflop | 48 | C(48,5) = 1,712,304 | 71,916,768 |
+| 3-way preflop | 46 | C(46,5) = 1,370,754 | 86,357,502 |
+| 6-way preflop | 40 | C(40,5) = 658,008 | 82,909,008 |
+| heads-up flop | 45 | C(45,2) = 990 | 41,580 |
+| heads-up turn | 44 | 44 | 1,848 |
+
+More seats means fewer runouts but more hands to score per runout, so
+preflop brute force costs about the same at 2, 3 or 6 seats. The 21 is
+C(7,5), the five-card subsets of seven cards (`seven.rs:28`).
+
+**Why the golden fixtures are integers.** Exact paths must agree *exactly*
+(Scope rule 3). `wins`, `ties` and `samples` are integers, so two exact paths
+either give equal integers or one of them is wrong. A float equity would need
+a tolerance, and a tolerance can hide an off-by-one board.
+
+**Why Monte Carlo needs a tolerance.** A sample's share lies in [0, 1], so
+its variance is at most 1/4 (Popoviciu's inequality). The mean of n
+independent samples therefore has standard error
+
+```text
+SE ≤ 0.5 / √n          n = 25,000  → SE ≤ 0.32 pp,  95% interval ≈ ±0.62 pp
+                       n = 100,000 → SE ≤ 0.16 pp,  95% interval ≈ ±0.31 pp
+```
+
+That matches the worst errors measured in `spec.rs:66-86` (~0.7 pp and
+~0.3 pp). Those are the *worst* errors over 40 seeds and several seats, and
+the worst of many draws sits 2–3 SE from the truth.
+
+**Why the perf baseline uses medians.** The `perf/` harness reports a median
+and a MAD (median absolute deviation) per workload. One slow run moves a mean
+a lot and a median hardly at all, so before/after deltas are compared on
+medians.
+
+**Learn more**
+
+- [Binomial coefficient](https://en.wikipedia.org/wiki/Binomial_coefficient)
+- [Standard error](https://en.wikipedia.org/wiki/Standard_error) and
+  [Popoviciu's inequality on variances](https://en.wikipedia.org/wiki/Popoviciu%27s_inequality_on_variances)
+- [Binomial proportion confidence interval](https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval):
+  why ±1.96 SE is the 95% interval, and when that approximation is poor
+  (equity near 0 or 1).
+- [Median absolute deviation](https://en.wikipedia.org/wiki/Median_absolute_deviation)
+
+### Phase 1 — Inner loop
+
+**Lower-is-better gives the same winners.** Today the engine takes the
+`max` `HandRank`. `HandRankValue` orders the same hands in reverse. A strictly
+order-reversing map turns the set of maximal elements into the set of minimal
+elements, so `argmax HandRank = argmin HandRankValue` on every runout, ties
+included. The one extra rule is that 0 means "not dealt" and must not win:
+take the minimum over **non-zero** values. `tally_from_values__agrees_with_hand_rank_order`
+pins this.
+
+**Why suits can be ignored for most hands.** There are 7,462 distinct
+five-card values (Cactus Kev's classes):
+
+| Needs one suit | Values | | Rank-only | Values |
+|---|---|---|---|---|
+| straight flush | 10 | | quads | 156 |
+| flush | 1,277 | | full house | 156 |
+| | | | straight | 10 |
+| | | | trips | 858 |
+| | | | two pair | 858 |
+| | | | pair | 2,860 |
+| | | | high card | 1,277 |
+| **total** | **1,287** | | **total** | **6,175** |
+
+The 6,175 rank-only values match, one for one, the multisets of five ranks
+with no rank five times: C(17, 5) − 13 = 6,188 − 13 = 6,175. So a non-flush
+value is a function of the five ranks alone, and suits only decide whether a
+flush is present. This one fact makes `hand_rank_value_ignoring_suits` correct
+here and the whole of Phase 3 possible.
+
+**What one lookup costs.** `Five::hand_rank_value` (`five.rs:244`) is one
+table read for a flush (`FLUSHES`), one for five distinct ranks
+(`UNIQUE_5`), and otherwise a binary search over the 4,888 prime products
+(`five.rs:137`): at most ⌈log₂ 4,888⌉ = 13 comparisons. A seven-card score is
+21 of those. See [Cactus Kev lookup core](../../.okf/cactus-kev-lookup.md)
+for the prime-product trick.
+
+**The hero cache.** Heads-up against a range V, the naive loop scores both
+hands for each (runout, villain holding): 2·|V| scores per runout. The hero's
+hand does not depend on the villain, so score it once per runout:
+1 + |V| scores. As |V| grows this tends to **half** the work. With e exact
+seats, the saving is e·|V| − e scores per runout.
+
+**Early exit is exact.** Let h be the hero's value and `hand_rank_value_beating(h)`
+scan the villain's 21 subsets, stopping at the first value below h.
+
+- If it stops, the villain's best is at most that value, which is below h.
+  The villain wins. The villain's true best is not needed for that.
+- If it never stops, it has seen all 21 subsets, so it returns the true
+  best v ≥ h. Then v = h is a tie and v > h is a hero win.
+
+Both branches give the right `share`. The saving happens only on boards the
+villain wins, and only for the subsets after the first winning one. So the
+saving is at most P(villain wins) of the villain's scoring cost. Item 1d
+measures the real number; do not promise one in advance.
+
+**Learn more**
+
+- [Cactus Kev's Poker Hand Evaluator](https://suffe.cool/poker/evaluator.html):
+  the 7,462 classes, the prime products, and the flush table.
+- [Poker probability](https://en.wikipedia.org/wiki/Poker_probability):
+  the "distinct hands" column gives the class counts above.
+- [Stars and bars](https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics)):
+  where C(17, 5) comes from (also used in Phase 3).
+- [Binary search](https://en.wikipedia.org/wiki/Binary_search)
+
+### Phase 2 — Enumerated exact with range seats
+
+**Every compatible tuple has the same number of runouts.** A tuple of n
+two-card holdings uses 2n cards, whatever they are. So every compatible
+tuple leaves m = 52 − |board| − 2n cards, and C(m, b) runouts. With T the
+number of compatible tuples:
+
+```text
+|Ω| = T · C(m, b)
+
+E_i = (1 / T) · Σ_{compatible tuples t} E_i(t)
+```
+
+So equity against a range is **the plain average of the exact equity against
+each compatible holding**, every combo weighted the same once blocked combos
+are removed. That is the textbook definition of hand-vs-range equity, and it
+is also the target distribution Phase 4 holds Monte Carlo to: uniform over
+compatible tuples.
+
+**Loop order does not change the answer.** The design walks runouts on the
+outside and tuples on the inside. The other order visits the same finite set
+of (tuple, runout) pairs, and a finite sum does not depend on the order of its
+terms. Runouts go outside because the hero's value is then constant across
+the inner loop, which is what makes the cache work.
+
+**`work_estimate` is an upper bound, and the right cost measure.**
+
+```text
+work_estimate = R · ∏_{range seats} |C_i|
+```
+
+R counts runouts from the cards left after the board and the exact seats.
+The product counts tuples before collisions are removed, so it is at least
+T · C(m, b). The exact count of compatible tuples needs inclusion–exclusion
+over every pair of colliding seats. That is not needed: the loop *visits*
+every element of the product and skips collisions, so its cost is
+proportional to the bound, not to |Ω|. Example, heads-up flop, hero vs
+`Random`: R = C(47, 2) = 1,081; the villain's candidates are the same 1,081
+holdings; the estimate is 1,081² = 1,168,561; the true |Ω| is
+1,081 · C(45, 2) = 1,070,190. The bound is 9% high.
+
+**Why the product must saturate.** One unrestricted seat has up to
+C(52, 2) = 1,326 holdings. 1,326⁶ ≈ 5.4·10¹⁸ still fits in a `u64`
+(max ≈ 1.8·10¹⁹); 1,326⁷ ≈ 7.2·10²¹ does not, and the runout factor gets
+there sooner. A wrapping multiply would turn "astronomically large" into a
+small number and select the exact path by mistake. A saturating multiply
+pins it at `u64::MAX`, which is always over the threshold. `n_choose_k`
+already saturates this way (`engine.rs:353`).
+
+**Setting the default.** Model the cost as t ≈ c · work, measure c on the
+slowest qualifying shapes (item 2d), and take the largest work with
+c · work ≤ 202 ms, today's six-seat Monte Carlo cost (`spec.rs:77`). The
+exact path then never costs more than the sampling it replaces.
+
+**Learn more**
+
+- [Inclusion–exclusion principle](https://en.wikipedia.org/wiki/Inclusion%E2%80%93exclusion_principle):
+  what an exact count of compatible tuples would take, and why the design
+  avoids it.
+- Ronald Graham, Donald Knuth and Oren Patashnik, *Concrete Mathematics*
+  (2nd ed., Addison-Wesley, 1994), ch. 2: manipulating and reordering sums.
+- [`u64::saturating_mul`](https://doc.rust-lang.org/std/primitive.u64.html#method.saturating_mul)
+- Chen and Ankenman (above): equity against a distribution of hands.
+
+### Phase 3 — Isomorphic exact preflop
+
+**3a. Counting rank patterns.** A pattern is how many board cards of each
+rank: k₂, …, k_A ≥ 0 with Σ k_r = 5. Choosing 5 items from 13 kinds with
+repetition is "stars and bars":
+
+```text
+C(13 + 5 − 1, 5) = C(17, 5) = 6,188
+```
+
+Patterns that need more cards of a rank than are live get weight 0 and are
+skipped.
+
+**3a. Pattern weights, and why they sum to the right total.** The boards
+with pattern P choose k_r of the live_r cards of each rank, independently:
+
+```text
+W(P) = ∏_r C(live_r, k_r)
+
+Σ_P W(P) = C(Σ_r live_r, 5) = C(remaining, 5)
+```
+
+The second line is the multivariate Vandermonde identity. Proof by counting:
+choose 5 cards from the whole remaining deck, then sort them by rank; the
+counts per rank are some pattern P, and each 5-card board arises in exactly
+one P. For A♠ K♦ vs 7♣ 7♥ the sum is 1,712,304 = C(48, 5), as
+`rank_patterns__weights_sum_to_remaining_choose_5` will assert.
+
+**3b. At most one flush suit, and only with three or more on board.** A
+player holds two cards, so a flush in suit s needs at least 3 board cards of
+s. Two suits with 3 or more each would need 6 board cards. So each board has
+at most one suit that can make a flush.
+
+**3b. The flush-assignment weight.** Take a board in pattern P with three or
+more cards of suit s. Let S be the ranks of its s-cards; they are distinct,
+because there is one card per rank per suit. Every other board card of rank r
+is *not* an s-card (otherwise its rank would be in S). So, rank by rank:
+
+- r ∈ S: the s-card of r is on the board; the other k_r − 1 come from the
+  live_r^{¬s} non-s cards.
+- r ∉ S: all k_r come from the non-s cards.
+
+```text
+W(P, s, S) = ∏_{r ∈ S} C(live_r^{¬s}, k_r − 1) · ∏_{r ∉ S} C(live_r^{¬s}, k_r)
+             (over S of size 3–5 whose s-cards are all live)
+
+W_rainbow(P) = W(P) − Σ_{s,S} W(P, s, S)
+```
+
+Each board with three or more of one suit has exactly one (s, S), so the
+assignments plus the rainbow remainder partition the boards. For
+A♠ K♦ vs 7♣ 7♥, Σ W(P, s, S) = 628,848, and a brute-force count of boards
+with three or more of one suit gives the same 628,848 (36.7% of all boards).
+A pattern has at most 5 distinct ranks, so at most
+4 · (C(5,3) + C(5,4) + C(5,5)) = 4 · 16 = **64** assignments; the walk
+reaches 64.
+
+**3c. Why `min(v_rank, v_flush)` is the true value.** A player's true value
+is the best of their 21 subsets. A subset that is not a flush has its rank-only
+value (Phase 1). A subset that is a flush has a flush or straight-flush
+value, which is always better than the same five cards' rank-only value.
+`v_rank` takes the best rank-only value over *all* 21 subsets, and `v_flush`
+is the best flush subset. So:
+
+```text
+true = min( best non-flush subset , v_flush )
+v_rank = min( best non-flush subset , rank-only values of the flush subsets )
+and each flush subset's rank-only value ≥ its flush value ≥ v_flush
+⇒ min(v_rank, v_flush) = true
+```
+
+A player without a flush on those boards has no flush subset, so `v_rank` is
+already the true value. This also covers the board that has both a flush and
+a full house for someone: the full house is inside `v_rank` and wins the
+`min`.
+
+**3c. The weighted tally.**
+
+```text
+E_i = (1 / C(remaining, 5)) · Σ_P [ W_rainbow(P) · share_i(v_rank values)
+                                  + Σ_{s,S} W(P, s, S) · share_i(values on that assignment) ]
+```
+
+Every W is an integer, so `wins`, `ties` and `samples` stay integers. That is
+why the result can equal brute force (item 3d) and the `hups.bin` chart
+(item 3e) exactly, not approximately.
+
+**Cost, honestly.** Rank-only scoring runs once per (pattern, seat) instead
+of once per (board, seat). The ratio is boards ÷ patterns:
+
+| Request | Boards | Patterns | Ratio |
+|---|---|---|---|
+| heads-up | 1,712,304 | ≤ 6,188 | ≈ 277× |
+| 3-way | 1,370,754 | ≤ 6,188 | ≈ 222× |
+| 6-way | 658,008 | ≤ 6,188 | ≈ 106× |
+
+That is about 2–2.4 orders of magnitude, not the "roughly 3" in Design §4,
+plus at most 64 cheap flush lookups per pattern and seat. The ratio shrinks as
+seats are added, because boards fall and patterns do not.
+
+**Relation to hand isomorphism.** Relabelling suits does not change who
+wins, and counting one representative per class with a weight is the idea
+behind Burnside's lemma and the hand isomorphism used by poker solvers. Hole
+cards break most of that symmetry, so this design does not enumerate suit
+classes. It splits on the one thing suits can change, whether a flush exists,
+and weights that split directly.
+
+**Learn more**
+
+- [Stars and bars](https://en.wikipedia.org/wiki/Stars_and_bars_(combinatorics))
+- [Vandermonde's identity](https://en.wikipedia.org/wiki/Vandermonde%27s_identity),
+  including the generalized form used above.
+- [Burnside's lemma](https://en.wikipedia.org/wiki/Burnside%27s_lemma):
+  counting classes under a symmetry group.
+- Kevin Waugh, "A Fast and Optimal Hand Isomorphism Algorithm", AAAI-13
+  Workshop on Computer Poker and Imperfect Information (2013): the
+  suit-isomorphism approach this design deliberately does not take.
+- *Concrete Mathematics* (above), ch. 5: binomial-coefficient identities.
+
+### Phase 4 — Range-sampling bias
+
+**4a. What the sampler actually draws.** `sample_once` (`engine.rs:253`)
+fills seats in request order. A range seat picks uniformly among the holdings
+compatible with the seats already filled (`pick_range`, `:300`). So a
+compatible tuple t is drawn with probability
+
+```text
+P_seq(t) = ∏_i 1 / |C_i(t₁, …, t_{i−1})|          target: 1 / T
+```
+
+That is uniform only when the product of the compatible counts is the same
+for every tuple.
+
+**A worked example.** Seat 1 holds {AA, 22} (6 + 6 = 12 combos); seat 2
+holds {AK} (16 combos).
+
+- Compatible tuples: an AA combo leaves 2 aces, so 2 · 4 = 8 AK combos;
+  a 22 combo leaves all 16. T = 6·8 + 6·16 = 48 + 96 = **144**. The true
+  chance that seat 1 holds AA is 48 / 144 = **1/3**. The AK in the other
+  hand blocks aces: that is card removal.
+- Seat 1 picked first: AA is picked half the time, and whatever seat 2
+  then picks cannot change that. P(seat 1 holds AA) = **1/2**.
+- Seat 2 picked first: every AK combo leaves 3 AA combos + 6 22 combos = 9
+  holdings, so every tuple has probability (1/16)·(1/9) = 1/144. **Uniform.**
+
+So the same request can give different answers depending on seat order. The
+first seat is drawn as if the later seats' cards did not exist. How far the
+*equity* moves depends on how different AA and 22 do against AK; that is what
+4a measures. `Exact` seats add no bias, and neither do `Random` seats: given
+the cards already taken, the number of compatible random holdings is always
+C(cards left, 2), the same for every earlier pick.
+
+**The second skew: dropped samples.** `pick_range` tries 64 times. If a
+fraction q of the seat's candidates is compatible, it fails with probability
+(1 − q)⁶⁴: about 5·10⁻²⁰ at q = 0.5, but about 3.7% at q = 0.05. Failures
+cluster where q is small, so dropping them under-samples exactly the tuples
+where blocking is heaviest.
+
+**4a. How the measurement decides.** Let b = E[Ê] − E be the bias of one
+run's estimate Ê. Average 200 seeded runs of 25,000 samples each:
+
+```text
+one run:          SE ≈ 0.32 pp          (Phase 0)
+mean of 200 runs: SE ≈ 0.32 / √200 ≈ 0.022 pp
+z = (mean − exact) / 0.022 pp
+```
+
+That resolves a bias down to about 0.05 pp. The closing rule in Design §5
+is |b| < 1 run SE (0.32 pp). The reason: the total error of one run is
+√(b² + SE²), so a bias equal to one SE makes the error √2 ≈ 1.41 times
+larger, which spends the precision the 25,000-sample default promises
+(`spec.rs:66-86`).
+
+**4b. Why joint rejection is uniform.** Draw every range seat independently
+and uniformly from its full candidate list; accept only if no card repeats.
+Before the check, every tuple has the same probability ∏ 1 / |C_i|. Keeping
+only the compatible ones leaves equal probabilities, so the accepted tuple is
+uniform over the T compatible tuples. The acceptance rate is
+α = T / ∏ |C_i|, and the number of tries is geometric with mean 1 / α. For
+the example above: 12 · 16 / 144 ≈ 1.33 tries per sample. Narrow,
+heavily overlapping ranges make α small, which is why the design reports
+dropped samples instead of hiding them.
+
+**Learn more**
+
+- [Rejection sampling](https://en.wikipedia.org/wiki/Rejection_sampling)
+- [Bias of an estimator](https://en.wikipedia.org/wiki/Bias_of_an_estimator)
+  and [Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error):
+  the b² + SE² decomposition.
+- [Geometric distribution](https://en.wikipedia.org/wiki/Geometric_distribution):
+  the retry count.
+- Art B. Owen, *Monte Carlo Theory, Methods and Examples* (free online
+  draft): acceptance–rejection and estimator error.
+- Christian Robert and George Casella, *Monte Carlo Statistical Methods*
+  (2nd ed., Springer, 2004), ch. 2: accept–reject methods.
+
+### Phase 5 — Docs and release
+
+No new math. Item 5a should link here rather than repeat it.
 
 ---
 
