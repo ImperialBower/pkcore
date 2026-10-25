@@ -346,6 +346,7 @@ mod play__stages__flop_eval_tests {
         let game = Game {
             hands: game.hands,
             board: Default::default(),
+            dead: Default::default(),
         };
 
         let sut = FlopEval::try_from(game);
@@ -360,6 +361,7 @@ mod play__stages__flop_eval_tests {
         let game = Game {
             hands: HoleCards::default(),
             board: game.board,
+            dead: Default::default(),
         };
 
         let sut = FlopEval::try_from(game);

@@ -24,8 +24,9 @@
   not 44; a flush-draw hero loses equity when two of the suit are dead; an
   empty `dead` gives the same integer tallies as `0.17.4`, byte for byte.
 - **Status:** Phases 0–3 landed on branch `dead_cards` as `0.18.0`
-  (2026-10-24). Open: 3e, telling bowery. Two deviations from the plan are
-  recorded under [As built](#as-built).
+  (2026-10-24). bowery pinned `0.18.0` and folded `dead` into its odds
+  percents on 2026-10-25 (bowery EPIC-110 Phase 7, item 7b). Two deviations
+  from the plan are recorded under [As built](#as-built).
 
 ---
 
@@ -96,7 +97,7 @@ leave the cards in the deck (wrong runouts), or pass the folded hand as an
 | Phase 0 — oracle tallies pinned at `0.17.4` | ✅ Done |
 | Phase 1 — `EquityRequest::dead`, validation, `with_dead` | ✅ Done |
 | Phase 2 — engine reads the reduced deck; tests | ✅ Done |
-| Phase 3 — in-repo callers, perf catalog, docs, CHANGELOG `0.18.0` | 🟡 Done but 3e (tell bowery) |
+| Phase 3 — in-repo callers, perf catalog, docs, CHANGELOG `0.18.0` | ✅ Done |
 
 ---
 
@@ -336,8 +337,12 @@ Landed 2026-10-24 on branch `dead_cards`, version `0.18.0`.
   `EPIC-124`. Flip this EPIC's Status rows.
 - [x] **3d.** `.okf/`: if an equity concept exists, add one paragraph on
   `dead`; otherwise one line in the bundle's log.
-- [ ] **3e.** Tell bowery: its odds design drops the by-hand outs filter and
-  passes the folded seats' cards as `dead` once it pins `0.18.0`.
+- [x] **3e.** Tell bowery: `bowery/Cargo.toml:32` pins `0.18.0`;
+  `odds::compute` (`bowery/src/odds.rs`) sets `EquityRequest::dead` to each
+  folded seat's known cards. Landed 2026-10-25 (bowery EPIC-110 Phase 7,
+  item 7b). The outs bar's by-hand filter stays: it runs on
+  `Game::turn_case_evals`, which this EPIC did not give a `dead` parameter
+  (see § What this EPIC does not do).
 
 ---
 
