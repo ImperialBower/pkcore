@@ -6,7 +6,7 @@ use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::prelude::Table;
-use crate::{PKError, Pile};
+use crate::{Cards, PKError, Pile};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
 
@@ -207,7 +207,26 @@ pub struct FlopEval {
 impl FlopEval {
     #[must_use]
     pub fn new(board: Three, hands: HoleCards) -> FlopEval {
-        let case_evals = CaseEvals::from_holdem_at_flop_mpsc(board, &hands);
+        FlopEval::with_dead(board, hands, &Cards::default())
+    }
+
+    /// [`FlopEval::new`], skipping every turn and river runout that uses a
+    /// `dead` card. Does not check `dead` against `hands` or `board`; the
+    /// `TryFrom<Game>` conversion does, through [`Game::check_dead`].
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::play::stages::flop_eval::FlopEval;
+    /// use std::str::FromStr;
+    ///
+    /// let game = TestData::the_hand();
+    /// let dead = Cards::from_str("A♠ K♠").unwrap();
+    /// let eval = FlopEval::with_dead(game.board.flop, game.hands, &dead);
+    /// assert_eq!(903, eval.case_evals.len());
+    /// ```
+    #[must_use]
+    pub fn with_dead(board: Three, hands: HoleCards, dead: &Cards) -> FlopEval {
+        let case_evals = CaseEvals::from_holdem_at_flop_with_dead(board, &hands, dead);
         let wins = case_evals.wins();
         let results = WinResults::from_wins(&wins, hands.len());
 
@@ -283,7 +302,8 @@ impl TryFrom<Game> for FlopEval {
         if !game.board.flop.is_dealt() || game.hands.is_empty() {
             Err(PKError::NotDealt)
         } else {
-            Ok(FlopEval::new(game.board.flop, game.hands))
+            game.check_dead()?;
+            Ok(FlopEval::with_dead(game.board.flop, game.hands, &game.dead))
         }
     }
 }
@@ -318,6 +338,41 @@ mod play__stages__flop_eval_tests {
         let sut = FlopEval::new(game.board.flop, game.hands);
 
         validate_the_hand(sut);
+    }
+
+    #[test]
+    fn with_dead_skips_runouts_using_dead_cards() {
+        use crate::Cards;
+        use std::str::FromStr;
+
+        let game = TestData::the_hand();
+        let dead = Cards::from_str("A♠ K♠").unwrap();
+
+        let sut = FlopEval::with_dead(game.board.flop, game.hands, &dead);
+
+        assert_eq!(903, sut.case_evals.len());
+    }
+
+    #[test]
+    fn try_from__game__honours_dead_cards() {
+        use crate::Cards;
+        use std::str::FromStr;
+
+        let game = TestData::the_hand().with_dead(Cards::from_str("A♠ K♠").unwrap());
+
+        let sut = FlopEval::try_from(game).unwrap();
+
+        assert_eq!(903, sut.case_evals.len());
+    }
+
+    #[test]
+    fn try_from__game__rejects_a_dead_card_in_a_hand() {
+        use crate::Cards;
+        use std::str::FromStr;
+
+        let game = TestData::the_hand().with_dead(Cards::from_str("6♠").unwrap());
+
+        assert_eq!(PKError::DuplicateCard, FlopEval::try_from(game).unwrap_err());
     }
 
     #[test]

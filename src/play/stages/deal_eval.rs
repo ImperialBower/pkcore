@@ -1,4 +1,3 @@
-use crate::PKError;
 use crate::analysis::equity::{EquityReport, EquityRequest, PlayerSpec};
 #[cfg(feature = "hup-charts")]
 use crate::analysis::equity::{Method, PlayerEquity};
@@ -7,6 +6,7 @@ use crate::analysis::gto::odds::WinLoseDraw;
 #[cfg(feature = "hup-charts")]
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::play::hole_cards::HoleCards;
+use crate::{Cards, PKError};
 use std::fmt::Formatter;
 
 /// Fixed RNG seed for the multi-way Monte Carlo path so preflop odds are
@@ -63,6 +63,36 @@ impl DealEval {
         Ok(DealEval { hands, report })
     }
 
+    /// [`DealEval::new`] with `dead` cards taken out of every runout. An empty
+    /// `dead` is exactly [`DealEval::new`]. Otherwise every seat count goes to
+    /// the equity engine, because the heads-up chart assumes a full deck.
+    ///
+    /// # Errors
+    ///
+    /// As [`DealEval::new`], plus [`PKError::DuplicateCard`] when a dead card
+    /// is also in a hand.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::play::stages::deal_eval::DealEval;
+    /// use std::str::FromStr;
+    ///
+    /// let hands = HoleCards::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// let dead = Cards::from_str("A♦ A♣").unwrap();
+    /// let eval = DealEval::with_dead(hands, &dead).unwrap();
+    /// assert_eq!(2, eval.report.players.len());
+    /// ```
+    pub fn with_dead(hands: HoleCards, dead: &Cards) -> Result<DealEval, PKError> {
+        if dead.is_empty() {
+            return Self::new(hands);
+        }
+        if hands.len() < 2 {
+            return Err(PKError::NotEnoughHands);
+        }
+        let report = Self::equity_report(&hands, dead)?;
+        Ok(DealEval { hands, report })
+    }
+
     /// Converts a heads-up win/lose/draw tally into a single seat's equity.
     #[cfg(feature = "hup-charts")]
     // Preflop tallies are far below 2^52, so the `as f64` casts are exact.
@@ -105,8 +135,12 @@ impl DealEval {
     /// Multi-way branch (3–10 seats, or 2 without `hup-charts`): the equity engine,
     /// seeded for reproducibility.
     fn multiway_report(hands: &HoleCards) -> Result<EquityReport, PKError> {
+        Self::equity_report(hands, &Cards::default())
+    }
+
+    fn equity_report(hands: &HoleCards, dead: &Cards) -> Result<EquityReport, PKError> {
         let players: Vec<PlayerSpec> = hands.iter().map(|two| PlayerSpec::Exact(*two)).collect();
-        let mut req = EquityRequest::new(players);
+        let mut req = EquityRequest::new(players).with_dead(dead.clone());
         req.opts.seed = Some(PREFLOP_SAMPLING_SEED);
         req.compute()
     }
@@ -210,6 +244,42 @@ mod play__stages__deal_eval_tests {
         assert_eq!(a.report.players[0].ties, b.report.players[0].ties);
         assert_eq!(a.report.players[1].wins, b.report.players[1].wins);
         assert_eq!(a.report.players[1].ties, b.report.players[1].ties);
+    }
+
+    #[test]
+    fn with_dead__empty_matches_new() {
+        let h = hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+
+        let a = DealEval::new(h.clone()).unwrap();
+        let b = DealEval::with_dead(h, &crate::Cards::default()).unwrap();
+
+        assert_eq!(a.report.method, b.report.method);
+        assert_eq!(a.report.samples, b.report.samples);
+        assert_eq!(a.report.players[0].wins, b.report.players[0].wins);
+    }
+
+    #[test]
+    fn with_dead__matches_the_equity_engine() {
+        let h = hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+        let dead = crate::Cards::from_str("A♦ A♣").unwrap();
+        let mut request =
+            EquityRequest::new(h.iter().map(|two| PlayerSpec::Exact(*two)).collect()).with_dead(dead.clone());
+        request.opts.seed = Some(PREFLOP_SAMPLING_SEED);
+        let expected = request.compute().unwrap();
+
+        let sut = DealEval::with_dead(h, &dead).unwrap();
+
+        assert_eq!(expected.method, sut.report.method);
+        assert_eq!(expected.players[0].wins, sut.report.players[0].wins);
+        assert_eq!(expected.players[1].wins, sut.report.players[1].wins);
+    }
+
+    #[test]
+    fn with_dead__rejects_a_dead_card_in_a_hand() {
+        let h = hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+        let dead = crate::Cards::from_str("A♠").unwrap();
+
+        assert_eq!(Err(PKError::DuplicateCard), DealEval::with_dead(h, &dead).map(|_| ()));
     }
 
     #[test]

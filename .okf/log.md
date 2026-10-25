@@ -1,5 +1,8 @@
 # Update Log
 
+## 2026-10-25
+* **Update**: Added `Game::dead` to the [analysis](/modules/analysis.md) concept — the street evaluators and `Table::build_game` now share the dead-card rule (DEFECT_043).
+
 ## 2026-10-24
 * **Update**: Added the dead-card rule to the [analysis](/modules/analysis.md) concept — `EquityRequest::dead` (EPIC-123) and the one dead set every equity path reads.
 * **Update**: Rewrote the [Cactus Kev lookup core](/cactus-kev-lookup.md) concept. The old text was pasted chat output with a wrong bit layout (prime in bits 16–23); it also skipped the `UNIQUE_5` step and cited `ckc-rs`, which pkcore does not use. It now matches `src/card.rs` and `Five::hand_rank_value`, and records the no-allocation tests and the M1 timings from `docs/perf/results/`.

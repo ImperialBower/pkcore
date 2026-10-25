@@ -4,7 +4,9 @@
 **Date:** 2026-10-25  
 **Severity:** Low — no engine-held state is wrong; a caller's own derived "outs"
 list is wrong unless it filters the result by hand  
-**Status:** Fixed in `0.19.0`  
+**Status:** Fixed in `0.19.0` for the turn only; the flop, preflop and
+`Table::build_game` gaps are
+[DEFECT_043](DEFECT_043_dead_cards_reach_only_the_turn.md), fixed in `0.20.0`  
 **Found by:** bowery EPIC-110 Phase 7 (`bowery/docs/EPIC-110_Bowery.md`), while
 folding in `EquityRequest::dead` (EPIC-123, `0.18.0`)  
 **Affects:** `play::game::Game::turn_case_evals` (`src/play/game.rs:383-385`),

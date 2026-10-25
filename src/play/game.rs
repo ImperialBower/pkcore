@@ -276,7 +276,8 @@ pub struct Game {
     pub board: Board,
     /// Cards known to be out of play that belong to no hand in `hands` and
     /// not to the board: folded hands, burn cards, an exposed card. Removed
-    /// from every runout. Empty by default.
+    /// from the preflop, flop and turn runouts. Not used by `TheNuts`, which
+    /// reads the board alone. Empty by default.
     pub dead: Cards,
 }
 
@@ -290,13 +291,53 @@ impl Game {
         }
     }
 
-    /// Marks cards known to be out of play but not already in `hands` or
-    /// `board` — folded hands, burn cards, an exposed card — so they are
-    /// removed from every runout `turn_case_evals()` enumerates.
+    /// Sets the cards known to be out of play — folded hands, burn cards, an
+    /// exposed card. Replaces any earlier set; it does not add to it. Does not
+    /// check the cards: the fallible analysis calls run [`Game::check_dead`].
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use std::str::FromStr;
+    ///
+    /// let hands = HoleCards::from(vec![
+    ///     Two::from_str("8♠ 7♠").unwrap(),
+    ///     Two::from_str("6♥ 6♦").unwrap(),
+    /// ]);
+    /// let board = Board::try_from(Cards::from_str("9♣ 6♠ K♥ 2♦").unwrap()).unwrap();
+    /// let game = Game::new(hands, board).with_dead(Cards::from_str("T♠ 3♣").unwrap());
+    /// assert_eq!(42, game.turn_case_evals().len()); // 44 rivers less 2 dead
+    /// ```
     #[must_use]
     pub fn with_dead(mut self, dead: Cards) -> Self {
         self.dead = dead;
         self
+    }
+
+    /// Checks that no dead card is also in a hand or on the board.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::DuplicateCard`] when a dead card is in `hands` or `board`.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use std::str::FromStr;
+    ///
+    /// let game = TestData::the_hand();
+    /// assert!(game.clone().with_dead(Cards::from_str("A♠").unwrap()).check_dead().is_ok());
+    /// assert_eq!(
+    ///     Err(PKError::DuplicateCard),
+    ///     game.with_dead(Cards::from_str("6♠").unwrap()).check_dead()
+    /// );
+    /// ```
+    pub fn check_dead(&self) -> Result<(), PKError> {
+        let mut known = self.board.cards();
+        known.insert_all(&self.hands.cards());
+        if self.dead.iter().any(|card| known.contains(card)) {
+            Err(PKError::DuplicateCard)
+        } else {
+            Ok(())
+        }
     }
 
     #[must_use]
@@ -337,9 +378,10 @@ impl Game {
         use crate::play::stages::river_eval::RiverEval;
         use crate::play::stages::turn_eval::TurnEval;
 
+        self.check_dead()?;
         let n = self.hands.len();
         if !self.board.flop.is_dealt() {
-            let eval = DealEval::new(self.hands.clone())?;
+            let eval = DealEval::with_dead(self.hands.clone(), &self.dead)?;
             Ok(eval
                 .report
                 .players
@@ -742,7 +784,11 @@ impl Game {
 
 impl Display for Game {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DEALT: {} {}", self.hands, self.board)
+        write!(f, "DEALT: {} {}", self.hands, self.board)?;
+        if !self.dead.is_empty() {
+            write!(f, " DEAD: {}", self.dead)?;
+        }
+        Ok(())
     }
 }
 
@@ -867,6 +913,126 @@ mod play__game_tests {
         assert_eq!(42, cases.len());
         assert!(!cases.iter().any(|c| c.card() == Card::from_str("T♠").unwrap()));
         assert!(!cases.iter().any(|c| c.card() == Card::from_str("3♣").unwrap()));
+    }
+
+    fn draw_vs_set_on_the_flop() -> Game {
+        let hands = HoleCards::from(vec![Two::from_str("8♠ 7♠").unwrap(), Two::from_str("6♥ 6♦").unwrap()]);
+        let board = Board::try_from(Cards::from_str("9♣ 6♠ K♥").unwrap()).unwrap();
+        Game::new(hands, board)
+    }
+
+    #[test]
+    fn with_dead_replaces_the_earlier_set() {
+        let game = draw_vs_set_on_the_flop()
+            .with_dead(Cards::from_str("T♠").unwrap())
+            .with_dead(Cards::from_str("3♣").unwrap());
+
+        assert_eq!(Cards::from_str("3♣").unwrap(), game.dead);
+    }
+
+    #[test]
+    fn check_dead_accepts_cards_out_of_play() {
+        let game = draw_vs_set_on_the_flop().with_dead(Cards::from_str("T♠ 3♣").unwrap());
+
+        assert!(game.check_dead().is_ok());
+    }
+
+    #[test]
+    fn check_dead_rejects_a_card_in_a_hand() {
+        let game = draw_vs_set_on_the_flop().with_dead(Cards::from_str("8♠").unwrap());
+
+        assert_eq!(Err(PKError::DuplicateCard), game.check_dead());
+    }
+
+    #[test]
+    fn check_dead_rejects_a_card_on_the_board() {
+        let game = draw_vs_set_on_the_flop().with_dead(Cards::from_str("K♥").unwrap());
+
+        assert_eq!(Err(PKError::DuplicateCard), game.check_dead());
+    }
+
+    #[test]
+    fn turn_eval_rejects_a_dead_card_in_a_hand() {
+        let hands = HoleCards::from(vec![Two::from_str("8♠ 7♠").unwrap(), Two::from_str("6♥ 6♦").unwrap()]);
+        let board = Board::try_from(Cards::from_str("9♣ 6♠ K♥ 2♦").unwrap()).unwrap();
+        let game = Game::new(hands, board).with_dead(Cards::from_str("8♠").unwrap());
+
+        assert_eq!(PKError::DuplicateCard, game.turn_eval().unwrap_err());
+    }
+
+    #[cfg(feature = "equity")]
+    #[test]
+    fn street_equities_at_the_flop_honour_dead_cards() {
+        use crate::analysis::equity::{EquityRequest, PlayerSpec};
+
+        let dead = Cards::from_str("T♠ 5♠ 4♠").unwrap();
+        let game = draw_vs_set_on_the_flop().with_dead(dead.clone());
+        let mut request = EquityRequest::new(vec![
+            PlayerSpec::Exact(Two::from_str("8♠ 7♠").unwrap()),
+            PlayerSpec::Exact(Two::from_str("6♥ 6♦").unwrap()),
+        ])
+        .with_dead(dead);
+        request.board = game.board;
+        let expected = request.compute().unwrap();
+
+        let actual = game.street_equities().unwrap();
+        let live = draw_vs_set_on_the_flop().street_equities().unwrap();
+
+        // `StreetEquity` holds f32, so compare to f32 precision.
+        assert!((expected.players[0].equity - actual[0].equity).abs() < 1e-6);
+        assert!((expected.players[1].equity - actual[1].equity).abs() < 1e-6);
+        assert!((live[0].equity - actual[0].equity).abs() > 0.01);
+    }
+
+    #[cfg(feature = "equity")]
+    #[test]
+    fn street_equities_preflop_honour_dead_cards() {
+        let hands = HoleCards::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+        let live = Game::new(hands.clone(), Board::default());
+        let dead = Game::new(hands, Board::default()).with_dead(Cards::from_str("A♦ A♣").unwrap());
+
+        let live_aces = live.street_equities().unwrap()[0].equity;
+        let dead_aces = dead.street_equities().unwrap()[0].equity;
+
+        // With the other two aces gone, KK can no longer be outdrawn by
+        // an ace set, so the aces' equity must move.
+        assert!((live_aces - dead_aces).abs() > 0.001);
+    }
+
+    #[cfg(feature = "equity")]
+    #[test]
+    fn street_equities_reject_a_dead_card_on_the_board() {
+        let game = draw_vs_set_on_the_flop().with_dead(Cards::from_str("K♥").unwrap());
+
+        assert_eq!(PKError::DuplicateCard, game.street_equities().unwrap_err());
+    }
+
+    #[test]
+    fn display_shows_dead_cards() {
+        let game = draw_vs_set_on_the_flop().with_dead(Cards::from_str("T♠ 3♣").unwrap());
+
+        assert!(game.to_string().ends_with("DEAD: T♠ 3♣"), "{game}");
+    }
+
+    #[test]
+    fn try_from__table_marks_folded_and_burned_cards_dead() {
+        let mut table = TestData::min_table();
+        table.deal_cards_to_seats().unwrap();
+        table.act_forced_bets().unwrap();
+        let _ = table.act_fold(0).unwrap();
+        let _ = table.act_call(1).unwrap();
+        let _ = table.act_check(2).unwrap();
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+
+        let game = Game::try_from(&table).unwrap();
+
+        // Seat 0 folded A♦ Q♣; 2♦ was burned before the flop.
+        assert_eq!(3, game.dead.len());
+        for card in ["A♦", "Q♣", "2♦"] {
+            assert!(game.dead.contains(&Card::from_str(card).unwrap()), "{card}");
+        }
+        assert!(game.check_dead().is_ok());
     }
 
     /// DEFECT_042: an empty (default) `dead` must change nothing — same 44
