@@ -1824,6 +1824,7 @@ fn equity_and_odds() -> usize {
             let request = EquityRequest {
                 players: vec![PlayerSpec::Exact(h), PlayerSpec::Exact(v)],
                 board,
+                dead: Cards::default(),
                 opts: EquityOptions::default(),
             };
             let report = request.compute().ok()?;
@@ -1872,6 +1873,7 @@ fn equity_and_odds() -> usize {
             let request = EquityRequest {
                 players: vec![PlayerSpec::Exact(h), PlayerSpec::Exact(v)],
                 board: Board::default(),
+                dead: Cards::default(),
                 opts: EquityOptions {
                     max_samples: 20_000,
                     seed: Some(*seed),

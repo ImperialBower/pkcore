@@ -247,6 +247,7 @@ impl PreflopEquity {
         let report = EquityRequest {
             players,
             board: Board::default(),
+            dead: crate::Cards::default(),
             opts,
         }
         .compute()

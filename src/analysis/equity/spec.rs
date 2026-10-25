@@ -2,6 +2,7 @@
 
 use crate::analysis::gto::combos::Combos;
 use crate::arrays::two::Two;
+use crate::cards::Cards;
 use crate::play::board::Board;
 
 /// How a single seat's hole cards are specified for an equity calculation.
@@ -108,7 +109,7 @@ impl Default for EquityOptions {
 }
 
 /// A complete equity calculation request: the seats, the (possibly partial)
-/// board, and the options.
+/// board, the dead cards, and the options.
 ///
 /// # Domain
 ///
@@ -119,6 +120,7 @@ impl Default for EquityOptions {
 /// ```
 /// use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
 /// use pkcore::arrays::two::Two;
+/// use pkcore::cards::Cards;
 /// use pkcore::play::board::Board;
 ///
 /// let req = EquityRequest {
@@ -127,6 +129,7 @@ impl Default for EquityOptions {
 ///         PlayerSpec::Random,
 ///     ],
 ///     board: Board::default(),
+///     dead: Cards::default(),
 ///     opts: EquityOptions { max_samples: 2_000, seed: Some(7), ..Default::default() },
 /// };
 /// let report = req.compute().unwrap();
@@ -138,13 +141,20 @@ pub struct EquityRequest {
     pub players: Vec<PlayerSpec>,
     /// The community cards known so far (0, 3, 4, or 5 of them).
     pub board: Board,
+    /// Cards known to be out of play that belong to no seat and not to the
+    /// board: folded hands, burn cards, an exposed card. They are removed
+    /// from every runout and from every range seat's candidates. Empty by
+    /// default. A card here that repeats a seat's card or a board card is
+    /// `PKError::DuplicateCard`. `Cards` is a set, so a card listed twice here
+    /// counts once.
+    pub dead: Cards,
     /// Calculation options.
     pub opts: EquityOptions,
 }
 
 impl EquityRequest {
-    /// Convenience constructor with [`EquityOptions::default`] and an empty
-    /// (pre-flop) board.
+    /// Convenience constructor with [`EquityOptions::default`], an empty
+    /// (pre-flop) board, and no dead cards.
     ///
     /// # Examples
     ///
@@ -163,8 +173,32 @@ impl EquityRequest {
         EquityRequest {
             players,
             board: Board::default(),
+            dead: Cards::default(),
             opts: EquityOptions::default(),
         }
+    }
+
+    /// Sets the dead cards: folded, burnt or exposed cards that no seat holds.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::equity::{EquityRequest, PlayerSpec};
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::cards::Cards;
+    /// use std::str::FromStr;
+    ///
+    /// let req = EquityRequest::new(vec![
+    ///     PlayerSpec::Exact(Two::HAND_AS_KS),
+    ///     PlayerSpec::Exact(Two::HAND_QH_QD),
+    /// ])
+    /// .with_dead(Cards::from_str("J♠ T♠").unwrap());
+    /// assert_eq!(2, req.dead.len());
+    /// ```
+    #[must_use]
+    pub fn with_dead(mut self, dead: Cards) -> Self {
+        self.dead = dead;
+        self
     }
 
     /// Runs the calculation. See [`crate::analysis::equity::EquityEngine::compute`].
@@ -172,7 +206,7 @@ impl EquityRequest {
     /// # Errors
     ///
     /// Returns a [`crate::PKError`] when the request is invalid (wrong number of
-    /// seats, duplicated cards, an over-full board, or an impossible range).
+    /// seats, duplicated cards (dead cards included), an over-full board, or an impossible range).
     pub fn compute(&self) -> Result<super::result::EquityReport, crate::PKError> {
         super::engine::EquityEngine::compute(self)
     }
@@ -182,6 +216,24 @@ impl EquityRequest {
 #[allow(non_snake_case)]
 mod analysis__equity__spec_tests {
     use super::*;
+    use std::str::FromStr;
+
+    fn two_seats() -> Vec<PlayerSpec> {
+        vec![PlayerSpec::Exact(Two::HAND_AS_KS), PlayerSpec::Exact(Two::HAND_QH_QD)]
+    }
+
+    #[test]
+    fn new__dead_is_empty() {
+        assert!(EquityRequest::new(two_seats()).dead.is_empty());
+    }
+
+    #[test]
+    fn with_dead__sets_the_field() {
+        let dead = Cards::from_str("J♠ T♠").unwrap();
+        let req = EquityRequest::new(two_seats()).with_dead(dead.clone());
+        assert_eq!(dead, req.dead);
+        assert_eq!(2, req.players.len(), "the seats are untouched");
+    }
 
     /// Pins the shipped defaults, because changing `max_samples` changes every
     /// caller's accuracy **silently** — nothing fails to compile and no other

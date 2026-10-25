@@ -4,7 +4,7 @@ title: Analysis
 description: Hand evaluation, nut calculation, preflop and multi-way equity, GTO combos, outs, and player statistics.
 resource: https://github.com/ImperialBower/pkcore/tree/main/src/analysis
 tags: [evaluation, equity, gto, player-stats]
-timestamp: '2026-07-22T00:00:00Z'
+timestamp: '2026-10-24T00:00:00Z'
 ---
 
 # Overview
@@ -32,6 +32,15 @@ reasons about hands lives here.
 * `analysis::equity` (behind the `equity` feature) — pure-compute
   multi-way equity engine: exact enumeration plus seeded Monte Carlo,
   parallelized with rayon.
+
+`EquityRequest::dead` holds cards known to be out of play that no seat
+holds: folded hands, burn cards, an exposed card. The engine builds one
+dead set from the board, the `Exact` seats and `dead`, and every path
+(exact enumeration, Monte Carlo draws, range filtering) reads the reduced
+deck from it. A dead card that repeats a seat or board card is
+`PKError::DuplicateCard`; `Cards` is a set, so a repeat inside `dead`
+counts once. The bot deciders pass an empty `dead`: a `TableSnapshot`
+never carries an opponent's cards. See `docs/epics/EPIC-123_Dead_Cards.md`.
 
 # GTO and ranges
 

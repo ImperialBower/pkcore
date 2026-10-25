@@ -8,6 +8,7 @@
 use crate::workload::{Band, HotFn, PerfError, Workload};
 use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::arrays::two::Two;
+use pkcore::cards::Cards;
 use pkcore::play::board::Board;
 use pkcore::prelude::FromStr;
 
@@ -26,12 +27,38 @@ fn hu_flop_request() -> EquityRequest {
     EquityRequest {
         players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
         board: dry_flop().unwrap_or_default(),
+        dead: Cards::default(),
         opts: EquityOptions {
             exact_threshold: 100_000,
             max_samples: 100_000,
             seed: Some(42),
         },
     }
+}
+
+/// [`DRY_FLOP`] plus a blank turn card.
+const DRY_TURN: &str = "2♣ 7♦ 9♠ J♥";
+
+/// Two cards out of play: a folded hand that holds nothing on [`DRY_TURN`].
+const DEAD_2: &str = "5♣ 6♦";
+
+/// AA versus KK on [`DRY_TURN`] with [`DEAD_2`] dead: 42 river cards instead
+/// of 44, so the reduced deck is measured.
+fn turn_dead_2_request() -> EquityRequest {
+    EquityRequest {
+        players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
+        board: Board::from_str(DRY_TURN).unwrap_or_default(),
+        dead: Cards::from_str(DEAD_2).unwrap_or_default(),
+        opts: EquityOptions {
+            exact_threshold: 100_000,
+            max_samples: 100_000,
+            seed: Some(42),
+        },
+    }
+}
+
+fn make_turn_dead_2() -> Result<HotFn, PerfError> {
+    make_from_request(turn_dead_2_request)
 }
 
 /// AA versus KK pre-flop, forced to enumerate exactly. `C(48,5)` is about
@@ -44,6 +71,7 @@ fn hu_preflop_request() -> EquityRequest {
     EquityRequest {
         players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
         board: Board::default(),
+        dead: Cards::default(),
         opts: EquityOptions {
             exact_threshold: 2_000_000,
             max_samples: 100_000,
@@ -66,6 +94,7 @@ fn three_way_request() -> EquityRequest {
             PlayerSpec::Exact(Two::HAND_AD_KD),
         ],
         board: Board::default(),
+        dead: Cards::default(),
         opts: EquityOptions {
             exact_threshold: 0,
             max_samples: 20_000,
@@ -143,6 +172,7 @@ fn dealeval_hu_request() -> EquityRequest {
     EquityRequest {
         players: vec![PlayerSpec::Exact(Two::HAND_AS_KS), PlayerSpec::Random],
         board: Board::default(),
+        dead: Cards::default(),
         opts: EquityOptions {
             exact_threshold: 0,
             max_samples: 10_000,
@@ -169,6 +199,7 @@ fn dealeval_three_way_request() -> EquityRequest {
             PlayerSpec::Random,
         ],
         board: Board::default(),
+        dead: Cards::default(),
         opts: EquityOptions {
             exact_threshold: 0,
             max_samples: 10_000,
@@ -200,6 +231,14 @@ pub fn equity_workloads() -> Vec<Workload> {
             features: &["equity"],
             parallel: true,
             make: make_hu_flop,
+        },
+        Workload {
+            name: "equity.exact.turn_dead_2",
+            band: Band::Micro,
+            inner_iters: 1,
+            features: &["equity"],
+            parallel: true,
+            make: make_turn_dead_2,
         },
         Workload {
             name: "equity.exact.hu_preflop",
@@ -244,7 +283,7 @@ mod perf__catalog_equity_tests {
     use crate::workload::Band;
 
     /// Every equity workload declares the `equity` feature; `hu_preflop`
-    /// alone is `Macro` (true 1.7M-runout enumeration), its four siblings
+    /// alone is `Macro` (true 1.7M-runout enumeration), its five siblings
     /// `Micro`.
     #[test]
     fn every_equity_workload_declares_the_equity_feature() {
@@ -267,11 +306,12 @@ mod perf__catalog_equity_tests {
     type NamedRequestBuilder = (&'static str, fn() -> EquityRequest);
 
     /// Every named request builder, paired with the workload name it backs.
-    /// A single list so a sixth fixture is automatically covered by every
-    /// structural check below, instead of hardcoding five blocks.
-    fn request_builders() -> [NamedRequestBuilder; 5] {
+    /// A single list so a seventh fixture is automatically covered by every
+    /// structural check below, instead of hardcoding six blocks.
+    fn request_builders() -> [NamedRequestBuilder; 6] {
         [
             ("equity.exact.hu_flop", hu_flop_request),
+            ("equity.exact.turn_dead_2", turn_dead_2_request),
             ("equity.exact.hu_preflop", hu_preflop_request),
             ("equity.mc.three_way", three_way_request),
             ("dealeval.hu", dealeval_hu_request),
@@ -310,11 +350,12 @@ mod perf__catalog_equity_tests {
                     cards.push(two.second());
                 }
             }
+            cards.extend(request.dead.iter().copied());
             let unique: HashSet<Card> = cards.iter().copied().collect();
             assert_eq!(
                 unique.len(),
                 cards.len(),
-                "{name} has a duplicate card among its known hands/board: {cards:?}"
+                "{name} has a duplicate card among its known hands/board/dead: {cards:?}"
             );
 
             let is_exact_named = name.starts_with("equity.exact.");
@@ -337,6 +378,18 @@ mod perf__catalog_equity_tests {
                 assert!(request.opts.seed.is_some(), "{name} runs Monte Carlo but has no seed");
             }
         }
+    }
+
+    /// `unwrap_or_default` would turn a typo in [`DRY_TURN`] or [`DEAD_2`] into
+    /// a valid but different request, so the fixture's shape is pinned here.
+    #[test]
+    fn turn_dead_2_has_four_board_cards_and_two_dead() {
+        use pkcore::prelude::Pile;
+
+        let request = turn_dead_2_request();
+        assert_eq!(4, request.board.cards().len());
+        assert_eq!(2, request.dead.len());
+        assert_eq!(42, request.compute().map(|report| report.samples).unwrap_or_default());
     }
 
     /// Exact enumeration is deterministic, and seeded Monte Carlo must be too —

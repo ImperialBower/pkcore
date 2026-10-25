@@ -23,7 +23,9 @@
 - **Proves it:** a turn request with two dead cards enumerates 42 runouts,
   not 44; a flush-draw hero loses equity when two of the suit are dead; an
   empty `dead` gives the same integer tallies as `0.17.4`, byte for byte.
-- **Status:** Planned. Nothing has landed.
+- **Status:** Phases 0–3 landed on branch `dead_cards` as `0.18.0`
+  (2026-10-24). Open: 3e, telling bowery. Two deviations from the plan are
+  recorded under [As built](#as-built).
 
 ---
 
@@ -91,10 +93,10 @@ leave the cards in the deck (wrong runouts), or pass the folded hand as an
 
 | Component | Status |
 |---|---|
-| Phase 0 — oracle tallies pinned at `0.17.4` | Planned |
-| Phase 1 — `EquityRequest::dead`, validation, `with_dead` | Planned |
-| Phase 2 — engine reads the reduced deck; tests | Planned |
-| Phase 3 — in-repo callers, perf catalog, docs, CHANGELOG `0.18.0` | Planned |
+| Phase 0 — oracle tallies pinned at `0.17.4` | ✅ Done |
+| Phase 1 — `EquityRequest::dead`, validation, `with_dead` | ✅ Done |
+| Phase 2 — engine reads the reduced deck; tests | ✅ Done |
+| Phase 3 — in-repo callers, perf catalog, docs, CHANGELOG `0.18.0` | 🟡 Done but 3e (tell bowery) |
 
 ---
 
@@ -139,8 +141,8 @@ The rules this EPIC must keep:
 |---|---|---|
 | Seat holding | `PlayerSpec::Exact(Two)` (`spec.rs:20`) | ✅ |
 | Board | `EquityRequest::board` (`spec.rs:140`) | ✅ |
-| Dead cards (folded, burnt, exposed) | `EquityRequest::dead: Cards` | ❌ |
-| The dead set the engine reasons over | `seen` / `remaining` (`engine.rs:120-127`) | 🟡 built from seats and board only |
+| Dead cards (folded, burnt, exposed) | `EquityRequest::dead: Cards` | ✅ |
+| The dead set the engine reasons over | `seen` / `remaining` (`engine.rs`) | ✅ built from seats, board and `dead` |
 | Runout space | `n_choose_k(remaining, unknown_board)` (`engine.rs:153`) | ✅ reads `remaining`, so follows for free |
 
 ---
@@ -236,11 +238,39 @@ rules. The scope rule is one deck; the code should have one deck.
 
 ---
 
+## As built
+
+Landed 2026-10-24 on branch `dead_cards`, version `0.18.0`.
+
+- **A repeat inside `dead` is not an error.** Scope rule 2 asked for
+  `PKError::DuplicateCard` when a card is listed twice in `dead`. `Cards` is
+  an `IndexSet`, so `Cards::from(vec![9♦, 9♦])` holds one card before the
+  engine sees it. The test `compute__dead_card_repeated_in_dead_is_duplicate`
+  keeps its planned name but pins what happens: the card counts once
+  (43 river cards, not 42). The field doc says so. A repeat against a seat
+  or the board is still `DuplicateCard`.
+- **The random-seat test is indirect.** `compute__dead_cards_never_drawn_for_random_seat`
+  puts all 43 cards but `A♣ A♦` in `dead` on a full board. The only legal
+  deal gives the random seat aces, which beat the hero's queens every time,
+  so all 2,000 samples are villain wins. No `#[cfg(test)]` hook was added.
+- **Oracles.** AA vs KK on `7♦ 8♣ 2♠ 3♥`: 44 runouts, `(42, 0)` and `(2, 0)`.
+  Seeded preflop (seed 42, 2,000 samples): `(1625, 11)` and `(364, 11)`.
+  Both are the same with `parallel` on and off.
+- **Gold Standard check.** With the seam line removed, all nine dead-card
+  tests fail and both oracles pass.
+- **Callers beyond the plan.** The examples `two_tables.rs`, `equity.rs` and
+  `decon_dump.rs` also built full literals; they pass `Cards::default()`.
+- **Version.** The branch already carried `0.17.5` (MoP notes). The break
+  needs a minor bump, so the branch goes to `0.18.0` and the `0.17.5`
+  CHANGELOG entries fold into it.
+
+---
+
 ## Work Items
 
 ### Phase 0 — Oracle tallies
 
-- [ ] **0a.** Pin `0.17.4` integers before touching the engine. In
+- [x] **0a.** Pin `0.17.4` integers before touching the engine. In
   `engine.rs`'s test module add `compute__oracle_exact_turn_aa_vs_kk`
   (asserts `samples == 44` and the exact `wins`/`ties` per seat) and
   `compute__oracle_monte_carlo_seeded` (a seeded preflop request; asserts
@@ -250,22 +280,22 @@ rules. The scope rule is one deck; the code should have one deck.
 
 ### Phase 1 — The field
 
-- [ ] **1a.** Add `pub dead: Cards` to `EquityRequest` (`spec.rs:136`),
+- [x] **1a.** Add `pub dead: Cards` to `EquityRequest` (`spec.rs:136`),
   documented as above. `new` sets `Cards::default()`. Add `with_dead`
   with its doc test.
-- [ ] **1b.** Fix the in-repo literals: `decider.rs:658`,
+- [x] **1b.** Fix the in-repo literals: `decider.rs:658`,
   `preflop_equity.rs:247` (`dead: Cards::default()`), the engine tests at
   `engine.rs:548`, `:559`, `:591`, `:596`, `:617`, `:634`, `:654`, and
   `perf/src/catalog_equity.rs`. Green: `cargo build --all-features`,
   `cargo build -p pkcore-perf` (or the perf crate's own check).
-- [ ] **1c.** Unit tests in `analysis__equity__spec_tests`:
+- [x] **1c.** Unit tests in `analysis__equity__spec_tests`:
   `new__dead_is_empty`, `with_dead__sets_the_field`.
 
 ### Phase 2 — The seam
 
-- [ ] **2a.** Extend the dead set at `engine.rs:118` with `req.dead`. No
+- [x] **2a.** Extend the dead set at `engine.rs:118` with `req.dead`. No
   other engine line changes.
-- [ ] **2b.** Tests in the engine's test module:
+- [x] **2b.** Tests in the engine's test module:
   - `compute__dead_card_repeating_a_seat_is_duplicate` and
     `compute__dead_card_repeating_the_board_is_duplicate` and
     `compute__dead_card_repeated_in_dead_is_duplicate` → `PKError::DuplicateCard`.
@@ -289,22 +319,22 @@ rules. The scope rule is one deck; the code should have one deck.
     doc records which.
   - `compute__empty_dead_matches_oracle`: the Phase 0 oracles, unchanged.
   - `exact_enumerate__counts_are_identical_serial_or_parallel_with_dead`.
-- [ ] **2c.** Doc test on `EquityEngine::compute` (`engine.rs:84-96`) gains
+- [x] **2c.** Doc test on `EquityEngine::compute` (`engine.rs:84-96`) gains
   a second example with `with_dead`.
 
 ### Phase 3 — Callers, perf, docs
 
-- [ ] **3a.** `perf/src/catalog_equity.rs`: every fixture passes
+- [x] **3a.** `perf/src/catalog_equity.rs`: every fixture passes
   `dead: Cards::default()`; add one `exact.turn_dead_2` fixture so the
   reduced deck is measured.
-- [ ] **3b.** `CHANGELOG.md`: under `## [0.18.0]` (shared with EPIC-122, or
+- [x] **3b.** `CHANGELOG.md`: under `## [0.18.0]` (shared with EPIC-122, or
   its own if this ships first), an **Added** entry for `EquityRequest::dead`
   and `with_dead`, and a **Changed** entry naming the struct-literal break
   and the one-line fix. Bump `Cargo.toml` `version`, `cargo build` for the
   lock file.
-- [ ] **3c.** `ROADMAP.md:422`: claim `EPIC-123 Dead Cards`, next free
+- [x] **3c.** `ROADMAP.md:422`: claim `EPIC-123 Dead Cards`, next free
   `EPIC-124`. Flip this EPIC's Status rows.
-- [ ] **3d.** `.okf/`: if an equity concept exists, add one paragraph on
+- [x] **3d.** `.okf/`: if an equity concept exists, add one paragraph on
   `dead`; otherwise one line in the bundle's log.
 - [ ] **3e.** Tell bowery: its odds design drops the by-hand outs filter and
   passes the folded seats' cards as `dead` once it pins `0.18.0`.
