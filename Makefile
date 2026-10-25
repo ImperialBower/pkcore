@@ -1,4 +1,4 @@
-.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools doctor watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -62,6 +62,7 @@ help:
 	@echo ""
 	@echo "Tools and Workflow:"
 	@echo "  make install-tools   - Install cargo-deny, cargo-udeps, cargo-mutants, and cargo-llvm-cov"
+	@echo "  make doctor          - Check which tools the targets here need are installed"
 	@echo "  make watch           - Run cargo-watch for check/test loop"
 	@echo "  make install-watch   - Install cargo-watch"
 	@echo "  make mutants         - Run cargo-mutants on the whole codebase (slow)"
@@ -271,6 +272,43 @@ install-tools:
 	@echo ""
 	@echo "✓ Tools installed!"
 	@echo ""
+
+# Check that the tools the targets in this file use are installed. Prints ✓ or
+# ✗ per tool, with the install command for each ✗. Fails only when a tool that
+# `make ayce` needs is missing; the other groups are for optional targets and
+# for the WIT / component work of EPIC-91 (docs/epics/EPIC-91_Kernel_on_seL4.md).
+doctor:
+	@missing=0; \
+	check() { \
+		if sh -c "$$2" >/dev/null 2>&1; then \
+			printf '  ✓ %s\n' "$$1"; \
+		else \
+			printf '  ✗ %s — %s\n' "$$1" "$$3"; \
+			if [ "$$4" = required ]; then missing=1; fi; \
+		fi; \
+	}; \
+	echo "Needed by make ayce:"; \
+	check "rust 1.99.0" "rustup run 1.99.0 rustc --version" "rustup toolchain install 1.99.0" required; \
+	check "rustfmt" "cargo fmt --version" "rustup component add rustfmt" required; \
+	check "clippy" "cargo clippy --version" "rustup component add clippy" required; \
+	check "wasm32-unknown-unknown" "rustup target list --installed | grep -qx wasm32-unknown-unknown" "rustup target add wasm32-unknown-unknown" required; \
+	check "cargo-nextest" "cargo nextest --version" "cargo install --locked cargo-nextest" required; \
+	echo "Optional targets:"; \
+	check "actionlint" "command -v actionlint" "brew install actionlint"; \
+	check "uv or python3" "command -v uv || command -v python3" "brew install uv"; \
+	check "nightly toolchain" "rustup run nightly rustc --version" "rustup toolchain install nightly"; \
+	check "cargo-deny" "cargo deny --version" "make install-tools"; \
+	check "cargo-udeps" "cargo +nightly udeps --version" "make install-tools"; \
+	check "cargo-mutants" "cargo mutants --version" "make install-tools"; \
+	check "cargo-llvm-cov" "cargo llvm-cov --version" "make install-tools"; \
+	check "llvm-tools" "rustup component list --installed | grep -q llvm-tools" "rustup component add llvm-tools"; \
+	check "cargo-watch" "cargo watch --version" "make install-watch"; \
+	check "samply" "command -v samply" "cargo install --locked samply"; \
+	echo "WIT and components (EPIC-91):"; \
+	check "wasm-tools" "command -v wasm-tools" "cargo install --locked wasm-tools"; \
+	check "wit-bindgen" "command -v wit-bindgen" "cargo install --locked wit-bindgen-cli"; \
+	check "wasmtime" "command -v wasmtime" "cargo install --locked wasmtime-cli"; \
+	if [ $$missing -ne 0 ]; then echo "A tool make ayce needs is missing."; exit 1; fi
 
 # Watch mode for development (requires cargo-watch)
 watch:

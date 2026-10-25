@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2026-10-25
+
+### Added
+
+- **`make doctor`** checks that the tools the Makefile targets use are
+  installed. It prints ✓ or ✗ for each tool, and the install command for
+  each ✗. There was no single way to see what a new machine was missing.
+  It fails only when a tool `make ayce` needs is missing. The other two
+  groups are optional targets (nightly, `cargo-deny`, `samply`, …) and
+  the WIT and component tools that
+  [EPIC-91](docs/epics/EPIC-91_Kernel_on_seL4.md) needs: `wasm-tools`,
+  `wit-bindgen` and `wasmtime`.
+
 ## [0.20.0] - 2026-10-25
 
 ### Added
