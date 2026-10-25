@@ -2413,7 +2413,11 @@ impl Table {
             }
         }
         let board = Board::try_from(self.board.clone())?;
-        Ok(Game { hands, board })
+        Ok(Game {
+            hands,
+            board,
+            dead: Cards::default(),
+        })
     }
 
     /// EPIC-31 Phase 2: builds a per-seat [`CaseEval`] for Omaha-family

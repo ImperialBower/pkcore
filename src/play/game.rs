@@ -274,12 +274,29 @@ impl StreetEquity {
 pub struct Game {
     pub hands: HoleCards,
     pub board: Board,
+    /// Cards known to be out of play that belong to no hand in `hands` and
+    /// not to the board: folded hands, burn cards, an exposed card. Removed
+    /// from every runout. Empty by default.
+    pub dead: Cards,
 }
 
 impl Game {
     #[must_use]
     pub fn new(hands: HoleCards, board: Board) -> Self {
-        Game { hands, board }
+        Game {
+            hands,
+            board,
+            dead: Cards::default(),
+        }
+    }
+
+    /// Marks cards known to be out of play but not already in `hands` or
+    /// `board` — folded hands, burn cards, an exposed card — so they are
+    /// removed from every runout `turn_case_evals()` enumerates.
+    #[must_use]
+    pub fn with_dead(mut self, dead: Cards) -> Self {
+        self.dead = dead;
+        self
     }
 
     #[must_use]
@@ -389,6 +406,7 @@ impl Game {
     pub(crate) fn turn_remaining(&self) -> Cards {
         let mut cards = self.board.turn_cards();
         cards.insert_all(&self.hands.cards());
+        cards.insert_all(&self.dead);
         Cards::deck_minus(&cards)
     }
 
@@ -831,6 +849,38 @@ mod play__game_tests {
         let game = TestData::the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
+    }
+
+    /// DEFECT_042: dead cards must be removed from every `turn_case_evals()`
+    /// runout, the same way `EquityRequest::dead` removes them from equity
+    /// (EPIC-123). Fixture is bowery's `three_way_outs.yaml`: Draw 8♠7♠ vs
+    /// Set 6♥6♦ on 9♣ 6♠ K♥ 2♦, with T♠ and 3♣ gone in a third, folded hand.
+    #[test]
+    fn turn_case_evals_excludes_dead_cards() {
+        let hands = HoleCards::from(vec![Two::from_str("8♠ 7♠").unwrap(), Two::from_str("6♥ 6♦").unwrap()]);
+        let board = Board::try_from(Cards::from_str("9♣ 6♠ K♥ 2♦").unwrap()).unwrap();
+        let dead = Cards::from(vec![Card::from_str("T♠").unwrap(), Card::from_str("3♣").unwrap()]);
+        let game = Game::new(hands, board).with_dead(dead);
+
+        let cases = game.turn_case_evals();
+
+        assert_eq!(42, cases.len());
+        assert!(!cases.iter().any(|c| c.card() == Card::from_str("T♠").unwrap()));
+        assert!(!cases.iter().any(|c| c.card() == Card::from_str("3♣").unwrap()));
+    }
+
+    /// DEFECT_042: an empty (default) `dead` must change nothing — same 44
+    /// cases as before the field existed.
+    #[test]
+    fn turn_case_evals_with_no_dead_cards_is_unchanged() {
+        let hands = HoleCards::from(vec![Two::from_str("8♠ 7♠").unwrap(), Two::from_str("6♥ 6♦").unwrap()]);
+        let board = Board::try_from(Cards::from_str("9♣ 6♠ K♥ 2♦").unwrap()).unwrap();
+        let game = Game::new(hands, board);
+
+        let cases = game.turn_case_evals();
+
+        assert_eq!(44, cases.len());
+        assert!(cases.iter().any(|c| c.card() == Card::from_str("T♠").unwrap()));
     }
 
     #[test]

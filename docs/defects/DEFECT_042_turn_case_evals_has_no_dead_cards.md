@@ -4,7 +4,7 @@
 **Date:** 2026-10-25  
 **Severity:** Low — no engine-held state is wrong; a caller's own derived "outs"
 list is wrong unless it filters the result by hand  
-**Status:** Open  
+**Status:** Fixed in `0.19.0`  
 **Found by:** bowery EPIC-110 Phase 7 (`bowery/docs/EPIC-110_Bowery.md`), while
 folding in `EquityRequest::dead` (EPIC-123, `0.18.0`)  
 **Affects:** `play::game::Game::turn_case_evals` (`src/play/game.rs:383-385`),
@@ -123,10 +123,14 @@ every call through it, including bowery's, is unaffected.
 second test pins `dead` empty giving the same 44 cases as today, byte for
 byte — EPIC-123's Scope rule 5, applied here too.
 
-**Not claimed fixed by this document.** No code changes — this is the
-write-up `EPIC-123` asked for from "a second caller." Fixing it is a
-follow-up EPIC or a small defect-driven patch; either way it starts from
-this file.
+**Fixed as proposed above**, in `0.19.0` (`Cargo.toml`, `CHANGELOG.md`):
+`Game` gained the `dead: Cards` field and `with_dead`, `turn_remaining`
+folds it in, and the two call-site struct literals plus three test-only
+literals outside `Game::new` were updated to compile. Both tests this
+document specified live in `src/play/game.rs`'s test module:
+`turn_case_evals_excludes_dead_cards` (42 cases, no `T♠`/`3♣`) and
+`turn_case_evals_with_no_dead_cards_is_unchanged` (44 cases, byte for byte
+with the pre-fix behavior).
 
 ## Prevention
 

@@ -172,6 +172,7 @@ mod play__stages__river_eval_tests {
         let game = Game {
             hands: game.hands,
             board: board_flop_and_turn_only(),
+            dead: Default::default(),
         };
         let result = RiverEval::try_from(game);
         assert!(result.is_err());
@@ -183,6 +184,7 @@ mod play__stages__river_eval_tests {
         let game = Game {
             hands: HoleCards::default(),
             board: TestData::the_hand().board,
+            dead: Default::default(),
         };
         let result = RiverEval::try_from(game);
         assert!(result.is_err());

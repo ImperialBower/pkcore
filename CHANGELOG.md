@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-10-25
+
+### Added
+
+- **Dead cards on `play::game::Game`.** `Game` has a new `dead: Cards` field,
+  and `Game::with_dead` sets it. This mirrors `EquityRequest::dead`
+  (0.18.0) at the matching level: `Game::turn_case_evals` (and everything
+  built from it — `Game::turn_remaining`, `TurnEval::case_evals`,
+  `Outs::from`) now removes `dead` cards from every river it enumerates.
+  Before this, a card already known to be gone — a folded hand, a burn
+  card, an exposed card — had nowhere to go on `Game`, so it was still
+  enumerated as a live out; callers filtered the result by hand instead.
+  An empty `dead` gives the same cases as before. See
+  `docs/defects/DEFECT_042_turn_case_evals_has_no_dead_cards.md`.
+
+### Changed
+
+- **Breaking:** `Game { hands, board }` struct literals no longer compile;
+  construct with `Game::new(hands, board)` (optionally chained with
+  `.with_dead(dead)`) instead.
+
 ## [0.18.0] - 2026-10-24
 
 ### Added

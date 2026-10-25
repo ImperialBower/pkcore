@@ -292,6 +292,7 @@ mod play__turn_eval_tests {
         let game = Game {
             hands: TestData::hole_cards_the_hand(),
             board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
+            dead: Default::default(),
         };
 
         let case_eval = TurnEval::turn_case_eval(&game, &Card::SIX_CLUBS);

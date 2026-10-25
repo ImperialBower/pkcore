@@ -65,6 +65,7 @@ impl TestData {
         Game {
             hands: TestData::hole_cards_the_hand(),
             board,
+            dead: Cards::default(),
         }
     }
 
@@ -75,7 +76,11 @@ impl TestData {
     pub fn the_board() -> Game {
         let hands = HoleCards::from(vec![Two::HAND_AC_QS, Two::HAND_TD_TC, Two::HAND_6D_4D, Two::HAND_2H_2D]);
         let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap_or_default();
-        Game { hands, board }
+        Game {
+            hands,
+            board,
+            dead: Cards::default(),
+        }
     }
 
     /// The 985th case at the flop when running `The Hand`:
