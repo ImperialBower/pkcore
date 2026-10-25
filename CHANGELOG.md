@@ -5,6 +5,41 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2026-10-25
+
+### Added
+
+- **`Game::dead` now reaches every street.** In 0.19.0 only the turn used
+  it. Now the preflop and the flop use it too:
+  - `Game::street_equities` removes dead cards on the preflop, flop and
+    turn. (The river has no cards left to deal.)
+  - `FlopEval::with_dead` and `CaseEvals::from_holdem_at_flop_with_dead`
+    skip every turn-and-river runout that uses a dead card.
+    `FlopEval::try_from(Game)` uses them.
+  - `DealEval::with_dead` sends the hands and the dead cards to the equity
+    engine. It does not use the heads-up chart, because the chart assumes a
+    full deck. An empty `dead` gives the same result as `DealEval::new`.
+- **`Game::check_dead`** returns `PKError::DuplicateCard` when a dead card is
+  also in a hand or on the board. `street_equities`, `TurnEval::try_from`
+  and `FlopEval::try_from` run it first. This is the same rule as
+  `EquityRequest::dead`. `with_dead` itself does not check, and it replaces
+  any earlier set. It does not add to it.
+- `Display` for `Game` adds ` DEAD: …` when `dead` is not empty.
+
+### Changed
+
+- **`Table::build_game` fills `Game::dead` from the table's muck**, which
+  holds the burn cards and every folded hand. So `FlopEval`, `TurnEval` and
+  `street_equities` on a live table no longer count those cards as live.
+  Odds from a table after a fold or a burn will differ from 0.19.0. That is
+  the fix: the 0.19.0 numbers counted cards that cannot be dealt. See
+  `docs/defects/DEFECT_043_dead_cards_reach_only_the_turn.md`.
+
+### Fixed
+
+- The 0.19.0 entry below named `Game::turn_remaining` as API. It is
+  `pub(crate)`, so it was removed from that entry.
+
 ## [0.19.0] - 2026-10-25
 
 ### Added
@@ -12,8 +47,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dead cards on `play::game::Game`.** `Game` has a new `dead: Cards` field,
   and `Game::with_dead` sets it. This mirrors `EquityRequest::dead`
   (0.18.0) at the matching level: `Game::turn_case_evals` (and everything
-  built from it — `Game::turn_remaining`, `TurnEval::case_evals`,
-  `Outs::from`) now removes `dead` cards from every river it enumerates.
+  built from it — `TurnEval::case_evals`, `Outs::from`) now removes `dead`
+  cards from every river it enumerates. Only the turn used `dead` in this
+  release; 0.20.0 extends it to every street.
   Before this, a card already known to be gone — a folded hand, a burn
   card, an exposed card — had nowhere to go on `Game`, so it was still
   enumerated as a live out; callers filtered the result by hand instead.

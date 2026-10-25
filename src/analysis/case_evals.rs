@@ -1,10 +1,10 @@
-use crate::Pile;
 use crate::analysis::case_eval::CaseEval;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::play::hole_cards::HoleCards;
+use crate::{Cards, Pile};
 use log::info;
 #[cfg(feature = "parallel")]
 use rayon::iter::{ParallelBridge, ParallelIterator};
@@ -40,8 +40,27 @@ impl CaseEvals {
     /// (`CaseEvals::wins`, etc.) aggregate order-independently.
     #[must_use]
     pub fn from_holdem_at_flop(board: Three, hands: &HoleCards) -> CaseEvals {
-        let board_cards = board.cards();
-        let runouts = hands.combinations_after(2, &board_cards);
+        Self::from_holdem_at_flop_with_dead(board, hands, &Cards::default())
+    }
+
+    /// [`CaseEvals::from_holdem_at_flop`], skipping every runout that uses a
+    /// `dead` card (a folded hand, a burn card, an exposed card).
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::analysis::case_evals::CaseEvals;
+    /// use std::str::FromStr;
+    ///
+    /// let game = TestData::the_hand();
+    /// let dead = Cards::from_str("A♠ K♠").unwrap();
+    /// let cases = CaseEvals::from_holdem_at_flop_with_dead(game.board.flop, &game.hands, &dead);
+    /// assert_eq!(903, cases.len()); // C(43, 2): 45 unseen cards less 2 dead
+    /// ```
+    #[must_use]
+    pub fn from_holdem_at_flop_with_dead(board: Three, hands: &HoleCards, dead: &Cards) -> CaseEvals {
+        let mut gone = board.cards();
+        gone.insert_all(dead);
+        let runouts = hands.combinations_after(2, &gone);
         let eval = |v: Vec<Card>| CaseEval::from_holdem_at_flop(board, Two::from(v), hands).ok();
 
         #[cfg(feature = "parallel")]
@@ -193,6 +212,24 @@ mod analysis___case_evals_tests {
         let sut = CaseEvals::from_holdem_at_flop(game.board.flop, &game.hands);
 
         assert_eq!(990, sut.len()); // Heads up at the flop there are 990 possible "runouts" for the cards in play.
+    }
+
+    #[test]
+    fn from_holdem_at_flop_with_dead_skips_runouts_using_dead_cards() {
+        use crate::Cards;
+        use std::str::FromStr;
+
+        let game = TestData::the_hand();
+        let dead = Cards::from_str("A♠ K♠").unwrap();
+
+        let sut = CaseEvals::from_holdem_at_flop_with_dead(game.board.flop, &game.hands, &dead);
+
+        // 45 unseen cards less 2 dead = 43; C(43, 2) = 903 runouts.
+        assert_eq!(903, sut.len());
+        assert!(sut.iter().all(|case| {
+            let runout = case.cards().unwrap_or_default();
+            !runout.contains(&Card::ACE_SPADES) && !runout.contains(&Card::KING_SPADES)
+        }));
     }
 
     #[test]

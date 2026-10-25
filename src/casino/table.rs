@@ -2380,6 +2380,7 @@ impl Table {
     // ── Showdown ──────────────────────────────────────────────────────────────
 
     /// Builds a [`Game`] from the current board and in-hand seat hole cards.
+    /// The muck (burn cards and folded hands) becomes [`Game::dead`].
     ///
     /// Useful for invoking analysis (flop/turn/river evaluation) without going
     /// through the `TryFrom<&Table>` conversions.
@@ -2413,10 +2414,11 @@ impl Table {
             }
         }
         let board = Board::try_from(self.board.clone())?;
+        // The muck holds every burn card and every folded hand.
         Ok(Game {
             hands,
             board,
-            dead: Cards::default(),
+            dead: self.muck.clone(),
         })
     }
 

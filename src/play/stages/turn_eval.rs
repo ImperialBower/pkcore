@@ -233,6 +233,7 @@ impl TryFrom<&Game> for TurnEval {
         if !game.has_dealt_turn() {
             return Err(PKError::NotEnoughCards);
         }
+        game.check_dead()?;
 
         let case_evals = TurnEval::case_evals(game);
         let wins = case_evals.wins();

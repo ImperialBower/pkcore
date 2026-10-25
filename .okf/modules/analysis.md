@@ -4,7 +4,7 @@ title: Analysis
 description: Hand evaluation, nut calculation, preflop and multi-way equity, GTO combos, outs, and player statistics.
 resource: https://github.com/ImperialBower/pkcore/tree/main/src/analysis
 tags: [evaluation, equity, gto, player-stats]
-timestamp: '2026-10-24T00:00:00Z'
+timestamp: '2026-10-25T00:00:00Z'
 ---
 
 # Overview
@@ -41,6 +41,13 @@ deck from it. A dead card that repeats a seat or board card is
 `PKError::DuplicateCard`; `Cards` is a set, so a repeat inside `dead`
 counts once. The bot deciders pass an empty `dead`: a `TableSnapshot`
 never carries an opponent's cards. See `docs/epics/EPIC-123_Dead_Cards.md`.
+
+`play::game::Game::dead` is the same rule for the double-dummy street
+evaluators: `DealEval::with_dead` (preflop, through the engine),
+`FlopEval::with_dead` and `turn_case_evals` all skip dead cards, and
+`Game::check_dead` gives `PKError::DuplicateCard` on overlap.
+`Table::build_game` fills `dead` from the muck (burns and folded hands).
+See `docs/defects/DEFECT_043_dead_cards_reach_only_the_turn.md`.
 
 # GTO and ranges
 
