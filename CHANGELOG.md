@@ -42,6 +42,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `EquityRequest::new` and set the board after. `EquityRequest::new` keeps its
   signature. The in-repo callers (the bot deciders, the examples, the perf
   catalog) pass an empty `dead`, so they compute what they did before.
+- **The perf equity catalog lives on a type.** The fixtures and `make`
+  functions in `perf/src/catalog_equity.rs` are now associated functions of
+  a unit struct, `EquityCatalog`, and `equity_workloads()` is
+  `EquityCatalog::workloads()`. This follows the project rule that no
+  function stands outside an `impl`. The `perf/` crate is internal, so no
+  deprecated wrapper is kept. The workloads and their names do not change.
 
 ## [0.17.4] - 2026-10-24
 
