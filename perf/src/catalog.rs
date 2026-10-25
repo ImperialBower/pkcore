@@ -352,7 +352,7 @@ pub fn catalog() -> Vec<Workload> {
     ];
 
     #[cfg(feature = "equity")]
-    workloads.extend(crate::catalog_equity::equity_workloads());
+    workloads.extend(crate::catalog_equity::EquityCatalog::workloads());
 
     workloads.extend(crate::catalog_sim::sim_workloads());
 
@@ -443,7 +443,7 @@ mod perf__catalog_tests {
     /// necessarily a proof of correctness for a macro workload the way it is
     /// for the others: `equity.exact.hu_preflop`'s `make` deliberately skips
     /// the validate-by-computing step precisely because that step is the
-    /// expensive part (see `catalog_equity::make_hu_preflop`'s doc comment).
+    /// expensive part (see `catalog_equity::EquityCatalog::make_hu_preflop`'s doc comment).
     #[test]
     fn every_workload_sets_up_and_runs() {
         for workload in catalog() {

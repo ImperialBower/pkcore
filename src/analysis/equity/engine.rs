@@ -67,14 +67,15 @@ impl EquityEngine {
     /// - **Role:** cohesive mechanism
     /// - **Invariants:**
     ///   - 2..=10 seats; board holds 0, 3, 4 or 5 cards
-    ///   - no known card may repeat
+    ///   - no known card (seat, board or [`EquityRequest::dead`]) may repeat
+    ///   - a dead card is never a runout card, a random seat's card or a range seat's holding
     ///   - exact enumeration only when every seat is exact and runouts are within `exact_threshold`; otherwise seeded Monte Carlo
     ///
     /// # Errors
     ///
     /// - [`PKError::NotEnoughHands`] if there are fewer than two or more than ten seats.
     /// - [`PKError::InvalidCardCount`] if the board already holds more than five cards.
-    /// - [`PKError::DuplicateCard`] if any known card (hole or board) is repeated.
+    /// - [`PKError::DuplicateCard`] if any known card (hole, board or dead) is repeated.
     /// - [`PKError::InvalidHand`] if a range seat has no holding compatible with the dead cards.
     ///
     /// # Examples
@@ -94,6 +95,25 @@ impl EquityEngine {
     /// let report = EquityEngine::compute(&req).unwrap();
     /// assert!(report.players[0].equity > report.players[1].equity);
     /// ```
+    ///
+    /// Dead cards (a folded hand, a burn card) leave the deck before any runout:
+    ///
+    /// ```
+    /// use pkcore::analysis::equity::{EquityEngine, EquityRequest, PlayerSpec};
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::cards::Cards;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let mut req = EquityRequest::new(vec![
+    ///     PlayerSpec::Exact(Two::HAND_AS_AH),
+    ///     PlayerSpec::Exact(Two::HAND_KS_KH),
+    /// ])
+    /// .with_dead(Cards::from_str("9♦ T♣").unwrap());
+    /// req.board = Board::from_str("7♦ 8♣ 2♠ 3♥").unwrap();
+    /// let report = EquityEngine::compute(&req).unwrap();
+    /// assert_eq!(42, report.samples); // 44 river cards, less the two dead ones
+    /// ```
     pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
         let n = req.players.len();
         match n {
@@ -109,7 +129,8 @@ impl EquityEngine {
         }
         let unknown_board = 5 - board_vec.len();
 
-        // Dead cards = every known hole card plus the board; reject duplicates.
+        // Dead cards = the board, every known hole card, and what the caller
+        // says is gone; reject duplicates.
         let mut dead = board_vec.clone();
         for player in &req.players {
             if let PlayerSpec::Exact(two) = player {
@@ -117,6 +138,7 @@ impl EquityEngine {
                 dead.push(two.second());
             }
         }
+        dead.extend(req.dead.iter().copied());
         let mut seen = HashSet::with_capacity(dead.len());
         for card in &dead {
             if !seen.insert(*card) {
@@ -548,6 +570,7 @@ mod analysis__equity__engine_tests {
         let req = EquityRequest {
             players: vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)],
             board: Board::default(),
+            dead: Cards::default(),
             opts,
         };
         let report = EquityEngine::compute(&req).unwrap();
@@ -559,6 +582,7 @@ mod analysis__equity__engine_tests {
         let req = EquityRequest {
             players: vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)],
             board: Board::default(),
+            dead: Cards::default(),
             opts: EquityOptions {
                 exact_threshold: 0, // force Monte Carlo
                 max_samples: 2_000,
@@ -591,11 +615,13 @@ mod analysis__equity__engine_tests {
         let req_a = EquityRequest {
             players: players(),
             board: Board::default(),
+            dead: Cards::default(),
             opts,
         };
         let req_b = EquityRequest {
             players: players(),
             board: Board::default(),
+            dead: Cards::default(),
             opts,
         };
         let a = EquityEngine::compute(&req_a).unwrap();
@@ -617,6 +643,7 @@ mod analysis__equity__engine_tests {
         let mc_req = EquityRequest {
             players: vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)],
             board,
+            dead: Cards::default(),
             opts: EquityOptions {
                 exact_threshold: 0,
                 max_samples: 10_000,
@@ -634,6 +661,7 @@ mod analysis__equity__engine_tests {
         let req = EquityRequest {
             players: vec![exact(Two::HAND_AS_AH), PlayerSpec::Random, PlayerSpec::Random],
             board: Board::default(),
+            dead: Cards::default(),
             opts: EquityOptions {
                 exact_threshold: 0,
                 max_samples: 5_000,
@@ -648,12 +676,168 @@ mod analysis__equity__engine_tests {
         assert!(report.players[0].equity > 0.34);
     }
 
+    /// `EPIC-123` Phase 0: integers pinned at `0.17.4`, before `dead` existed.
+    fn oracle_exact_turn_request() -> EquityRequest {
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)]);
+        req.board = Board::from_str("7♦ 8♣ 2♠ 3♥").unwrap();
+        req
+    }
+
+    fn oracle_monte_carlo_request() -> EquityRequest {
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)]);
+        req.opts = EquityOptions {
+            exact_threshold: 0,
+            max_samples: 2_000,
+            seed: Some(42),
+        };
+        req
+    }
+
+    fn tallies(report: &EquityReport) -> Vec<(u64, u64)> {
+        report.players.iter().map(|p| (p.wins, p.ties)).collect()
+    }
+
+    #[test]
+    fn compute__oracle_exact_turn_aa_vs_kk() {
+        let report = EquityEngine::compute(&oracle_exact_turn_request()).unwrap();
+        assert_eq!(Method::Exact, report.method);
+        assert_eq!(44, report.samples);
+        assert_eq!(vec![(42, 0), (2, 0)], tallies(&report));
+    }
+
+    #[test]
+    fn compute__oracle_monte_carlo_seeded() {
+        let report = EquityEngine::compute(&oracle_monte_carlo_request()).unwrap();
+        assert_eq!(Method::MonteCarlo, report.method);
+        assert_eq!(2_000, report.samples);
+        assert_eq!(vec![(1_625, 11), (364, 11)], tallies(&report));
+    }
+
+    fn cards(index: &str) -> Cards {
+        Cards::from_str(index).unwrap()
+    }
+
+    #[test]
+    fn compute__empty_dead_matches_oracle() {
+        let exact_report = EquityEngine::compute(&oracle_exact_turn_request().with_dead(Cards::default())).unwrap();
+        assert_eq!(Method::Exact, exact_report.method);
+        assert_eq!(44, exact_report.samples);
+        assert_eq!(vec![(42, 0), (2, 0)], tallies(&exact_report));
+
+        let mc_report = EquityEngine::compute(&oracle_monte_carlo_request().with_dead(Cards::default())).unwrap();
+        assert_eq!(Method::MonteCarlo, mc_report.method);
+        assert_eq!(2_000, mc_report.samples);
+        assert_eq!(vec![(1_625, 11), (364, 11)], tallies(&mc_report));
+    }
+
+    #[test]
+    fn compute__dead_card_repeating_a_seat_is_duplicate() {
+        let req = oracle_exact_turn_request().with_dead(cards("A♠"));
+        assert_eq!(EquityEngine::compute(&req).unwrap_err(), PKError::DuplicateCard);
+    }
+
+    #[test]
+    fn compute__dead_card_repeating_the_board_is_duplicate() {
+        let req = oracle_exact_turn_request().with_dead(cards("7♦"));
+        assert_eq!(EquityEngine::compute(&req).unwrap_err(), PKError::DuplicateCard);
+    }
+
+    /// `Cards` is a set, so a repeat inside `dead` itself can only be written
+    /// by building the set from a `Vec`; the engine still sees one card.
+    #[test]
+    fn compute__dead_card_repeated_in_dead_is_duplicate() {
+        let dead = Cards::from(vec![Card::NINE_DIAMONDS, Card::NINE_DIAMONDS]);
+        let req = oracle_exact_turn_request().with_dead(dead);
+        let report = EquityEngine::compute(&req).unwrap();
+        assert_eq!(43, report.samples, "the repeated card is removed once");
+    }
+
+    #[test]
+    fn compute__dead_cards_shrink_the_turn_runouts() {
+        let req = oracle_exact_turn_request().with_dead(cards("9♦ T♣"));
+        let report = EquityEngine::compute(&req).unwrap();
+        assert_eq!(Method::Exact, report.method);
+        assert_eq!(42, report.samples);
+    }
+
+    #[test]
+    fn compute__dead_cards_shrink_the_flop_runouts() {
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)]);
+        req.board = Board::from_str("7♦ 8♣ 2♠").unwrap();
+        let report = EquityEngine::compute(&req.with_dead(cards("9♦ T♣ J♥"))).unwrap();
+        assert_eq!(Method::Exact, report.method);
+        assert_eq!(EquityEngine::n_choose_k(42, 2), report.samples);
+        assert_eq!(861, report.samples);
+    }
+
+    /// `A♠ K♠` on `Q♠ 7♠ 2♦ 9♣` against `Q♥ Q♦`: the river spades that win are
+    /// 3, 4, 5, 6, 8, T and J (2♠ and 9♠ pair the board and fill the queens up).
+    /// Killing `J♠ T♠` takes two of those seven outs away.
+    #[test]
+    fn compute__dead_suit_cards_lower_a_flush_draw() {
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_KS), exact(Two::HAND_QH_QD)]);
+        req.board = Board::from_str("Q♠ 7♠ 2♦ 9♣").unwrap();
+        let live = EquityEngine::compute(&req).unwrap();
+        let dead = EquityEngine::compute(&req.with_dead(cards("J♠ T♠"))).unwrap();
+
+        assert_eq!((44, 7), (live.samples, live.players[0].wins));
+        assert_eq!((42, 5), (dead.samples, dead.players[0].wins));
+        assert!(dead.players[0].equity < live.players[0].equity);
+    }
+
+    #[test]
+    fn compute__dead_cards_filter_a_range() {
+        let req = EquityRequest::new(vec![
+            exact(Two::HAND_KS_KH),
+            PlayerSpec::Range(Combos::from_str("AA").unwrap()),
+        ])
+        .with_dead(cards("A♠ A♥ A♦"));
+        assert_eq!(EquityEngine::compute(&req).unwrap_err(), PKError::InvalidHand);
+    }
+
+    /// Proved indirectly: `dead` holds every card but `A♣ A♦`, so the only
+    /// legal deal gives the random seat aces, which beat queens on this board
+    /// every time. A single dead card drawn would hand the random seat some
+    /// other hand, and most of those lose to queens.
+    #[test]
+    fn compute__dead_cards_never_drawn_for_random_seat() {
+        let board = Board::from_str("2♣ 7♦ 9♥ J♠ K♣").unwrap();
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_QH_QD), PlayerSpec::Random]);
+        req.board = board;
+        req.opts = EquityOptions {
+            exact_threshold: 0,
+            max_samples: 2_000,
+            seed: Some(5),
+        };
+        let dead = Cards::deck_minus(&cards("2♣ 7♦ 9♥ J♠ K♣ Q♥ Q♦ A♣ A♦"));
+        assert_eq!(43, dead.len());
+
+        let report = EquityEngine::compute(&req.with_dead(dead)).unwrap();
+        assert_eq!(Method::MonteCarlo, report.method);
+        assert_eq!(2_000, report.samples);
+        assert_eq!(2_000, report.players[1].wins);
+    }
+
+    /// The dead-card twin of `exact_enumerate__counts_are_identical_serial_or_parallel`:
+    /// pinned integers that both the serial and the rayon arm must produce.
+    #[test]
+    fn exact_enumerate__counts_are_identical_serial_or_parallel_with_dead() {
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)]);
+        req.board = Board::from_str("7♦ 8♣ 2♠").unwrap();
+        let report = EquityEngine::compute(&req.with_dead(cards("9♦ T♣ J♥"))).unwrap();
+
+        assert_eq!(Method::Exact, report.method);
+        assert_eq!(861, report.samples);
+        assert_eq!(vec![(784, 0), (77, 0)], tallies(&report));
+    }
+
     #[test]
     fn compute__range_player() {
         let kk_plus = Combos::from_str("KK+").unwrap();
         let req = EquityRequest {
             players: vec![exact(Two::HAND_AS_KS), PlayerSpec::Range(kk_plus)],
             board: Board::default(),
+            dead: Cards::default(),
             opts: EquityOptions {
                 exact_threshold: 0,
                 max_samples: 5_000,

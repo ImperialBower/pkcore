@@ -1,6 +1,7 @@
 # Update Log
 
 ## 2026-10-24
+* **Update**: Added the dead-card rule to the [analysis](/modules/analysis.md) concept — `EquityRequest::dead` (EPIC-123) and the one dead set every equity path reads.
 * **Update**: Rewrote the [Cactus Kev lookup core](/cactus-kev-lookup.md) concept. The old text was pasted chat output with a wrong bit layout (prime in bits 16–23); it also skipped the `UNIQUE_5` step and cited `ckc-rs`, which pkcore does not use. It now matches `src/card.rs` and `Five::hand_rank_value`, and records the no-allocation tests and the M1 timings from `docs/perf/results/`.
 * **Update**: Rewrote the [GTO combos](/gto-combos.md) concept. The old text was pasted chat output, described a regex tokenizer that does not exist, and missed the comma-only separator, the silent empty span, and the `KQ+` climb. It now matches the parser code and cites `docs/ANALYSIS_String_Parsing.md`.
 

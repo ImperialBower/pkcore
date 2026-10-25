@@ -5,6 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-10-24
+
+### Added
+
+- **Dead cards on equity requests.** `EquityRequest` has a new `dead: Cards`
+  field, and `EquityRequest::with_dead` sets it. Dead cards are cards you know
+  are out of play but that no seat holds: a folded hand, a burn card, an
+  exposed card. The engine takes them out of the deck before it deals any
+  runout, any random seat, or any range holding. Before this, a folded hand's
+  cards went back into the deck, so an odds display could count an "out" that
+  was face up in the muck. A dead card that repeats a seat's card or a board
+  card is `PKError::DuplicateCard`. An empty `dead` gives the same integer
+  tallies as before, for exact enumeration and for seeded Monte Carlo. See
+  [EPIC-123](docs/epics/EPIC-123_Dead_Cards.md).
+- **A perf workload for the reduced deck.** `equity.exact.turn_dead_2` times
+  a turn request with two dead cards (42 river cards, not 44).
+- **Reading notes for *The Mathematics of Poker*.** Bill Chen and Jerrod
+  Ankenman's book is the source
+  [EPIC-122](docs/epics/EPIC-122_Exact_Equity.md) cites for equity and card
+  removal. [docs/mop/README.md](docs/mop/README.md) indexes all 30 chapters
+  by print-edition page. Each note explains a page in our own words and
+  links the pkcore code that does the same thing. Chapter 1 is drafted.
+- **`tests/mop.rs` reproduces the book's worked numbers with pkcore.** The
+  Chapter 1 checks count real cards and ranges: pocket aces 1 in 221, heart
+  or ace 4 in 13, a suited hand flopping a flush 33 in 3920, the 34 hands in
+  {AA, KK, QQ, AKs, AKo}, and the book's coin and dice bets through `Ev`.
+  Every check compares exact ratios, so a disagreement between pkcore and
+  the book cannot pass by rounding. All 11 agree.
+
+### Changed
+
+- **Breaking: `EquityRequest` struct literals need the `dead` field.** Code
+  that builds `EquityRequest { players, board, opts }` no longer compiles.
+  Add `dead: Cards::default()` to the literal, or build the request with
+  `EquityRequest::new` and set the board after. `EquityRequest::new` keeps its
+  signature. The in-repo callers (the bot deciders, the examples, the perf
+  catalog) pass an empty `dead`, so they compute what they did before.
+- **The perf equity catalog lives on a type.** The fixtures and `make`
+  functions in `perf/src/catalog_equity.rs` are now associated functions of
+  a unit struct, `EquityCatalog`, and `equity_workloads()` is
+  `EquityCatalog::workloads()`. This follows the project rule that no
+  function stands outside an `impl`. The `perf/` crate is internal, so no
+  deprecated wrapper is kept. The workloads and their names do not change.
+
 ## [0.17.4] - 2026-10-24
 
 ### Added

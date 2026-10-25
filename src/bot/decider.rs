@@ -655,7 +655,14 @@ impl RuleBasedDecider {
             seed: Some(rng.random::<u64>()),
             ..EquityOptions::default()
         };
-        let report = EquityRequest { players, board, opts }.compute().ok()?;
+        let report = EquityRequest {
+            players,
+            board,
+            dead: crate::Cards::default(),
+            opts,
+        }
+        .compute()
+        .ok()?;
         report.players.first().map(|p| p.equity)
     }
 

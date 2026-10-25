@@ -8,6 +8,7 @@
 use crate::workload::{Band, HotFn, PerfError, Workload};
 use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::arrays::two::Two;
+use pkcore::cards::Cards;
 use pkcore::play::board::Board;
 use pkcore::prelude::FromStr;
 
@@ -15,225 +16,269 @@ use pkcore::prelude::FromStr;
 /// the measured work is enumeration rather than an unusual board texture.
 const DRY_FLOP: &str = "2♣ 7♦ 9♠";
 
-/// Parses [`DRY_FLOP`], mapping the error into a `PerfError` so setup failures
-/// are reported rather than panicking.
-fn dry_flop() -> Result<Board, PerfError> {
-    Board::from_str(DRY_FLOP).map_err(|e| PerfError::Setup(format!("parsing flop {DRY_FLOP:?}: {e:?}")))
-}
+/// [`DRY_FLOP`] plus a blank turn card.
+const DRY_TURN: &str = "2♣ 7♦ 9♠ J♥";
 
-/// AA versus KK on [`DRY_FLOP`] — 990 runouts, enumerated exactly.
-fn hu_flop_request() -> EquityRequest {
-    EquityRequest {
-        players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
-        board: dry_flop().unwrap_or_default(),
-        opts: EquityOptions {
-            exact_threshold: 100_000,
-            max_samples: 100_000,
-            seed: Some(42),
-        },
+/// Two cards out of play: a folded hand that holds nothing on [`DRY_TURN`].
+const DEAD_2: &str = "5♣ 6♦";
+
+/// The equity-engine workload catalog: request fixtures, their `make`
+/// functions, and the list that registers them.
+pub struct EquityCatalog;
+
+impl EquityCatalog {
+    /// Parses [`DRY_FLOP`], mapping the error into a `PerfError` so setup failures
+    /// are reported rather than panicking.
+    fn dry_flop() -> Result<Board, PerfError> {
+        Board::from_str(DRY_FLOP).map_err(|e| PerfError::Setup(format!("parsing flop {DRY_FLOP:?}: {e:?}")))
     }
-}
 
-/// AA versus KK pre-flop, forced to enumerate exactly. `C(48,5)` is about
-/// 1.7M runouts — `exact_threshold` is raised well above that count so this
-/// is true enumeration, not the Monte Carlo fallback most pre-flop requests
-/// take. That much real work is minutes, not micro-to-seconds, on this host:
-/// [`Band::Macro`], not [`Band::Micro`] like its siblings. Because it is
-/// `Macro`, the smoke tests below only prove it sets up; they do not run it.
-fn hu_preflop_request() -> EquityRequest {
-    EquityRequest {
-        players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
-        board: Board::default(),
-        opts: EquityOptions {
-            exact_threshold: 2_000_000,
-            max_samples: 100_000,
-            seed: Some(42),
-        },
-    }
-}
-
-/// Three-way seeded Monte Carlo, the shape a live table actually asks for.
-///
-/// The third seat is `A♦K♦`, not `A♠K♠`: `Two::HAND_AS_KS` shares the ace of
-/// spades with the first seat's `Two::HAND_AS_AH`, which `compute` correctly
-/// rejects as `PKError::DuplicateCard`. `A♦K♦` keeps the same AKs shape
-/// without colliding with either pocket pair.
-fn three_way_request() -> EquityRequest {
-    EquityRequest {
-        players: vec![
-            PlayerSpec::Exact(Two::HAND_AS_AH),
-            PlayerSpec::Exact(Two::HAND_KS_KH),
-            PlayerSpec::Exact(Two::HAND_AD_KD),
-        ],
-        board: Board::default(),
-        opts: EquityOptions {
-            exact_threshold: 0,
-            max_samples: 20_000,
-            seed: Some(42),
-        },
-    }
-}
-
-/// Builds the timed closure that folds the integer win and tie counts across
-/// every seat, for one already-built request.
-///
-/// A `compute()` failure is a [`PerfError::Run`], never silently skipped: an
-/// earlier version used `if let Ok(...)` with no else arm, so a request that
-/// started failing produced a stable checksum of 0 and an absurdly fast
-/// timing that the runner reported as `Status::Ok`.
-fn hot_closure(request: EquityRequest) -> HotFn {
-    Box::new(move |iters: u32| {
-        let mut acc: u64 = 0;
-        for _ in 0..iters {
-            let report = request
-                .compute()
-                .map_err(|e| PerfError::Run(format!("equity compute failed: {e:?}")))?;
-            for player in &report.players {
-                acc = acc.wrapping_add(player.wins).wrapping_add(player.ties);
-            }
+    /// AA versus KK on [`DRY_FLOP`] — 990 runouts, enumerated exactly.
+    fn hu_flop_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
+            board: Self::dry_flop().unwrap_or_default(),
+            dead: Cards::default(),
+            opts: EquityOptions {
+                exact_threshold: 100_000,
+                max_samples: 100_000,
+                seed: Some(42),
+            },
         }
-        Ok(acc)
-    })
-}
-
-/// Wraps a request builder into a hot closure that folds the integer win and
-/// tie counts across every seat.
-///
-/// Validates by computing once before the timed region, so a bad fixture is a
-/// setup error rather than a mysteriously fast measurement. That validation
-/// call is itself real work — cheap for every workload in this module except
-/// [`hu_preflop_request`], whose `make` bypasses this helper for exactly that
-/// reason; see [`make_hu_preflop`].
-fn make_from_request(build: fn() -> EquityRequest) -> Result<HotFn, PerfError> {
-    let request = build();
-    request
-        .compute()
-        .map_err(|e| PerfError::Setup(format!("equity request failed: {e:?}")))?;
-    Ok(hot_closure(request))
-}
-
-fn make_hu_flop() -> Result<HotFn, PerfError> {
-    make_from_request(hu_flop_request)
-}
-
-/// Deliberately skips `make_from_request`'s eager validate-by-computing:
-/// for this one request, that validation *is* the ~1.7M-runout enumeration
-/// that earns it [`Band::Macro`] in the first place, so paying for it during
-/// setup would make every smoke test that proves setup succeeds just as slow
-/// as actually running the workload. The two seats are hardcoded, known
-/// non-overlapping exact hands (unlike `equity.mc.three_way`'s three seats,
-/// where the same class of duplicate-card mistake this validation exists to
-/// catch was actually found), and the exact-enumeration code path itself is
-/// already exercised by `equity.exact.hu_flop`, so the residual risk this
-/// skips checking is small.
-fn make_hu_preflop() -> Result<HotFn, PerfError> {
-    Ok(hot_closure(hu_preflop_request()))
-}
-
-fn make_three_way() -> Result<HotFn, PerfError> {
-    make_from_request(three_way_request)
-}
-
-/// One known hand against a random opponent, heads up.
-///
-/// Ported from the `benches/preflop_odds.rs` heads-up case that Phase 5
-/// deletes. Kept distinct from `equity.exact.hu_preflop` because it fixes the
-/// sample count rather than the threshold.
-fn dealeval_hu_request() -> EquityRequest {
-    EquityRequest {
-        players: vec![PlayerSpec::Exact(Two::HAND_AS_KS), PlayerSpec::Random],
-        board: Board::default(),
-        opts: EquityOptions {
-            exact_threshold: 0,
-            max_samples: 10_000,
-            seed: Some(7),
-        },
     }
-}
 
-fn make_dealeval_hu() -> Result<HotFn, PerfError> {
-    make_from_request(dealeval_hu_request)
-}
-
-/// One known hand against two random opponents.
-///
-/// Ported from the `benches/preflop_odds.rs` three-way case. One known hand
-/// against two unknowns is the shape a hand-history replayer asks for, and the
-/// extra seat roughly doubles the per-sample showdown work relative to
-/// [`dealeval_hu_request`].
-fn dealeval_three_way_request() -> EquityRequest {
-    EquityRequest {
-        players: vec![
-            PlayerSpec::Exact(Two::HAND_AS_KS),
-            PlayerSpec::Random,
-            PlayerSpec::Random,
-        ],
-        board: Board::default(),
-        opts: EquityOptions {
-            exact_threshold: 0,
-            max_samples: 10_000,
-            seed: Some(7),
-        },
+    /// AA versus KK on [`DRY_TURN`] with [`DEAD_2`] dead: 42 river cards instead
+    /// of 44, so the reduced deck is measured.
+    fn turn_dead_2_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
+            board: Board::from_str(DRY_TURN).unwrap_or_default(),
+            dead: Cards::from_str(DEAD_2).unwrap_or_default(),
+            opts: EquityOptions {
+                exact_threshold: 100_000,
+                max_samples: 100_000,
+                seed: Some(42),
+            },
+        }
     }
-}
 
-fn make_dealeval_three_way() -> Result<HotFn, PerfError> {
-    make_from_request(dealeval_three_way_request)
-}
+    fn make_turn_dead_2() -> Result<HotFn, PerfError> {
+        Self::make_from_request(Self::turn_dead_2_request)
+    }
 
-/// Every equity-engine workload.
-///
-/// # Examples
-///
-/// ```
-/// use pkcore_perf::catalog_equity::equity_workloads;
-///
-/// assert!(equity_workloads().iter().all(|w| w.features.contains(&"equity")));
-/// ```
-#[must_use]
-pub fn equity_workloads() -> Vec<Workload> {
-    vec![
-        Workload {
-            name: "equity.exact.hu_flop",
-            band: Band::Micro,
-            inner_iters: 1,
-            features: &["equity"],
-            parallel: true,
-            make: make_hu_flop,
-        },
-        Workload {
-            name: "equity.exact.hu_preflop",
-            band: Band::Macro,
-            inner_iters: 1,
-            features: &["equity"],
-            parallel: true,
-            make: make_hu_preflop,
-        },
-        Workload {
-            name: "equity.mc.three_way",
-            band: Band::Micro,
-            inner_iters: 1,
-            features: &["equity"],
-            parallel: true,
-            make: make_three_way,
-        },
-        Workload {
-            name: "dealeval.hu",
-            band: Band::Micro,
-            inner_iters: 1,
-            features: &["equity"],
-            parallel: true,
-            make: make_dealeval_hu,
-        },
-        Workload {
-            name: "dealeval.three_way",
-            band: Band::Micro,
-            inner_iters: 1,
-            features: &["equity"],
-            parallel: true,
-            make: make_dealeval_three_way,
-        },
-    ]
+    /// AA versus KK pre-flop, forced to enumerate exactly. `C(48,5)` is about
+    /// 1.7M runouts — `exact_threshold` is raised well above that count so this
+    /// is true enumeration, not the Monte Carlo fallback most pre-flop requests
+    /// take. That much real work is minutes, not micro-to-seconds, on this host:
+    /// [`Band::Macro`], not [`Band::Micro`] like its siblings. Because it is
+    /// `Macro`, the smoke tests below only prove it sets up; they do not run it.
+    fn hu_preflop_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![PlayerSpec::Exact(Two::HAND_AS_AH), PlayerSpec::Exact(Two::HAND_KS_KH)],
+            board: Board::default(),
+            dead: Cards::default(),
+            opts: EquityOptions {
+                exact_threshold: 2_000_000,
+                max_samples: 100_000,
+                seed: Some(42),
+            },
+        }
+    }
+
+    /// Three-way seeded Monte Carlo, the shape a live table actually asks for.
+    ///
+    /// The third seat is `A♦K♦`, not `A♠K♠`: `Two::HAND_AS_KS` shares the ace of
+    /// spades with the first seat's `Two::HAND_AS_AH`, which `compute` correctly
+    /// rejects as `PKError::DuplicateCard`. `A♦K♦` keeps the same AKs shape
+    /// without colliding with either pocket pair.
+    fn three_way_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![
+                PlayerSpec::Exact(Two::HAND_AS_AH),
+                PlayerSpec::Exact(Two::HAND_KS_KH),
+                PlayerSpec::Exact(Two::HAND_AD_KD),
+            ],
+            board: Board::default(),
+            dead: Cards::default(),
+            opts: EquityOptions {
+                exact_threshold: 0,
+                max_samples: 20_000,
+                seed: Some(42),
+            },
+        }
+    }
+
+    /// Builds the timed closure that folds the integer win and tie counts across
+    /// every seat, for one already-built request.
+    ///
+    /// A `compute()` failure is a [`PerfError::Run`], never silently skipped: an
+    /// earlier version used `if let Ok(...)` with no else arm, so a request that
+    /// started failing produced a stable checksum of 0 and an absurdly fast
+    /// timing that the runner reported as `Status::Ok`.
+    fn hot_closure(request: EquityRequest) -> HotFn {
+        Box::new(move |iters: u32| {
+            let mut acc: u64 = 0;
+            for _ in 0..iters {
+                let report = request
+                    .compute()
+                    .map_err(|e| PerfError::Run(format!("equity compute failed: {e:?}")))?;
+                for player in &report.players {
+                    acc = acc.wrapping_add(player.wins).wrapping_add(player.ties);
+                }
+            }
+            Ok(acc)
+        })
+    }
+
+    /// Wraps a request builder into a hot closure that folds the integer win and
+    /// tie counts across every seat.
+    ///
+    /// Validates by computing once before the timed region, so a bad fixture is a
+    /// setup error rather than a mysteriously fast measurement. That validation
+    /// call is itself real work — cheap for every workload in this module except
+    /// [`Self::hu_preflop_request`], whose `make` bypasses this helper for exactly that
+    /// reason; see [`Self::make_hu_preflop`].
+    fn make_from_request(build: fn() -> EquityRequest) -> Result<HotFn, PerfError> {
+        let request = build();
+        request
+            .compute()
+            .map_err(|e| PerfError::Setup(format!("equity request failed: {e:?}")))?;
+        Ok(Self::hot_closure(request))
+    }
+
+    fn make_hu_flop() -> Result<HotFn, PerfError> {
+        Self::make_from_request(Self::hu_flop_request)
+    }
+
+    /// Deliberately skips `make_from_request`'s eager validate-by-computing:
+    /// for this one request, that validation *is* the ~1.7M-runout enumeration
+    /// that earns it [`Band::Macro`] in the first place, so paying for it during
+    /// setup would make every smoke test that proves setup succeeds just as slow
+    /// as actually running the workload. The two seats are hardcoded, known
+    /// non-overlapping exact hands (unlike `equity.mc.three_way`'s three seats,
+    /// where the same class of duplicate-card mistake this validation exists to
+    /// catch was actually found), and the exact-enumeration code path itself is
+    /// already exercised by `equity.exact.hu_flop`, so the residual risk this
+    /// skips checking is small.
+    fn make_hu_preflop() -> Result<HotFn, PerfError> {
+        Ok(Self::hot_closure(Self::hu_preflop_request()))
+    }
+
+    fn make_three_way() -> Result<HotFn, PerfError> {
+        Self::make_from_request(Self::three_way_request)
+    }
+
+    /// One known hand against a random opponent, heads up.
+    ///
+    /// Ported from the `benches/preflop_odds.rs` heads-up case that Phase 5
+    /// deletes. Kept distinct from `equity.exact.hu_preflop` because it fixes the
+    /// sample count rather than the threshold.
+    fn dealeval_hu_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![PlayerSpec::Exact(Two::HAND_AS_KS), PlayerSpec::Random],
+            board: Board::default(),
+            dead: Cards::default(),
+            opts: EquityOptions {
+                exact_threshold: 0,
+                max_samples: 10_000,
+                seed: Some(7),
+            },
+        }
+    }
+
+    fn make_dealeval_hu() -> Result<HotFn, PerfError> {
+        Self::make_from_request(Self::dealeval_hu_request)
+    }
+
+    /// One known hand against two random opponents.
+    ///
+    /// Ported from the `benches/preflop_odds.rs` three-way case. One known hand
+    /// against two unknowns is the shape a hand-history replayer asks for, and the
+    /// extra seat roughly doubles the per-sample showdown work relative to
+    /// [`Self::dealeval_hu_request`].
+    fn dealeval_three_way_request() -> EquityRequest {
+        EquityRequest {
+            players: vec![
+                PlayerSpec::Exact(Two::HAND_AS_KS),
+                PlayerSpec::Random,
+                PlayerSpec::Random,
+            ],
+            board: Board::default(),
+            dead: Cards::default(),
+            opts: EquityOptions {
+                exact_threshold: 0,
+                max_samples: 10_000,
+                seed: Some(7),
+            },
+        }
+    }
+
+    fn make_dealeval_three_way() -> Result<HotFn, PerfError> {
+        Self::make_from_request(Self::dealeval_three_way_request)
+    }
+
+    /// Every equity-engine workload.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore_perf::catalog_equity::EquityCatalog;
+    ///
+    /// assert!(EquityCatalog::workloads().iter().all(|w| w.features.contains(&"equity")));
+    /// ```
+    #[must_use]
+    pub fn workloads() -> Vec<Workload> {
+        vec![
+            Workload {
+                name: "equity.exact.hu_flop",
+                band: Band::Micro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_hu_flop,
+            },
+            Workload {
+                name: "equity.exact.turn_dead_2",
+                band: Band::Micro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_turn_dead_2,
+            },
+            Workload {
+                name: "equity.exact.hu_preflop",
+                band: Band::Macro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_hu_preflop,
+            },
+            Workload {
+                name: "equity.mc.three_way",
+                band: Band::Micro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_three_way,
+            },
+            Workload {
+                name: "dealeval.hu",
+                band: Band::Micro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_dealeval_hu,
+            },
+            Workload {
+                name: "dealeval.three_way",
+                band: Band::Micro,
+                inner_iters: 1,
+                features: &["equity"],
+                parallel: true,
+                make: Self::make_dealeval_three_way,
+            },
+        ]
+    }
 }
 
 #[cfg(test)]
@@ -244,11 +289,11 @@ mod perf__catalog_equity_tests {
     use crate::workload::Band;
 
     /// Every equity workload declares the `equity` feature; `hu_preflop`
-    /// alone is `Macro` (true 1.7M-runout enumeration), its four siblings
+    /// alone is `Macro` (true 1.7M-runout enumeration), its five siblings
     /// `Micro`.
     #[test]
     fn every_equity_workload_declares_the_equity_feature() {
-        for workload in equity_workloads() {
+        for workload in EquityCatalog::workloads() {
             let expected_band = if workload.name == "equity.exact.hu_preflop" {
                 Band::Macro
             } else {
@@ -267,17 +312,16 @@ mod perf__catalog_equity_tests {
     type NamedRequestBuilder = (&'static str, fn() -> EquityRequest);
 
     /// Every named request builder, paired with the workload name it backs.
-    /// A single list so a sixth fixture is automatically covered by every
-    /// structural check below, instead of hardcoding five blocks.
-    fn request_builders() -> [NamedRequestBuilder; 5] {
-        [
-            ("equity.exact.hu_flop", hu_flop_request),
-            ("equity.exact.hu_preflop", hu_preflop_request),
-            ("equity.mc.three_way", three_way_request),
-            ("dealeval.hu", dealeval_hu_request),
-            ("dealeval.three_way", dealeval_three_way_request),
-        ]
-    }
+    /// A single list so a seventh fixture is automatically covered by every
+    /// structural check below, instead of hardcoding six blocks.
+    const REQUEST_BUILDERS: [NamedRequestBuilder; 6] = [
+        ("equity.exact.hu_flop", EquityCatalog::hu_flop_request),
+        ("equity.exact.turn_dead_2", EquityCatalog::turn_dead_2_request),
+        ("equity.exact.hu_preflop", EquityCatalog::hu_preflop_request),
+        ("equity.mc.three_way", EquityCatalog::three_way_request),
+        ("dealeval.hu", EquityCatalog::dealeval_hu_request),
+        ("dealeval.three_way", EquityCatalog::dealeval_three_way_request),
+    ];
 
     /// Validates every equity request fixture *without running the engine* —
     /// deliberately fast, so it catches the class of mistake `make_hu_preflop`
@@ -300,7 +344,7 @@ mod perf__catalog_equity_tests {
         use pkcore::prelude::{Card, Pile};
         use std::collections::HashSet;
 
-        for (name, build) in request_builders() {
+        for (name, build) in REQUEST_BUILDERS {
             let request = build();
 
             let mut cards: Vec<Card> = request.board.cards().to_vec();
@@ -310,11 +354,12 @@ mod perf__catalog_equity_tests {
                     cards.push(two.second());
                 }
             }
+            cards.extend(request.dead.iter().copied());
             let unique: HashSet<Card> = cards.iter().copied().collect();
             assert_eq!(
                 unique.len(),
                 cards.len(),
-                "{name} has a duplicate card among its known hands/board: {cards:?}"
+                "{name} has a duplicate card among its known hands/board/dead: {cards:?}"
             );
 
             let is_exact_named = name.starts_with("equity.exact.");
@@ -339,6 +384,18 @@ mod perf__catalog_equity_tests {
         }
     }
 
+    /// `unwrap_or_default` would turn a typo in [`DRY_TURN`] or [`DEAD_2`] into
+    /// a valid but different request, so the fixture's shape is pinned here.
+    #[test]
+    fn turn_dead_2_has_four_board_cards_and_two_dead() {
+        use pkcore::prelude::Pile;
+
+        let request = EquityCatalog::turn_dead_2_request();
+        assert_eq!(4, request.board.cards().len());
+        assert_eq!(2, request.dead.len());
+        assert_eq!(42, request.compute().map(|report| report.samples).unwrap_or_default());
+    }
+
     /// Exact enumeration is deterministic, and seeded Monte Carlo must be too —
     /// an unseeded RNG here would surface as `Status::Nondeterministic`.
     ///
@@ -353,7 +410,7 @@ mod perf__catalog_equity_tests {
     /// enumeration once is affordable.
     #[test]
     fn every_equity_workload_is_deterministic_and_does_real_work() {
-        for workload in equity_workloads() {
+        for workload in EquityCatalog::workloads() {
             if workload.band == Band::Macro {
                 let _ = (workload.make)().unwrap_or_else(|e| panic!("{} setup failed: {e}", workload.name));
                 continue;
@@ -375,7 +432,7 @@ mod perf__catalog_equity_tests {
     /// wrong thing quickly; this does.
     #[test]
     fn hu_flop_puts_aces_far_ahead() {
-        let report = hu_flop_request().compute().expect("computes");
+        let report = EquityCatalog::hu_flop_request().compute().expect("computes");
         assert_eq!(report.players.len(), 2);
         assert!(
             report.players[0].equity > 0.75,

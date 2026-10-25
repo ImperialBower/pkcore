@@ -28,6 +28,7 @@ use clap::Parser;
 use pkcore::analysis::equity::{EquityEngine, EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::analysis::gto::combos::Combos;
 use pkcore::arrays::two::Two;
+use pkcore::cards::Cards;
 use pkcore::play::board::Board;
 use std::str::FromStr;
 use std::time::Instant;
@@ -110,7 +111,12 @@ fn main() {
     }
     opts.seed = args.seed;
 
-    let request = EquityRequest { players, board, opts };
+    let request = EquityRequest {
+        players,
+        board,
+        dead: Cards::default(),
+        opts,
+    };
 
     let start = Instant::now();
     let report = match EquityEngine::compute(&request) {

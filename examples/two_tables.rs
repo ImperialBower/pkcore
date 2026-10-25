@@ -139,6 +139,7 @@ fn preflop_exact_versus_sampled() -> Result<(), PKError> {
             let request = EquityRequest {
                 players: vec![PlayerSpec::Exact(GUS), PlayerSpec::Exact(DANIEL)],
                 board: Board::default(),
+                dead: Cards::default(),
                 opts: EquityOptions {
                     max_samples: samples,
                     seed: Some(seed),
@@ -179,6 +180,7 @@ fn exact_by_street(board: &Board) -> Result<(), PKError> {
         let request = EquityRequest {
             players: vec![PlayerSpec::Exact(GUS), PlayerSpec::Exact(DANIEL)],
             board: partial,
+            dead: Cards::default(),
             opts: EquityOptions::default(),
         };
         let report = request.compute()?;
@@ -417,6 +419,7 @@ fn where_they_meet(board: &Board, before_shove: &WeightedCombos, posterior: &Wei
     let request = EquityRequest {
         players: vec![PlayerSpec::Exact(DANIEL), PlayerSpec::Range(posterior.to_combos())],
         board: *board,
+        dead: Cards::default(),
         opts: EquityOptions {
             seed: Some(7),
             ..Default::default()
