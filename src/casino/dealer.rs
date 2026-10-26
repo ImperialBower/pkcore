@@ -335,9 +335,9 @@ impl Dealer {
         self.table.act_shuffle_deck();
         self.table.act_new_hand();
 
-        // Advance the button to the next occupied seat so that SB and BB
-        // also land on occupied seats.
-        self.advance_button_to_occupied(&occupied);
+        // DEFECT_044: the big blind moves one player; the button may land on
+        // an empty chair (TDA 2024 Rule 32).
+        self.table.button_up();
 
         self.table.act_forced_bets().map_err(DealerError::from)?;
         self.table.deal_cards_to_seats().map_err(DealerError::from)?;
@@ -345,23 +345,6 @@ impl Dealer {
         self.hand_in_progress = true;
         log::info!("Hand started at table {}", self.table.id);
         Ok(())
-    }
-
-    /// Advances the button to the next occupied seat.
-    /// Because `determine_small_blind` and `determine_big_blind` now skip empty
-    /// seats, we only need to move the button to any occupied seat — the table
-    /// will correctly find the next two occupied seats for SB and BB.
-    fn advance_button_to_occupied(&mut self, occupied: &[u8]) {
-        let size = self.table.seats.size();
-        // Move button forward until it lands on an occupied seat.
-        for _ in 0..size {
-            self.table.button_up();
-            let btn = self.table.button;
-            if occupied.contains(&btn) {
-                return;
-            }
-        }
-        // Fallback: leave button wherever it is.
     }
 
     /// Advances the hand to the next street when the current betting round is
@@ -841,6 +824,34 @@ mod casino__dealer_tests {
         let mut dealer = two_player_dealer();
         dealer.start_hand().unwrap();
         assert!(dealer.is_hand_in_progress());
+    }
+
+    /// `DEFECT_044`: with empty chairs between players, every player posts the
+    /// big blind once an orbit. Moving the button to the next occupied seat
+    /// gave seat 5 the big blind twice in three hands and seat 0 never.
+    #[test]
+    fn start_hand__big_blind_moves_one_player_past_empty_chairs() {
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        for seat in [0, 1, 5] {
+            dealer
+                .seat_player_at(Player::new_with_chips(format!("P{seat}"), 10_000), seat)
+                .unwrap();
+        }
+
+        let big_blinds: Vec<u8> = (0..6)
+            .map(|_| {
+                dealer.start_hand().unwrap();
+                let big_blind = dealer.table.determine_big_blind();
+                while !dealer.table.is_game_over() {
+                    let seat = dealer.next_to_act();
+                    dealer.act(DealerAction::Fold { seat }).unwrap();
+                }
+                dealer.end_hand().unwrap();
+                big_blind
+            })
+            .collect();
+
+        assert_eq!(vec![0, 1, 5, 0, 1, 5], big_blinds);
     }
 
     #[test]
