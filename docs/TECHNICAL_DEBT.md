@@ -7,8 +7,22 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-10-16** against `ssc` @ `af91076b`, pkcore `0.15.5`
-> (working tree clean). Since the `11ddc54d` pass (`0.14.0`): `0.15.0` landed
+> **Last refreshed 2026-10-26** against `main` @ `6d1bfac9`, pkcore `0.20.1`
+> (working tree clean). Since the `af91076b` pass (`0.15.5`): `0.16.0` fixed
+> the six headline defects of the 2026-10-17 review plus `DEFECT_033`–`039`
+> and moved every free function into an `impl`; `0.17.0` shipped EPIC-93
+> (`HandHistory::validate`, `DEFECT_040`); `0.17.3` fixed `DEFECT_041`;
+> `0.18.0`–`0.20.0` shipped EPIC-123 dead cards (`DEFECT_042`, `DEFECT_043`).
+> Marker census (`grep -rnE '\b(TODO|FIXME|HACK|XXX)\b' --include='*.rs'
+> src/`, minus the `expect("TODO: panic message")` idiom, plus the one
+> `TODONE` the word-boundary grep misses): **54 hits**, **10 `TODO RF`**,
+> **4 `TODO TD`** in `src/` (+1 `TODO TD DEFECT` in `examples/preflop.rs`).
+> No marker was added since `af91076b`; the drop from 58 is the stricter
+> grep, not closed work. Line numbers below were re-anchored to `6d1bfac9`.
+> `fn test_` count in `src/` is now **344**.
+>
+> Previous header (2026-10-16, `af91076b`, `0.15.5`) kept for history:
+> Since the `11ddc54d` pass (`0.14.0`): `0.15.0` landed
 > kernel-purity fixes 1, 1a–1c, 2 and 8 (default features flipped — marked
 > **Breaking** — plus the `full` umbrella and the `entropy` / `persistence` /
 > `json` / `csv` features; `src/util/name.rs` deleted); `0.15.1` added
@@ -131,13 +145,19 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   § Context says Omaha is validated. Ranking with `OmahaHigh` (two from the
   hand, three from the board) would close it.
   ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
-- [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:520`)
+- [ ] **Remove the 25 `#[deprecated(since = "0.16.0")]` wrappers** — the
+  free-function move (decided 2026-10-18) said to keep the old public paths
+  for one release, then remove them in the next minor. Four minors have
+  shipped since (`0.17`–`0.20`) and all 25 are still there. Removing them is
+  breaking; do it in one change with a `Removed` CHANGELOG line, and check
+  the consumers first (`grep -rn 'deprecated(since = "0.16.0"' src`).
+- [ ] **Suit-weighted card sort** — change `Card` so sort is `Suit`-weighted first. (`src/cards.rs:548`)
 - [ ] **Win-count refactor** — examine win count in case eval for refactoring opportunities. (`src/analysis/case_eval.rs:626`)
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
 - [x] ~~**`unimplemented!()` sweep (DEFECT_023's "next sweep")**~~ — **DONE 2026-08-21** in `0.7.0`. Nine public methods whose body was a descriptive `unimplemented!("…")` now do what the message said (`CardsCell::swap`/`card_at`, `Bard::swap`, `HoleCards`/`SortedHeadsUp`/`Board::clean`, `Board::the_nuts`, `Twos::percentage`, `SevenFiveBCM::exists`/`insert_many`/`select_all`, `TestData::deck_the_hand_dealable`); `Cards::swap` gained a bounds guard on the way. **What remains is deliberate**: `Pile::add`/`card_at`/`swap` on fixed-size hands (`Card`, `Two`…`Seven`, `Board`, `HoleCards`, `OmahaHigh`, `StartingHands`, `SortedHeadsUp`, `BoxedCards`) and `the_nuts` on bare card sets (`Cards`, `CardsCell`, `Bard`, `Card`, `HoleCards`, `SortedHeadsUp`, `Five`…`Seven`). The `Pile` trait gives them no error channel and the operations have no meaning there; each is documented and `#[should_panic]`-tested. Changing that means redesigning `Pile` — a separate decision, not debt.
 - [x] ~~**Masked matchups defect**~~ — **RETIRED 2026-08-21.** The bare `TODO DEFECT` marker dated from 2023-09-15 (`4db372e4`); the only trace of its meaning is the `#[ignore]`d `defect_type4_1123` / `defect_type4_1123_2` tests, which pass. Replaced with a real doc comment on `Masked`. (`src/arrays/matchups/masked.rs:67`)
 - [ ] **Suit-texture "defect watch"** — four `Type1223a–d` variants carry a `Defect watch` note, and the module header calls the code "an abomination. No wonder there are so many gaps in it." (`src/arrays/matchups/masks/suit_texture.rs:25–28`, `:41`)
-- [ ] **`BinaryCardMap` has no `Display`** — `TODO: Implement display trait`. House rule asks for `Display` on user-facing types. (`src/analysis/store/bcm/binary_card_map.rs:208`)
+- [ ] **`BinaryCardMap` has no `Display`** — `TODO: Implement display trait`. House rule asks for `Display` on user-facing types. (`src/analysis/store/bcm/binary_card_map.rs:170`)
 - [ ] **`preflop` example double-inserts** — `TODO TD DEFECT: Still doing double inserts`, plus an error-cast ergonomics gap. (`examples/preflop.rs:210`, `:117`)
 - [x] ~~**`PokerSession::next_actor` swallows a failed deal**~~ — **FIXED in `0.7.0`** (2026-08-21); returns `Result<Option<u8>, PKError>`. Original note: — the `DEFECT_019` leftover. `advance_street().is_err()` collapses to `None`, the same silence `next_step` used to have before it grew `SessionStep::Failed`. A caller cannot tell "hand over" from "deal failed". Suggested: return `Result<Option<u8>, PKError>`, or route through `next_step`. (`src/casino/session.rs:458`, [`DEFECT_019`](defects/DEFECT_019_next_step_swallows_advance_street_error.md))
 - [x] ~~**Two empty defect EPIC stubs**~~ — **DELETED 2026-08-21.** Original note: — `EPIC-DEFECT-Minraise.md` is a bare title (rule now covered by `DEFECT_007`/`010`/`015`/`023`); `EPIC-DEFECT-A_Preflop_Perf.md` is zero bytes. Delete or close both so `ls docs/epics | grep -v CLOSED` stops listing them as open. (`docs/epics/`)
@@ -149,7 +169,7 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 
 - [x] ~~**`analysis/store/heads_up.rs`** — `TODO: Write tests!!!`~~ — **DONE 2026-09-13** in `0.14.0`. Eight tests now colocated in the module; the TODO comment is gone. (`src/analysis/store/heads_up.rs:150`)
 - [x] ~~**`play/game.rs`** — `TODO: Write some fucking tests.`~~ — **DONE 2026-09-13** in `0.14.0`. (`src/play/game.rs:345`)
-- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` Still open; the `0.14.0` test pass covered its two siblings but not this one. (`src/play/game.rs:920`; was `:912` on 2026-09-13)
+- [ ] **`play/game.rs` negative boundaries** — `TODO: Add more coverage for negative boundary conditions.` Still open; the `0.14.0` test pass covered its two siblings but not this one. (`src/play/game.rs:1138`; was `:920` on 2026-10-16 — the dead-cards work in `0.19.0`/`0.20.0` grew the file but did not touch this)
 - [ ] **`lib.rs` combinatorial constants unverified** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` is annotated `Need to validate`, and the surrounding block asks for on-demand `#[ignore]` tests to check the numbers against the code. Still open. (`src/lib.rs:557`; line moved from `:467` by 2026-09-12)
 
 ### Missing `# Errors` documentation
@@ -163,12 +183,12 @@ _10 `TODO RF` markers in `src/` (re-counted 2026-08-30). The author flagged thes
 most are localized clean-ups, not behavior changes._
 
 - [ ] **`arrays/two.rs` trait sorting** — sorting wanted for these traits "is starting to feel too complicated"; second marker notes a universal-method extraction. (`src/arrays/two.rs:1521`, `:1563`)
-- [ ] **`arrays/five.rs` hacks** — three stacked `RF`/"Hack" markers around hand evaluation, one labelled "MEGA Hack". (`src/arrays/five.rs:268`, `:274`, `:283`)
+- [ ] **`arrays/five.rs` hacks** — three stacked `RF`/"Hack" markers around hand evaluation, one labelled "MEGA Hack". (`src/arrays/five.rs:281`, `:287`, `:296`)
 - [x] ~~**`casino/state.rs` cleanup**~~ — **GONE 2026-08-30.** The "This sucks" marker is no longer in `src/casino/state.rs`; verified by `grep TODO` at `cf5f50f7`.
 - [ ] **`play/board.rs` clunky path** — `RF? Clunky`. (`src/play/board.rs:217`)
-- [ ] **`flop_eval.rs` → trait** — extract into a trait. (`src/play/stages/flop_eval.rs:226`)
+- [ ] **`flop_eval.rs` → trait** — extract into a trait. (`src/play/stages/flop_eval.rs:245`)
 - [ ] **`case_eval.rs` case param** — change case parameter to `Two` to facilitate range calculations. (`src/analysis/case_eval.rs:103`)
-- [ ] **`cards.rs` markers** — two unexplained `RF`/"Hack" notes. (`src/cards.rs:87`, `:898`)
+- [ ] **`cards.rs` markers** — two unexplained `RF`/"Hack" notes. (`src/cards.rs:70`, `:911`)
 - [ ] **`matchups/sorted_heads_up.rs` struct pollution** — "Refactor out this pollution of the struct space". (`src/arrays/matchups/sorted_heads_up.rs:137`)
 - [x] ~~**`table_celled/showdown.rs`**~~ — **GONE.** File deleted with `TableCelled` ([EPIC-83](epics/EPIC-83_Table_Decelled.md), `ba1dd3fc`).
 - [x] ~~**`table_celled/seats.rs`**~~ — **GONE.** File deleted with `TableCelled` ([EPIC-83](epics/EPIC-83_Table_Decelled.md), `ba1dd3fc`).
@@ -190,18 +210,20 @@ _First time these are captured. Mostly small, some are vague enough that the
 right move is deleting the comment rather than acting on it — flagged where
 that looks true._
 
-- [ ] **`play/game.rs:444` — `TODONE TD: Resolve this.`** — the `TODONE`
+- [ ] **`play/game.rs:506` (was `:444`) — `TODONE TD: Resolve this.`** — the `TODONE`
   spelling reads like a half-finished edit; unclear whether the marker itself
   is stale or the work is. Worth a look before the next `play/game.rs` change.
 - [ ] **`Cards` gaps** — `TODO: Add the ability to pass in burn cards`
-  (`src/cards.rs:112`); `TODO: Refactor this to return the Cards as
-  BoxedCards, instead of an examples` (`src/cards.rs:209`).
+  (`src/cards.rs:125`); `TODO: Refactor this to return the Cards as
+  BoxedCards, instead of an examples` (`src/cards.rs:222`). The burn-card
+  ask may now be covered by EPIC-123's `dead: Cards` on `EquityRequest` and
+  `Game`; check before acting.
 - [ ] **`Rank`/`Suit` char round-trip** — `TODO NOTE: I wonder if there is a
   better way to go back and forth from chars?` (`src/rank.rs:98`); a `TODO
   Early` tag with no body (`src/suit.rs:5`).
 - [ ] **GTO layer stubs** — `TODO: Add logging`
   (`src/analysis/gto/combo.rs:3690`); a vague aspirational note about future
-  gameplay work (`src/analysis/gto/mod.rs:2416`).
+  gameplay work (`src/analysis/gto/mod.rs:2417`).
 - [ ] **`arrays/mod.rs` open questions** — `TODO: How can we make this work?`
   (`:73`) and `TODO ¿Is there a way to do this directly from the trait?`
   (`:116`).
@@ -209,8 +231,8 @@ that looks true._
 - [ ] **`hole_cards/twos.rs:40`** — bare `TODO: do that`, no context.
 - [ ] **`play/hole_cards.rs:55`** — `TODO: Refactor to Two;`.
 - [ ] **`play/stages/flop_eval.rs`** — two more markers beyond the tracked
-  `TODO RF` at `:226`: `TODO: Add the ability to calculate the effective
-  nuts` (`:178`) and `TODO: Even spacing for each result string` (`:255`,
+  `TODO RF` at `:245`: `TODO: Add the ability to calculate the effective
+  nuts` (`:178`) and `TODO: Even spacing for each result string` (`:274`,
   cosmetic).
 - [ ] **`arrays/seven.rs:129`** — `TODO: Align around passing by reference or
   value for primitives.`
@@ -221,7 +243,7 @@ that looks true._
   on defect vectors` at `src/analysis/case_eval.rs:66`; `TODO: Make sure to
   write something about the inability to use the and trait to consts` at
   `src/bard.rs:244`; `TODO Continue refactoring` on a test case attribute at
-  `src/card.rs:763`; two musings in
+  `src/card.rs:769`; two musings in
   `src/arrays/matchups/sorted_heads_up.rs:741` (atomic `Ordering`?) and `:929`
   (`do I need this? I'm overthinking and underknowing`). None of these describe behavior that is wrong — candidates
   for deleting the comment rather than actioning it.
@@ -229,6 +251,13 @@ that looks true._
   these numbers against our code`, the same combinatorial-constants concern
   already tracked under **Self-declared missing tests** at `lib.rs:557` — two
   markers, one issue.
+
+### Newly found, 2026-10-26 — untracked comment TODOs
+
+- [ ] **`arrays/matchups/sorted_heads_up.rs:1149`** — `TODO: Why doesn't
+  this work. I am too befuddled to dive into it now. Need to get preflop
+  done.` Dates from 2023-07-27 (`2b32dd80`); missed by earlier passes. It
+  says something does not work, so read it before deleting it.
 
 ## 🤖 Automated review findings
 
@@ -480,7 +509,7 @@ These are full re-runnable audits, not one-line debt items. Read them before
 attacking the areas they cover.
 
 - [`docs/KERNEL_PURITY_AUDIT.md`](KERNEL_PURITY_AUDIT.md) — the eight kernel invariants, with a ranked fix list. Refreshed against 0.15.0.
-- [`docs/TESTKIT_AUDIT.md`](TESTKIT_AUDIT.md) — controllability: fake data, textures and state coverage (T1–T7). **Stale — still headed `0.8.0` (2026-08-25); seven releases behind.**
+- [`docs/TESTKIT_AUDIT.md`](TESTKIT_AUDIT.md) — controllability: fake data, textures and state coverage (T1–T7). **Stale — still headed `0.8.0` (2026-08-25); the repo is at `0.20.1`.**
 - [`docs/DOMAIN_ROLES_REPORT.md`](DOMAIN_ROLES_REPORT.md) — every `pub` type with its `# Domain` role, from `/dddocs list` at `0.15.4`. Re-run with `/dddocs check` after adding public types.
 - [`docs/DEPENDENCY_AUDIT.md`](DEPENDENCY_AUDIT.md) — dependency entanglement and extraction cost.
 - [`docs/REUSABILITY_AUDIT.md`](REUSABILITY_AUDIT.md) — public-API reusability against the five Muratori characteristics.
