@@ -90,8 +90,13 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   (chips added, the engine's) and the fixtures be migrated, after which the
   other reading becomes an `Amount` finding.
   ([EPIC-93](epics/EPIC-93_Faithful_Replay.md#implementation-corrigendum))
-- [ ] **Suspected engine defect: a wrapping dead small blind lands on seat 0**
-  — found 2026-10-20 by EPIC-93. With the button on seat 4 of a six-chair
+- [x] ~~**Suspected engine defect: a wrapping dead small blind lands on seat 0**~~
+  — **CLOSED 2026-10-26** in `0.20.2`. The record is heads-up, and TDA Rule
+  34 has no dead small blind heads-up, so the engine's reading is the
+  heads-up rule, not a defect. Following it up found a real one: the big
+  blind did not move one player per hand past empty chairs,
+  [`DEFECT_044`](defects/DEFECT_044_big_blind_skips_players_past_empty_chairs.md),
+  fixed. Original note: found 2026-10-20 by EPIC-93. With the button on seat 4 of a six-chair
   table, seats 0 and 1 occupied and the small blind owed by empty chair 5
   (dead-button wraparound, TDA Rule 32), the engine puts the small blind on
   seat 0, so `validate` reports the record's fold by seat 1 as "seat 1 acts

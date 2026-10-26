@@ -34,13 +34,11 @@
 
 Ranked by risk first, then by how cheap the fix is.
 
-1. **Suspected engine defect: a wrapping dead small blind lands on seat 0.**
-   Found by EPIC-93 on 2026-10-20 and never opened as a DEFECT. Button on
-   seat 4 of six chairs, seats 0–1 occupied, small blind owed by empty chair
-   5: the engine posts the small blind on seat 0. If real, it moves the
-   action order in every short-handed dead-button hand. First move: check
-   TDA Rule 32, then `/defect-report` + a `tests/defects/` fixture. Detail in
-   [`TECHNICAL_DEBT.md` § Tracked debt](TECHNICAL_DEBT.md#tracked-debt).
+1. ~~**Suspected engine defect: a wrapping dead small blind lands on seat
+   0.**~~ — **done 2026-10-26** in `0.20.2`. The record was heads-up, where
+   the engine is right; the real bug was the big blind skipping players past
+   empty chairs,
+   [`DEFECT_044`](defects/DEFECT_044_big_blind_skips_players_past_empty_chairs.md).
 2. **Release audit — three breaking releases are unaudited.** No
    `RELEASE_AUDIT_*` since `0.14.0`. Breaking since then: `0.15.0` (default
    features flipped, `util::name` deleted), `0.18.0` (`EquityRequest`
@@ -148,7 +146,7 @@ to **Tracked debt**.
 
 The ones that read as more than cleanup:
 
-- **Dead small blind on seat 0** — **Do next** #1.
+- ~~**Dead small blind on seat 0**~~ — fixed as `DEFECT_044`, `0.20.2`.
 - **EPIC-93 follow-ups**, all open: a recorded `call` amount has two
   readings; `validate()` rough edges (three findings for one fault, hidden
   second faults, `mucked` turns off the winner check); partial records get
@@ -187,8 +185,8 @@ close them.
 
 Not authored by the user. Keep, edit, or delete.
 
-- 🤖 **Open a DEFECT for the dead-small-blind order.** See **Do next** #1.
-  New this pass.
+- ~~🤖 **Open a DEFECT for the dead-small-blind order.**~~ — done,
+  `DEFECT_044`.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.0`.** Three
   breaking changes, no downstream check. Carried, now bigger.
 - 🤖 **Tag `v0.17.4`.** New this pass.

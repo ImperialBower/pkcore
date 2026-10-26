@@ -2308,7 +2308,12 @@ impl Table {
         self.muck_board();
     }
 
-    /// Advances the button to the next occupied seat.
+    /// Moves the button so the big blind passes to the next player.
+    ///
+    /// TDA 2024 Rule 32 (dead button): the big blind moves one player per
+    /// hand, and the button and small blind follow it by position, so either
+    /// can land on an empty chair. Moving the button one chair at a time does
+    /// not do that when chairs are empty (`DEFECT_044`).
     ///
     /// # Examples
     ///
@@ -2316,20 +2321,54 @@ impl Table {
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = Seats::new(vec![
-    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
-    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
-    /// ]);
+    /// let live = |name: &str| Seat::new(Player::new_with_chips(name.to_string(), 5_000));
+    /// let seats = Seats::new(vec![live("A"), live("B"), Seat::default(), Seat::default(), live("E")]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// assert_eq!(0, t.button);
+    /// assert_eq!(4, t.determine_big_blind());
+    ///
     /// t.button_up();
-    /// assert_eq!(1, t.button);
+    /// assert_eq!(0, t.determine_big_blind());
     /// t.button_up();
-    /// assert_eq!(0, t.button); // wraps
+    /// assert_eq!(1, t.determine_big_blind());
+    /// t.button_up();
+    /// assert_eq!(4, t.determine_big_blind());
     /// ```
     pub fn button_up(&mut self) {
-        self.button = (self.button + 1) % self.seats.size().max(1);
+        let size = self.seats.size().max(1);
+        let target = self.next_occupied_seat_after(self.last_big_blind(), 1);
+        let start = self.button;
+        for _ in 0..size {
+            self.button = (self.button + 1) % size;
+            if self.determine_big_blind() == target {
+                if self.count_occupied_seats() <= 2 {
+                    // Heads-up the button is the small blind (TDA 2024 Rule 34)
+                    // and acts last after the flop, so it sits on that chair.
+                    self.button = self.determine_small_blind();
+                }
+                self.log(TableAction::MoveButton(self.button));
+                return;
+            }
+        }
+        // No position gives that big blind (fewer than two players).
+        self.button = (start + 1) % size;
         self.log(TableAction::MoveButton(self.button));
+    }
+
+    /// The big blind `button_up` moves on from: the last one posted, unless
+    /// the button has moved since, in which case the one the button now gives.
+    ///
+    /// The posted seat wins over the derived one because the player on it may
+    /// have left since; the big blind then moves to the next player after that
+    /// chair, and the small blind they would have posted is dead.
+    fn last_big_blind(&self) -> u8 {
+        for action in self.event_log.iter().rev() {
+            match action {
+                TableAction::ForcedBetBigBlind(seat, _) => return *seat,
+                TableAction::MoveButton(_) => break,
+                _ => {}
+            }
+        }
+        self.determine_big_blind()
     }
 
     /// Resets the table for a new hand: mucks cards, resets states, returns
@@ -5586,6 +5625,109 @@ mod casino__table_tests {
         assert_eq!(2, table.determine_big_blind());
         assert_eq!(3, table.determine_utg());
         assert!(!table.is_small_blind_dead());
+    }
+
+    /// Builds tables with empty chairs for the `DEFECT_044` tests.
+    struct DeadButton;
+
+    impl DeadButton {
+        /// `chairs` seats, players on `occupied`, the button on `button`.
+        fn table(chairs: usize, occupied: &[usize], button: u8) -> Table {
+            let mut table = Table::nlh_from_seats(Seats::new(vec![Seat::default(); chairs]), ForcedBets::new(100, 200));
+            for &index in occupied {
+                let mut player = Player::new_with_chips(format!("P{index}"), 50_000);
+                player.state = PlayerState::YetToAct;
+                table.seats.assign(index, Seat::new(player)).unwrap();
+            }
+            table.button = button;
+            table
+        }
+
+        /// The big blind after each of `moves` calls to `button_up`.
+        fn big_blinds(table: &mut Table, moves: usize) -> Vec<u8> {
+            (0..moves)
+                .map(|_| {
+                    table.button_up();
+                    table.determine_big_blind()
+                })
+                .collect()
+        }
+    }
+
+    /// `DEFECT_044`: the big blind moves one player per hand (TDA 2024 Rule
+    /// 32), so with empty chairs between players every player still posts it
+    /// once an orbit. Moving the button one chair at a time left it on seat 5
+    /// for four hands while seats 0 and 1 posted it once each.
+    #[test]
+    fn button_up_moves_the_big_blind_one_player_past_empty_chairs() {
+        let mut table = DeadButton::table(6, &[0, 1, 5], 0);
+        assert_eq!(5, table.determine_big_blind());
+
+        assert_eq!(vec![0, 1, 5, 0, 1, 5], DeadButton::big_blinds(&mut table, 6));
+    }
+
+    /// `DEFECT_044`: heads-up with empty chairs, the big blind alternates.
+    #[test]
+    fn button_up_alternates_the_big_blind_heads_up_past_empty_chairs() {
+        let mut table = DeadButton::table(6, &[0, 1], 0);
+        assert_eq!(1, table.determine_big_blind());
+
+        assert_eq!(vec![0, 1, 0, 1, 0, 1], DeadButton::big_blinds(&mut table, 6));
+    }
+
+    /// Heads-up the button never rests on an empty chair: it is the small
+    /// blind, and the seat after it acts first after the flop.
+    #[test]
+    fn button_up_heads_up_puts_the_button_on_the_small_blind() {
+        let mut table = DeadButton::table(6, &[0, 3], 0);
+
+        for _ in 0..4 {
+            table.button_up();
+            assert_eq!(table.determine_small_blind(), table.button);
+        }
+    }
+
+    /// The big blind of the last hand leaves: the big blind moves to the next
+    /// player, and the small blind, which that player would have posted, is
+    /// dead. The button lands on the last hand's small blind (TDA 2024 Rule 32).
+    #[test]
+    fn button_up_after_the_big_blind_leaves_kills_the_small_blind() {
+        let mut table = DeadButton::table(6, &[0, 1, 3, 5], 0);
+        table.act_forced_bets().unwrap();
+        assert_eq!(3, table.determine_big_blind());
+        table.seats.assign(3, Seat::default()).unwrap();
+
+        table.button_up();
+
+        assert_eq!(1, table.button, "last hand's small blind");
+        assert!(table.is_small_blind_dead());
+        assert_eq!(5, table.determine_big_blind());
+    }
+
+    /// Down to two players, the one who posted the big blind last hand posts
+    /// the small blind now (TDA 2024 Rule 34: no big blind twice in a row).
+    #[test]
+    fn button_up_into_heads_up_does_not_repeat_the_big_blind() {
+        let mut table = DeadButton::table(6, &[0, 1, 5], 4);
+        table.act_forced_bets().unwrap();
+        assert_eq!(0, table.determine_big_blind());
+        table.seats.assign(5, Seat::default()).unwrap();
+
+        table.button_up();
+
+        assert_eq!(0, table.determine_small_blind());
+        assert_eq!(1, table.determine_big_blind());
+    }
+
+    /// Two `button_up` calls with no hand between them move the big blind two
+    /// players, not one: the last posted big blind is stale after the first.
+    #[test]
+    fn button_up_twice_after_a_hand_moves_the_big_blind_twice() {
+        let mut table = DeadButton::table(6, &[0, 1, 3, 5], 0);
+        table.act_forced_bets().unwrap();
+        assert_eq!(3, table.determine_big_blind());
+
+        assert_eq!(vec![5, 0], DeadButton::big_blinds(&mut table, 2));
     }
 
     /// A freshly built table holds a whole deck and nothing else.

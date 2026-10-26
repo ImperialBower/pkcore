@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.2] - 2026-10-26
+
+### Fixed
+
+- **The big blind now moves one player per hand when chairs are empty.**
+  Blinds are placed by position (TDA 2024 Rule 32, dead button), but the
+  button did not move by that rule. `Table::button_up` moved it one chair,
+  so with players on seats 0, 1 and 5 of six chairs, seat 5 posted the big
+  blind four hands in a row; heads-up with empty chairs, one player posted
+  it five times in a row. `Dealer::start_hand` moved it to the next
+  occupied seat, so in the same three-handed game seat 0 never posted the
+  big blind. `button_up` now moves the button until the big blind reaches
+  the next player after the last big blind posted. The button and small
+  blind can land on an empty chair; when the last big blind left, the small
+  blind is dead. Heads-up, the button stays on the small blind's chair
+  (Rule 34). `Dealer::start_hand` and `SimTable` both use it. With every
+  chair taken, nothing changes. See
+  [DEFECT_044](docs/defects/DEFECT_044_big_blind_skips_players_past_empty_chairs.md).
+
 ## [0.20.1] - 2026-10-25
 
 ### Added

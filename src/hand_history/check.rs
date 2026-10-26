@@ -1934,10 +1934,10 @@ players:
     #[cfg(feature = "hand-histories")]
     #[test]
     fn validate__zero_or_amountless_post_by_an_unlisted_seat_is_not_a_finding() {
-        // The engine places the small blind on seat 0 when a dead SB wraps
-        // (suspected engine defect, docs/TECHNICAL_DEBT.md), so the
-        // walk reports seat 1's fold as out of turn. This test is about the
-        // Seats rule only.
+        // Two players is heads-up, which has no dead small blind (TDA Rule
+        // 34), so the engine makes seat 0 the small blind and the walk
+        // reports seat 1's fold as out of turn (DEFECT_044). This test is
+        // about the Seats rule only.
         let yaml = r"
 hand: { id: deadblind, game: holdem }
 table: { seats: 6, button: 4, stakes: { small_blind: 50.0, big_blind: 100.0 } }
