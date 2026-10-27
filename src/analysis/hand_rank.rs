@@ -14,8 +14,8 @@ use std::fmt::{Display, Formatter};
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - lower is stronger
-///   - `NO_HAND_RANK_VALUE` (0) means no rank
+///   - INV-18: lower is stronger
+///   - INV-19: `NO_HAND_RANK_VALUE` (0) means no rank
 #[allow(clippy::module_name_repetitions)]
 pub type HandRankValue = u16;
 
@@ -29,8 +29,8 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - `From<HandRankValue>` yields the default when the value has no valid name or class
-///   - lower `value` orders higher; invalid ranks order below valid ones
+///   - INV-20: `From<HandRankValue>` yields the default when the value has no valid name or class
+///   - INV-21: lower `value` orders higher; invalid ranks order below valid ones
 ///
 /// # REFACTORING
 ///
@@ -112,6 +112,7 @@ mod hand_rank_tests {
 
     #[test]
     fn from() {
+        // pins: INV-19
         assert!(HandRank::from(1).salright());
         assert!(HandRank::from(7462).salright());
         assert!(!HandRank::from(0).salright());
@@ -120,9 +121,18 @@ mod hand_rank_tests {
 
     #[test]
     fn ord() {
+        // pins: INV-18, INV-21
         assert!(HandRank::from(1) > HandRank::from(2));
         assert!(HandRank::from(2000) < HandRank::from(2));
         assert!(HandRank::from(0) < HandRank::from(2));
         assert_eq!(HandRank::from(2), HandRank::from(2));
+    }
+
+    #[test]
+    fn from__an_invalid_value_is_the_default() {
+        // pins: INV-20
+        assert_eq!(HandRank::from(0), HandRank::default());
+        assert_eq!(HandRank::from(7463), HandRank::default());
+        assert_eq!(HandRank::from(HandRankValue::MAX), HandRank::default());
     }
 }

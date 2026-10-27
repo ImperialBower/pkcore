@@ -15,9 +15,9 @@
   tests in both directions (checks O1–O7), and prints an integrator ledger.
 - **Proves it:** `check_ontology.py .` exits 0 with no HARD finding, and
   `--ledger` renders `docs/PKCORE_LEDGER.md`.
-- **Status:** In progress (0.20.3). Phases 0–4 and 7 landed in the file;
-  the checker reports 25 HARD (O2 events) and 98 WARN (unpinned, uncited
-  invariants). Grounded at `44b484ee`, 26 October 2026.
+- **Status:** In progress (0.20.3). Phases 0–7 landed. `--report` gives
+  25 HARD (O2: event cases no step emits) and 3 WARN (INV-31, INV-33,
+  INV-49 unpinned, each with a `note`). Grounded at `44b484ee`, 26 October 2026.
 
 ---
 
@@ -87,8 +87,8 @@ the code changes the contract exposes as follow-ups.
 | Transitions and reads declared by hand | ✅ 13 transitions, 7 reads; 25 event cases unmapped |
 | Error strategy for `PKError` decided | ✅ (A) ontology first, split later |
 | Argument classes declared | ✅ in the file; not in `**Inputs:**` (see Findings) |
-| Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | 🟡 pruned 87 → 49; prefixes not added |
-| `pins: INV-n` markers in tests | Planned |
+| Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | ✅ 87 → 49; all 49 cited |
+| `pins: INV-n` markers in tests | ✅ 46 of 49 pinned; 15 new tests |
 | Obligations and "does not answer" written | ✅ 6 obligations |
 | `make ontology` target | Planned |
 | CI gate | Planned |
@@ -138,6 +138,20 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
    This is a dkskills gap, not a pkcore one.
 5. **`analysis::player_stats` depends on `hand_history` and `bot::sim`**,
    which are not this kernel. Under scope (B) a kernel type reads shell types.
+6. **INV-31 and INV-33 are not true.** `Six::hand_rank_value`
+   (`src/arrays/six.rs:124`) and `Seven::hand_rank_value`
+   (`src/arrays/seven.rs:179`) have no `is_dealt` guard. A hand with a blank
+   slot still ranks its real cards. `Five` has the guard. Both stay unpinned,
+   with a `note`.
+7. **`SevenEval` breaks the `Ord`/`Eq` contract.** `Eq` compares `hand_rank`
+   only (`src/analysis/eval.rs:503`), but `Ord` is derived and compares
+   `seven` first. Two equal values can sort as unequal. The INV-17 test checks
+   `==` only.
+8. **`StartingHands: From<Vec<Two>>` panics on more than nine hands**
+   (`src/arrays/hole_cards/twos.rs:321`, an index out of bounds in library
+   code). INV-34 is pinned on the nine-slot array, not on this path.
+9. **INV-49 needs a compile-fail test.** `Deck` has a private field and no
+   constructor, so the compiler holds the rule. No `#[test]` can pin it.
 
 ### Follow-ups
 
@@ -148,6 +162,9 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
   so it emits `MoveButton` and OB-6 can go.
 - Fix the `src/casino/mod.rs` driver table.
 - Report finding 4 to dkskills.
+- Findings 6–8 are bugs. Each one wants a DEFECT doc and a fix: an
+  `is_dealt` guard on `Six` and `Seven`, a hand-written `Ord` for
+  `SevenEval`, and a `TryFrom<Vec<Two>>` that returns an error.
 
 ---
 
@@ -339,16 +356,16 @@ IDs are the stable part, which is the point of the file.
 ### Phase 5 — Invariants
 
 - [x] **5a.** Prune the 87 drafted invariants to the kernel scope from 0b.
-- [ ] **5b.** Add the `INV-n:` prefix to each kept invariant in its `# Domain`
+- [x] **5b.** Add the `INV-n:` prefix to each kept invariant in its `# Domain`
   block, starting with `Table` (`src/casino/table.rs:81-85`) and
   `PokerSession` (`src/casino/session.rs:103-107`). Use `/dddocs write`.
 
 ### Phase 6 — Pins
 
-- [ ] **6a.** For each invariant, find the test that proves it and add a
+- [x] **6a.** For each invariant, find the test that proves it and add a
   `pins: INV-n` marker in the test's source. Start with chip conservation:
   the tests that call `audit_chip_total` (`src/casino/table.rs:3121`).
-- [ ] **6b.** An invariant with no test is a gap. Write the test (this is the
+- [x] **6b.** An invariant with no test is a gap. Write the test (this is the
   kata loop: a failing test first), or move the invariant to Obligations if the
   kernel cannot enforce it.
 - [ ] **6c.** Run with `--report` while pins are incomplete (unpinned is then

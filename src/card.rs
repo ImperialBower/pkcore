@@ -31,8 +31,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - a valid CKC number or blank
-///   - blank is `0`
+///   - INV-42: a valid CKC number or blank
+///   - INV-43: blank is `0`
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Card(#[serde(deserialize_with = "Card::deserialize_card_index")] u32);
 // #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -561,6 +561,7 @@ mod card_tests {
 
     #[test]
     fn new() {
+        // pins: INV-47
         assert_eq!(Card::TREY_CLUBS, Card::new(Rank::TREY, Suit::CLUBS));
         assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::CLUBS));
         assert_eq!(Card::BLANK, Card::new(Rank::TREY, Suit::BLANK));
@@ -996,5 +997,19 @@ mod card_tests {
     #[test]
     fn blank_card_never_renders_a_real_suit() {
         assert_eq!(Card::BLANK.to_pluribus(), "__");
+    }
+
+    #[test]
+    fn from__u32__an_invalid_number_is_blank() {
+        // pins: INV-42
+        assert_eq!(Card::from(0xDEAD_u32), Card::BLANK);
+        assert_eq!(Card::from(u32::MAX), Card::BLANK);
+    }
+
+    #[test]
+    fn blank_is_zero() {
+        // pins: INV-43
+        assert_eq!(Card::BLANK.as_u32(), 0);
+        assert_eq!(Card::default(), Card::BLANK);
     }
 }

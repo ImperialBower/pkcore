@@ -17,8 +17,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly six card slots
-///   - ranked only when dealt
+///   - INV-30: exactly six card slots
+///   - INV-31: ranked only when dealt
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Six([Card; 6]);
 
@@ -254,6 +254,7 @@ mod arrays__six_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-30
         assert_eq!(Six::from_str("AD 2D 3D 4D 5d 6d").unwrap(), Six::from(CARDS));
         assert_eq!(Six::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(

@@ -19,8 +19,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guessing and re-checking them. The kernel is the default feature set; the
   bots, hand histories, Kuhn, the GTO solver, storage and `Dealer` are listed
   as not the kernel. The dkskills checker does not pass yet: 25 `TableAction`
-  cases are emitted by no `PokerSession` step, and no test pins an invariant.
+  cases are emitted by no `PokerSession` step.
   See [EPIC-124](docs/epics/EPIC-124_Kernel_Ontology.md).
+- **Each invariant now names its ID and its tests** (EPIC-124, Phases 5–6).
+  The 49 `# Domain` invariant bullets start with `INV-n:`, and 46 are pinned
+  by a `// pins: INV-n` marker in a test. 15 new tests fill the gaps: the
+  fixed-limit raise cap refuses a third raise and changes nothing, the
+  street counters reset when the bets are swept, a blank card is `0`, an
+  invalid number is a blank, each card is one `Bard` bit, the deck is in
+  card-number order, and more. Three invariants stay unpinned and say why:
+  `Six` and `Seven` still rank a hand with a blank slot (a bug, now
+  recorded), and `Deck` having one value is held by the compiler.
 
 ### Fixed
 

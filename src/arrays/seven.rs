@@ -18,8 +18,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly seven card slots
-///   - ranked only when dealt
+///   - INV-32: exactly seven card slots
+///   - INV-33: ranked only when dealt
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Seven([Card; 7]);
 
@@ -333,6 +333,7 @@ mod arrays__seven_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-32
         assert_eq!(Seven::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap(), Seven::from(CARDS));
         assert_eq!(Seven::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(

@@ -146,8 +146,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - one bit per card
-///   - blank is `0`
+///   - INV-45: one bit per card
+///   - INV-46: blank is `0`
 ///
 /// # EPIC 6: Pre flop
 ///
@@ -637,6 +637,7 @@ mod bard_tests {
 
     #[test]
     fn default() {
+        // pins: INV-46
         assert_eq!(Bard::default(), Bard::BLANK);
     }
 
@@ -983,5 +984,17 @@ mod bard_tests {
     #[test]
     fn pile__to_vec__empty() {
         assert_eq!(Bard::BLANK.to_vec(), [] as [crate::card::Card; 0]);
+    }
+
+    #[test]
+    fn from__card__sets_one_bit_per_card() {
+        // pins: INV-45
+        let mut all = Bard::BLANK;
+        for card in Cards::deck().iter() {
+            let bard = Bard::from(*card);
+            assert_eq!(bard.as_u64().count_ones(), 1);
+            all = all | bard;
+        }
+        assert_eq!(all.as_u64().count_ones(), 52);
     }
 }

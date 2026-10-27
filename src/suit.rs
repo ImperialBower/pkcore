@@ -10,7 +10,7 @@ use strum::{EnumIter, IntoEnumIterator}; // TODO Early
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - `BLANK` is no suit
+///   - INV-47: `BLANK` is no suit
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Suit {
     SPADES = 4,
@@ -127,6 +127,7 @@ mod card_suit_tests {
 
     #[test]
     fn binary_signature() {
+        // pins: INV-47
         assert_eq!(32768, Suit::SPADES.binary_signature());
         assert_eq!(16384, Suit::HEARTS.binary_signature());
         assert_eq!(8192, Suit::DIAMONDS.binary_signature());

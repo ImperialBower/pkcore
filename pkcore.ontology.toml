@@ -712,6 +712,7 @@ doc = "exactly six card slots"
 id = "INV-31"
 scope = "Six"
 doc = "ranked only when dealt"
+note = "Not true today: Six::hand_rank_value has no is_dealt guard, so a Six with a blank slot ranks its five real cards (EPIC-124 finding 6). Unpinned until fixed."
 
 [[invariants]]
 id = "INV-32"
@@ -722,6 +723,7 @@ doc = "exactly seven card slots"
 id = "INV-33"
 scope = "Seven"
 doc = "ranked only when dealt"
+note = "Not true today: Seven::hand_rank_value has no is_dealt guard, so a Seven with a blank slot ranks its best real five (EPIC-124 finding 6). Unpinned until fixed."
 
 [[invariants]]
 id = "INV-34"
@@ -802,6 +804,7 @@ doc = "the 52 cards in canonical order"
 id = "INV-49"
 scope = "Deck"
 doc = "only instance is `POKER_DECK`"
+note = "Held by the compiler: Deck's field is private and it has no public constructor. A #[test] cannot pin it; a compile-fail test (trybuild) could."
 
 # ---------------------------------------------------------------------------
 # Transitions — tell. The surface is PokerSession (EPIC-124 0c), plus the

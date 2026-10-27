@@ -9,7 +9,7 @@ use std::sync::OnceLock;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - entries with equal chips are merged
+///   - INV-12: entries with equal chips are merged
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TableEquity(Vec<SeatEquity>);
 
@@ -414,6 +414,7 @@ mod casino__equity__table_equity_tests {
 
     #[test]
     fn test_seat_equities_consolidate_merges_matching_chip_counts() {
+        // pins: INV-12
         let mut equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(5_000, Seatbit::SEAT_1),

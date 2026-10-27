@@ -14,8 +14,8 @@ use std::array::IntoIter;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - the 52 cards in canonical order
-///   - only instance is `POKER_DECK`
+///   - INV-48: the 52 cards in canonical order
+///   - INV-49: only instance is `POKER_DECK`
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Deck([Card; 52]);
 
@@ -188,5 +188,18 @@ mod poker_deck_tests {
     fn get__out_of_range_is_none() {
         assert_eq!(Some(POKER_DECK.0[51]), Deck::get(51));
         assert_eq!(None, Deck::get(Deck::len()));
+    }
+
+    #[test]
+    fn as_vec__is_in_card_number_order() {
+        // pins: INV-48
+        use crate::card_number::CardNumber;
+        use strum::IntoEnumIterator;
+
+        let expected: Vec<Card> = CardNumber::iter().map(|number| Card::from(number as u32)).collect();
+
+        assert_eq!(Deck::as_vec(), expected);
+        assert_eq!(Deck::get(0), Some(Card::ACE_SPADES));
+        assert_eq!(Deck::get(51), Some(Card::DEUCE_CLUBS));
     }
 }

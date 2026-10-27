@@ -15,7 +15,7 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly three card slots
+///   - INV-26: exactly three card slots
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Three([Card; 3]);
 
@@ -345,6 +345,7 @@ mod arrays__three_tests {
 
     #[test]
     fn try_from__cards() {
+        // pins: INV-26
         assert_eq!(
             Three::try_from(Cards::from_str("9♣ 6♦ 5♥").unwrap()).unwrap(),
             Three::from(THE_FLOP)

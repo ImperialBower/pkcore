@@ -27,8 +27,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly five card slots
-///   - ranked only when dealt
+///   - INV-28: exactly five card slots
+///   - INV-29: ranked only when dealt
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five(pub(crate) [Card; 5]);
 
@@ -2658,6 +2658,7 @@ mod arrays__five_tests {
 
     #[test]
     fn try_from__cards__not_enough() {
+        // pins: INV-28
         let sut = Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦").unwrap());
 
         assert!(sut.is_err());
@@ -2666,6 +2667,7 @@ mod arrays__five_tests {
 
     #[test]
     fn try_from__cards__too_many() {
+        // pins: INV-28
         let sut = Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦").unwrap());
 
         assert!(sut.is_err());
@@ -2762,5 +2764,19 @@ mod arrays__five_tests {
         for board in ["3h7s5cQs6c", "AsKsQsJsTs", "2c3d4h5s7c"] {
             assert_eq!(Five::from_pluribus(board).unwrap().to_pluribus(), board);
         }
+    }
+
+    #[test]
+    fn hand_rank_value__a_blank_slot_gets_no_rank() {
+        // pins: INV-29
+        let five = Five::from([
+            Card::BLANK,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FOUR_CLUBS,
+            Card::TREY_SPADES,
+        ]);
+
+        assert_eq!(five.hand_rank_value(), NO_HAND_RANK_VALUE);
     }
 }

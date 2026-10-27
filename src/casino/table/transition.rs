@@ -247,6 +247,7 @@ mod transition_surface_tests {
     /// table so the mutations do not interfere.
     #[test]
     fn every_legal_action_is_accepted_by_apply_action() {
+        // pins: INV-2
         let seat = nlh_at_utg().next_to_act();
         let actions = nlh_at_utg().legal_actions(seat);
         assert_ne!(actions, [] as [crate::casino::action::PlayerAction; 0]);
@@ -363,6 +364,7 @@ mod transition_surface_tests {
     /// `legal_actions` reports for the completer is accepted by `apply_action`.
     #[test]
     fn every_legal_action_is_accepted_by_apply_action__stud() {
+        // pins: INV-2
         let completer = stud_at_completer().next_to_act();
         let actions = stud_at_completer().legal_actions(completer);
         assert_ne!(actions, [] as [crate::casino::action::PlayerAction; 0]);
@@ -383,6 +385,7 @@ mod transition_surface_tests {
     // broke the crown-jewel invariant for capped structures).
     #[test]
     fn fixed_limit_all_in_at_cap_degrades_to_call_not_error() {
+        // pins: INV-2, INV-3
         let mut t = stud_at_completer();
         let completer = t.next_to_act();
         t.apply_action(completer, PlayerAction::Raise(20)).unwrap(); // complete to small bet
@@ -407,5 +410,51 @@ mod transition_surface_tests {
             !t.seats.get_seat(actor).unwrap().player.is_all_in(),
             "the deep stack called; it did not actually go all-in"
         );
+    }
+
+    #[test]
+    fn act_raise__past_the_fixed_limit_cap_is_refused_and_changes_nothing() {
+        // pins: INV-3
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 100_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 100_000)),
+        ]);
+        // small_bet 50, big_bet 100, cap of 2 raises per street.
+        let mut table = Table::limit_holdem_from_seats(seats, 50, 100, 2);
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(table.next_to_act(), table.min_raise_to()).unwrap();
+        table.act_raise(table.next_to_act(), table.min_raise_to()).unwrap();
+        let actor = table.next_to_act();
+        let before = table.clone();
+
+        assert_eq!(
+            table.act_raise(actor, table.min_raise_to()),
+            Err(PKError::RaiseCapReached)
+        );
+        assert_eq!(table, before);
+    }
+
+    #[test]
+    fn bring_it_in__resets_the_street_counters() {
+        // pins: INV-4
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 100_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 100_000)),
+        ]);
+        let mut table = Table::limit_holdem_from_seats(seats, 50, 100, 2);
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(table.next_to_act(), table.min_raise_to()).unwrap();
+        table.act_call(table.next_to_act()).unwrap();
+        assert_ne!(0, table.raises_this_street);
+
+        table.bring_it_in().unwrap();
+
+        assert_eq!(0, table.bet);
+        assert_eq!(0, table.raise_increment);
+        assert_eq!(0, table.raises_this_street);
+        assert_eq!(0, table.actions_this_street);
+        assert_eq!(0, table.chip_actions_this_street);
     }
 }

@@ -589,6 +589,7 @@ mod tda_2024_conformance {
     /// it, so a new street starts back at zero.
     #[test]
     fn substantial_action_resets_at_street_boundary() {
+        // pins: INV-4
         let mut table = three_handed_to_the_flop();
         let first = table.next_to_act();
         table.act_check(first).expect("first checks");

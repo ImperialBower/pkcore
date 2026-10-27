@@ -67,7 +67,7 @@ const CKC_2C: CKCNumber = 0b00_0000_0000_0001_0001_0000_0000_0010;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - only the 52 valid CKC numbers
+///   - INV-44: only the 52 valid CKC numbers
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u32)]
 pub enum CardNumber {
@@ -188,5 +188,23 @@ impl TryFrom<u32> for CardNumber {
 
             _ => Err(PKError::InvalidCardNumber),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod card_number_tests {
+    use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn try_from__accepts_only_the_52_card_numbers() {
+        // pins: INV-44
+        assert_eq!(CardNumber::iter().count(), 52);
+        for number in CardNumber::iter() {
+            assert_eq!(CardNumber::try_from(number as u32), Ok(number));
+        }
+        assert_eq!(CardNumber::try_from(0), Err(PKError::InvalidCardNumber));
+        assert_eq!(CardNumber::try_from(0xDEAD), Err(PKError::InvalidCardNumber));
     }
 }

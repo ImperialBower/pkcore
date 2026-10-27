@@ -101,10 +101,10 @@ pub enum SessionStep {
 ///
 /// - **Role:** consistency boundary (DDD: aggregate)
 /// - **Invariants:**
-///   - a blind change during a hand waits for the next `start_hand`
-///   - `forced_at_hand_start` is the blinds this hand posted
-///   - `shuffled_deck_str` is the deck before any card is drawn
-///   - `hand_number` counts hands started without error
+///   - INV-5: a blind change during a hand waits for the next `start_hand`
+///   - INV-6: `forced_at_hand_start` is the blinds this hand posted
+///   - INV-7: `shuffled_deck_str` is the deck before any card is drawn
+///   - INV-8: `hand_number` counts hands started without error
 ///
 /// # Examples
 ///
@@ -1005,7 +1005,7 @@ impl PokerSession {
 ///
 /// - **Role:** read model
 /// - **Invariants:**
-///   - `hole_cards` is `None` unless the viewer owns the seat
+///   - INV-9: `hole_cards` is `None` unless the viewer owns the seat
 ///
 /// # Examples
 ///
@@ -1078,7 +1078,7 @@ pub struct SessionState {
 ///
 /// - **Role:** read model
 /// - **Invariants:**
-///   - carries no deck
+///   - INV-10: carries no deck
 ///
 /// # Examples
 ///
@@ -1198,6 +1198,7 @@ mod tests {
 
     #[test]
     fn start_hand_with_deck__does_not_shuffle() {
+        // pins: INV-7
         let deck: Cards = Cards::deck().iter().rev().copied().collect();
         let order: Vec<_> = deck.iter().copied().collect();
         let mut session = seeded_two_player_session();
@@ -1226,6 +1227,7 @@ mod tests {
 
     #[test]
     fn start_hand_with_deck__a_deck_that_is_not_52_cards_is_refused_and_changes_nothing() {
+        // pins: INV-8
         let mut session = seeded_two_player_session();
         let before = session.table.clone();
 
@@ -1354,6 +1356,7 @@ mod tests {
 
     #[test]
     fn poker_session_hand_number_increments() {
+        // pins: INV-8
         let mut session = two_player_session();
         session.run_hand(|_, _| PlayerAction::Fold).unwrap();
         assert_eq!(session.hand_number, 1);
@@ -1789,6 +1792,7 @@ mod tests {
 
     #[test]
     fn set_blinds_during_hand_defers_to_next_hand() {
+        // pins: INV-5
         let mut session = two_player_session();
         session.start_hand().unwrap();
         // Mid-hand: caller asks to bump blinds.
@@ -1801,6 +1805,7 @@ mod tests {
 
     #[test]
     fn deferred_blinds_take_effect_on_next_start_hand() {
+        // pins: INV-5
         let mut session = two_player_session();
         session.start_hand().unwrap();
         session.set_blinds(ForcedBets::new(100, 200));
@@ -1817,6 +1822,7 @@ mod tests {
 
     #[test]
     fn forced_at_hand_start_snapshot_is_stable_during_hand() {
+        // pins: INV-6
         let mut session = two_player_session();
         session.start_hand().unwrap();
         let captured = session.forced_at_hand_start();
@@ -1841,6 +1847,7 @@ mod tests {
 
     #[test]
     fn view_reveals_only_owned_seat_hole_cards() {
+        // pins: INV-9
         let mut session = two_player_session();
         session.start_hand().unwrap();
 
@@ -1888,6 +1895,7 @@ mod tests {
 
     #[test]
     fn view_unseated_principal_sees_no_hole_cards() {
+        // pins: INV-9
         let mut session = three_player_session();
         session.start_hand().unwrap();
 
@@ -1901,6 +1909,7 @@ mod tests {
 
     #[test]
     fn view_never_contains_deck() {
+        // pins: INV-10
         let mut session = two_player_session();
         session.start_hand().unwrap();
 

@@ -402,7 +402,7 @@ use std::fmt::Display;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - holds at most one `Eval` per `HandRankClass`; later pushes of a seen class are dropped
+///   - INV-22: holds at most one `Eval` per `HandRankClass`; later pushes of a seen class are dropped
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(Vec<Eval>, HashSet<HandRankClass>);
 
@@ -503,6 +503,7 @@ mod analysis__the_nuts_tests {
 
     #[test]
     fn len() {
+        // pins: INV-22
         assert_eq!(2, test_data().len());
     }
 

@@ -80,7 +80,7 @@ impl From<Masked> for RankMasked {
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - masks are derived from `shu`
+///   - INV-38: masks are derived from `shu`
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Masked {
@@ -1015,6 +1015,7 @@ mod arrays__matchups__masked_tests {
 
     #[test]
     fn from_sorted_heads_up() {
+        // pins: INV-38
         assert_eq!(HANDS_6S_6H_V_5D_5C, Masked::from(TestData::the_hand_sorted_headsup()));
     }
 

@@ -29,8 +29,8 @@ use std::thread;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - at most nine hands
-///   - unused slots are blank
+///   - INV-34: at most nine hands
+///   - INV-35: unused slots are blank
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StartingHands([Two; 9]);
 
@@ -442,6 +442,7 @@ mod arrays__hole_cards__twos_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-35
         let expected = [
             HERO,
             VILLAIN,
@@ -479,5 +480,11 @@ mod arrays__hole_cards__twos_tests {
 
         assert_eq!(expected, twos.array());
         assert_eq!(vec![HERO, VILLAIN, MINION], twos.vec());
+    }
+
+    #[test]
+    fn array__has_nine_slots() {
+        // pins: INV-34
+        assert_eq!(StartingHands::default().array().len(), 9);
     }
 }

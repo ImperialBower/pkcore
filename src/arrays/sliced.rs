@@ -25,7 +25,7 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - a blank marks an undealt slot
+///   - INV-36: a blank marks an undealt slot
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct BoxedCards(Box<[Card]>);
 
@@ -817,6 +817,7 @@ mod arrays__sliced_tests {
 
     #[test]
     fn number_of_dealt_cards() {
+        // pins: INV-36
         let blank_boxed: BoxedCards = boxed!("__ __");
 
         assert_eq!(2, blank_boxed.len());
