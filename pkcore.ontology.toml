@@ -1,0 +1,1064 @@
+# The pkcore kernel ontology (EPIC-124). Checked by the dkskills
+# kernel-ontology checker; `make ontology` once Phase 8 lands.
+#
+# Roles live in the `# Domain` blocks and pins in the tests; this file holds
+# neither. IDs are stable: never renumber an INV-, TR-, RD- or OB- id.
+
+package = "pkcore"          # no WIT world yet (docs/KERNEL_ADR.md §7)
+world = "none"
+summary = """One hand at one table: who may act, what each action does to \
+chips, pot and board, and who wins; plus the pure reads over hands that ship \
+by default: evaluation, equity, player stats and the heads-up chart. \
+Storage, transport, accounts, clocks and bot decisions are the shell's."""
+
+# ---------------------------------------------------------------------------
+# Not this kernel. Scope is the default feature set (EPIC-124 0b, option B).
+# ---------------------------------------------------------------------------
+[[not-this-kernel]]
+ref = "bot"
+why = "bot deciders and self-play simulation; they choose actions, the kernel only applies them"
+
+[[not-this-kernel]]
+ref = "hand_history"
+why = "YAML hand-history records and replay; a shell format over finished hands"
+
+[[not-this-kernel]]
+ref = "pokerbench"
+why = "HuggingFace PokerBench dataset reader; behind the opt-in `pokerbench` feature"
+
+[[not-this-kernel]]
+ref = "util"
+why = "console, CSV and test-data helpers; no domain rule"
+
+[[not-this-kernel]]
+ref = "games::kuhn"
+why = "Kuhn poker, a separate toy game with its own rules"
+
+[[not-this-kernel]]
+ref = "analysis::gto"
+why = "heads-up GTO solver; a sibling engine that reads hands and never changes a table"
+
+[[not-this-kernel]]
+ref = "analysis::nubibus"
+why = "Pluribus log parser; a translator for one external format"
+
+[[not-this-kernel]]
+ref = "analysis::player_stats_store"
+why = "YAML persistence for player stats; behind the opt-in `player-stats-persistence` feature"
+
+[[not-this-kernel]]
+ref = "analysis::store::bcm"
+why = "binary card map storage; on-disk layer behind the opt-in `store` feature"
+
+[[not-this-kernel]]
+ref = "analysis::store::db"
+why = "SQLite storage; on-disk layer behind the opt-in `store` feature"
+
+[[not-this-kernel]]
+ref = "casino::dealer"
+why = "a convenience driver, not the canonical one (src/casino/dealer.rs:8); PokerSession is"
+
+# ---------------------------------------------------------------------------
+# Concepts — the vocabulary. Meanings only; roles stay in the code.
+# ---------------------------------------------------------------------------
+
+[[concepts]]
+ref = "CaseEval"
+doc = "Every seat's best hand for one runout of the board."
+
+[[concepts]]
+ref = "CaseEvals"
+doc = "The CaseEval for every runout from a given street."
+
+[[concepts]]
+ref = "HandRankClass"
+doc = "HandRankClass represents the more specific type of the five card PokerHand."
+
+[[concepts]]
+ref = "EquityEngine"
+doc = "The equity solver: exact enumeration when cheap, seeded Monte Carlo when not."
+
+[[concepts]]
+ref = "Method"
+doc = "Which strategy produced an EquityReport."
+
+[[concepts]]
+ref = "PlayerEquity"
+doc = "Equity for a single seat, all expressed as fractions in 0.0..=1.0."
+
+[[concepts]]
+ref = "EquityReport"
+doc = "The result of an equity calculation: one PlayerEquity per seat (in input order), plus how it was computed."
+
+[[concepts]]
+ref = "PlayerSpec"
+doc = "How a single seat's hole cards are specified for an equity calculation."
+
+[[concepts]]
+ref = "EquityOptions"
+doc = "Tuning knobs for an equity calculation."
+
+[[concepts]]
+ref = "EquityRequest"
+doc = "One equity calculation: seats, partial board, dead cards and options."
+
+[[concepts]]
+ref = "Ev"
+doc = "Expected value of a call, derived from outcome counts and pot geometry."
+
+[[concepts]]
+ref = "Eval"
+doc = "A five-card hand and its HandRank."
+
+[[concepts]]
+ref = "SevenEval"
+doc = "A seven-card hand with its best five cards and their HandRank."
+
+[[concepts]]
+ref = "Evals"
+doc = "A list of Eval values, sortable best to worst."
+
+[[concepts]]
+ref = "HandRankValue"
+doc = "HandRankValue is the integer representing the HandRank for a particular five card PokerHand."
+
+[[concepts]]
+ref = "HandRank"
+doc = "HandRank represents the value of a specific 5 card hand of poker."
+
+[[concepts]]
+ref = "PlayOut"
+doc = "Plays hole cards out against every runout from the flop."
+
+[[concepts]]
+ref = "HandRankName"
+doc = "HandRankName represents the traditional name of a five card PokerHand."
+
+[[concepts]]
+ref = "EightOrBetter"
+doc = "An eight-or-better low hand for hi/lo games."
+
+[[concepts]]
+ref = "Outs"
+doc = "The cards that improve each seat to the winning hand, keyed by seat."
+
+[[concepts]]
+ref = "PlayerStats"
+doc = "Per-player aggregated action data and derived poker reads."
+
+[[concepts]]
+ref = "Confidence"
+doc = "Sample-size confidence band for a PlayerStats read."
+
+[[concepts]]
+ref = "StatsRegistry"
+doc = "Per-Uuid registry of PlayerStats."
+
+[[concepts]]
+ref = "PlayerWins"
+doc = "Deprecated win tally per player; use Game directly."
+
+[[concepts]]
+ref = "PotOdds"
+doc = "The pot size and call amount for a single decision point."
+
+[[concepts]]
+ref = "RangeEquity"
+doc = "Equity of a hero Combos range against a villain Combos range on a given board."
+
+[[concepts]]
+ref = "HupCache"
+doc = "The embedded heads-up preflop odds chart."
+
+[[concepts]]
+ref = "lookup_odds"
+doc = "Deprecated free-function alias of HupCache::lookup_odds."
+
+[[concepts]]
+ref = "PreflopRow"
+doc = "One stored heads-up preflop result: the two hands and their win, lose and draw counts."
+
+[[concepts]]
+ref = "PreflopRowHash"
+doc = "PreflopRow values keyed by matchup, held in memory."
+
+[[concepts]]
+ref = "HUP"
+doc = "Heads-up preflop lookups over the stored chart."
+
+[[concepts]]
+ref = "TheNuts"
+doc = "Every possible five-card hand on a board, sorted best to worst."
+
+[[concepts]]
+ref = "Hands"
+doc = "A list of five-card hands."
+
+[[concepts]]
+ref = "Five"
+doc = "The most important type in the library."
+
+[[concepts]]
+ref = "Four"
+doc = "Four cards, such as an Omaha holding."
+
+[[concepts]]
+ref = "StartingHands"
+doc = "The hole cards of up to nine players."
+
+[[concepts]]
+ref = "Masked"
+doc = "A heads-up matchup reduced to its rank and suit masks."
+
+[[concepts]]
+ref = "Mask"
+doc = "The rank and suit bit masks of a hand."
+
+[[concepts]]
+ref = "RankMask"
+doc = "The rank bits of each side of a heads-up matchup."
+
+[[concepts]]
+ref = "SuitMask"
+doc = "The suit bits of each side of a heads-up matchup."
+
+[[concepts]]
+ref = "SuitTexture"
+doc = "The suit pattern class of a heads-up matchup."
+
+[[concepts]]
+ref = "Shifter"
+doc = "A masked matchup and its suit-shifted equivalents."
+
+[[concepts]]
+ref = "SortedHeadsUp"
+doc = "Two hole-card hands in a fixed order."
+
+[[concepts]]
+ref = "Arrayable"
+doc = "Converts a card holder into a fixed-size array."
+
+[[concepts]]
+ref = "HandRanker"
+doc = "The HandRanker trait is designed to return a HandRank for a collection five or more cards."
+
+[[concepts]]
+ref = "Seven"
+doc = "Seven cards, such as hole cards plus a full board."
+
+[[concepts]]
+ref = "Six"
+doc = "Six cards, such as hole cards plus the turn."
+
+[[concepts]]
+ref = "BoxedCards"
+doc = "A fixed-length boxed slice of cards."
+
+[[concepts]]
+ref = "Boxes"
+doc = "A row of card boxes, one per player."
+
+[[concepts]]
+ref = "Three"
+doc = "Three cards, such as a flop."
+
+[[concepts]]
+ref = "Two"
+doc = "Two cards, such as a player's hole cards."
+
+[[concepts]]
+ref = "Bard"
+doc = "A Bard is a binary representation of one or more Cards contained in a single unsigned integer."
+
+[[concepts]]
+ref = "Card"
+doc = "One playing card, packed in a u32 in Cactus Kev's binary layout."
+
+[[concepts]]
+ref = "CKCNumber"
+doc = "The u32 that holds one Cactus Kev card value."
+
+[[concepts]]
+ref = "CardNumber"
+doc = "The Cactus Kev number of each of the 52 cards."
+
+[[concepts]]
+ref = "Cards"
+doc = "An ordered set of distinct cards."
+
+[[concepts]]
+ref = "CardsCell"
+doc = "Cards behind a RefCell, for shared mutable decks."
+
+[[concepts]]
+ref = "PlayerAction"
+doc = "A player's chosen action at their turn."
+
+[[concepts]]
+ref = "TableAction"
+doc = "An entry in a table's event log, from TableOpen through ResetTable."
+
+[[concepts]]
+ref = "Stack"
+doc = "A chip count behind a Cell, for interior mutability."
+
+[[concepts]]
+ref = "SeatEquity"
+doc = "The chips a group of seats can win at one point in a hand."
+
+[[concepts]]
+ref = "Seatbit"
+doc = "A set of seats as a bitmask."
+
+[[concepts]]
+ref = "TableEquity"
+doc = "Chips in play, grouped by the seats that can win them."
+
+[[concepts]]
+ref = "ForcedBets"
+doc = "The forced bets of a hand: blinds, antes and bring-in."
+
+[[concepts]]
+ref = "Position"
+doc = "A seat's position name at the table (SB, BB, UTG, ...)."
+
+[[concepts]]
+ref = "Positions"
+doc = "The positions in play at one table size."
+
+[[concepts]]
+ref = "Principal"
+doc = "Who is asking: a seat, the house, or a spectator."
+
+[[concepts]]
+ref = "SessionStep"
+doc = "Describes the outcome of a single PokerSession::next_step call."
+
+[[concepts]]
+ref = "PokerSession"
+doc = "A multi-hand game session wrapping a Table."
+
+[[concepts]]
+ref = "SeatView"
+doc = "One seat as a UI renders it, redacted for one viewer."
+
+[[concepts]]
+ref = "SessionState"
+doc = "The written-down form of a PokerSession: a TableState plus the session's own bookkeeping."
+
+[[concepts]]
+ref = "SessionView"
+doc = "The whole table as a UI renders it, redacted for one viewer."
+
+[[concepts]]
+ref = "PlayerState"
+doc = "What a player last did in the hand."
+
+[[concepts]]
+ref = "Player"
+doc = "A poker player: id, name, chips and per-hand state, as plain fields."
+
+[[concepts]]
+ref = "Seat"
+doc = "A single seat at the table holding a Player and their hole cards."
+
+[[concepts]]
+ref = "Seats"
+doc = "The collection of seats at a Table, backed by a plain Vec."
+
+[[concepts]]
+ref = "BettingState"
+doc = "Postcard-safe mirror of BettingStructure."
+
+[[concepts]]
+ref = "SeatState"
+doc = "One seat, flattened for the wire."
+
+[[concepts]]
+ref = "TableState"
+doc = "The written-down form of a Table."
+
+[[concepts]]
+ref = "VisibleHandMode"
+doc = "Picks how a Stud-family table finds the first seat to act."
+
+[[concepts]]
+ref = "Table"
+doc = "One poker table and the hand in progress; the all-or-nothing step is apply_action."
+
+[[concepts]]
+ref = "Winnings"
+doc = "The pot wins from one showdown."
+
+[[concepts]]
+ref = "PotWin"
+doc = "One pot share and the hand that won it."
+
+[[concepts]]
+ref = "Deck"
+doc = "The standard 52-card deck as a fixed array of cards."
+
+[[concepts]]
+ref = "BetTier"
+doc = "Per-street betting tier for variants that use small-bet / big-bet fixed increments (Limit Hold'em, Limit Stud)."
+
+[[concepts]]
+ref = "BettingStructure"
+doc = "Betting structure: no-limit, pot-limit, or fixed-limit."
+
+[[concepts]]
+ref = "GameFamily"
+doc = "The structural shape of a poker variant, apart from its betting structure."
+
+[[concepts]]
+ref = "GameType"
+doc = "A poker variant: a GameFamily played with a BettingStructure."
+
+[[concepts]]
+ref = "GamePhase"
+doc = "Where a hand stands in its dealing and betting sequence."
+
+[[concepts]]
+ref = "OmahaHigh"
+doc = "A four-card Omaha high holding."
+
+[[concepts]]
+ref = "California"
+doc = "Empty marker type for California lowball evaluation helpers."
+
+[[concepts]]
+ref = "CaliforniaHandRankValue"
+doc = "Numeric value of a CaliforniaHandRank."
+
+[[concepts]]
+ref = "CaliforniaHandRank"
+doc = "The rank of a five-card California lowball (Razz) hand."
+
+[[concepts]]
+ref = "StreetIndex"
+doc = "Index of a street within a variant's street table, starting at 0."
+
+[[concepts]]
+ref = "StreetDescriptor"
+doc = "A static descriptor for one street of one variant."
+
+[[concepts]]
+ref = "PKError"
+doc = "The crate-wide error. Mixes kernel rule errors with shell failures; the split is a follow-up."
+
+[[concepts]]
+ref = "Agency"
+doc = "Asks whether a player in a given state may still act in the hand."
+
+[[concepts]]
+ref = "Betting"
+doc = "Moves chips out of a stack: bet, call, all-in."
+
+[[concepts]]
+ref = "Forgiving"
+doc = "Parses a value from a string and falls back to its default on bad input."
+
+[[concepts]]
+ref = "GTO"
+doc = "Expands a range into its hole-card combinations."
+
+[[concepts]]
+ref = "Pile"
+doc = "A collection of cards."
+
+[[concepts]]
+ref = "Plurable"
+doc = "Parses one part of the Pluribus log format."
+
+[[concepts]]
+ref = "Unumable"
+doc = "The other half of Plurable."
+
+[[concepts]]
+ref = "SOK"
+doc = "Says whether a value is well-formed."
+
+[[concepts]]
+ref = "SuitShift"
+doc = "Spades to Hearts to Diamonds to Clubs."
+
+[[concepts]]
+ref = "Shifty"
+doc = "Finds the suit-shifted equivalents of a value."
+
+[[concepts]]
+ref = "Board"
+doc = "The face-up community cards of one Hold'em hand: flop, turn and river."
+
+[[concepts]]
+ref = "StreetEquity"
+doc = "Per-seat odds at the current street, as fractions in 0.0..=1.0."
+
+[[concepts]]
+ref = "Game"
+doc = "One Hold'em hand to analyse: the hole cards and the board."
+
+[[concepts]]
+ref = "HoleCard"
+doc = "A single hole card held by a seat, tagged with its visibility."
+
+[[concepts]]
+ref = "HoleCards"
+doc = "The hole cards of every seat in one hand, in seat order."
+
+[[concepts]]
+ref = "Position6Max"
+doc = "A six-max table position."
+
+[[concepts]]
+ref = "PhaseHoldem"
+doc = "A stage of a Hold'em hand."
+
+[[concepts]]
+ref = "PhaseHoldemTracker"
+doc = "Holds the current PhaseHoldem of a hand behind a Cell."
+
+[[concepts]]
+ref = "SeatHand"
+doc = "A seat's hand of hole cards, with per-card visibility."
+
+[[concepts]]
+ref = "DealEval"
+doc = "Per-seat preflop odds for a whole table."
+
+[[concepts]]
+ref = "FlopEval"
+doc = "Hand ranks and win odds for every seat at the flop."
+
+[[concepts]]
+ref = "RiverEval"
+doc = "Hand ranking at the river stage."
+
+[[concepts]]
+ref = "TurnEval"
+doc = "Hand ranks and win odds for every seat at the turn."
+
+[[concepts]]
+ref = "Visibility"
+doc = "Whether a hole card is dealt face-down (concealed) or face-up (visible)."
+
+[[concepts]]
+ref = "Rank"
+doc = "One of the thirteen card ranks, Ace high."
+
+[[concepts]]
+ref = "Ranks"
+doc = "The ranks of a set of cards."
+
+[[concepts]]
+ref = "Suit"
+doc = "One of the four suits."
+
+# ---------------------------------------------------------------------------
+# Invariants. Pins are `pins: INV-n` markers in tests (EPIC-124 Phase 6).
+# ---------------------------------------------------------------------------
+
+[[invariants]]
+id = "INV-1"
+scope = "Table"
+doc = "chips are conserved across a hand (`audit_chip_total`)"
+
+[[invariants]]
+id = "INV-2"
+scope = "Table"
+doc = "every action in `legal_actions` is accepted by `apply_action`"
+
+[[invariants]]
+id = "INV-3"
+scope = "Table"
+doc = "raise count is capped per street under fixed limit"
+
+[[invariants]]
+id = "INV-4"
+scope = "Table"
+doc = "street counters reset at each street"
+
+[[invariants]]
+id = "INV-5"
+scope = "PokerSession"
+doc = "a blind change during a hand waits for the next `start_hand`"
+
+[[invariants]]
+id = "INV-6"
+scope = "PokerSession"
+doc = "`forced_at_hand_start` is the blinds this hand posted"
+
+[[invariants]]
+id = "INV-7"
+scope = "PokerSession"
+doc = "`shuffled_deck_str` is the deck before any card is drawn"
+
+[[invariants]]
+id = "INV-8"
+scope = "PokerSession"
+doc = "`hand_number` counts hands started without error"
+
+[[invariants]]
+id = "INV-9"
+scope = "SeatView"
+doc = "`hole_cards` is `None` unless the viewer owns the seat"
+
+[[invariants]]
+id = "INV-10"
+scope = "SessionView"
+doc = "carries no deck"
+
+[[invariants]]
+id = "INV-11"
+scope = "EquityReport"
+doc = "one `PlayerEquity` per request seat, in input order"
+
+[[invariants]]
+id = "INV-12"
+scope = "TableEquity"
+doc = "entries with equal chips are merged"
+
+[[invariants]]
+id = "INV-13"
+scope = "Seatbit"
+doc = "bit `n` is seat `n`"
+
+[[invariants]]
+id = "INV-14"
+scope = "PlayerStats"
+doc = "ratios return `None` when there were no opportunities"
+
+[[invariants]]
+id = "INV-15"
+scope = "Confidence"
+doc = "`Low` below 50 hands, `Medium` below 200, `High` otherwise"
+
+[[invariants]]
+id = "INV-16"
+scope = "Eval"
+doc = "equal and ordered by `hand_rank` only; the cards are ignored"
+
+[[invariants]]
+id = "INV-17"
+scope = "SevenEval"
+doc = "equal when `hand_rank` is equal"
+
+[[invariants]]
+id = "INV-18"
+scope = "HandRankValue"
+doc = "lower is stronger"
+
+[[invariants]]
+id = "INV-19"
+scope = "HandRankValue"
+doc = "`NO_HAND_RANK_VALUE` (0) means no rank"
+
+[[invariants]]
+id = "INV-20"
+scope = "HandRank"
+doc = "`From<HandRankValue>` yields the default when the value has no valid name or class"
+
+[[invariants]]
+id = "INV-21"
+scope = "HandRank"
+doc = "lower `value` orders higher; invalid ranks order below valid ones"
+
+[[invariants]]
+id = "INV-22"
+scope = "TheNuts"
+doc = "holds at most one `Eval` per `HandRankClass`; later pushes of a seen class are dropped"
+
+[[invariants]]
+id = "INV-23"
+scope = "OmahaHigh"
+doc = "a hand plays exactly two hole cards and three board cards"
+
+[[invariants]]
+id = "INV-24"
+scope = "Two"
+doc = "exactly two card slots"
+
+[[invariants]]
+id = "INV-25"
+scope = "Two"
+doc = "`new` rejects blanks and duplicates"
+
+[[invariants]]
+id = "INV-26"
+scope = "Three"
+doc = "exactly three card slots"
+
+[[invariants]]
+id = "INV-27"
+scope = "Four"
+doc = "exactly four card slots"
+
+[[invariants]]
+id = "INV-28"
+scope = "Five"
+doc = "exactly five card slots"
+
+[[invariants]]
+id = "INV-29"
+scope = "Five"
+doc = "ranked only when dealt"
+
+[[invariants]]
+id = "INV-30"
+scope = "Six"
+doc = "exactly six card slots"
+
+[[invariants]]
+id = "INV-31"
+scope = "Six"
+doc = "ranked only when dealt"
+
+[[invariants]]
+id = "INV-32"
+scope = "Seven"
+doc = "exactly seven card slots"
+
+[[invariants]]
+id = "INV-33"
+scope = "Seven"
+doc = "ranked only when dealt"
+
+[[invariants]]
+id = "INV-34"
+scope = "StartingHands"
+doc = "at most nine hands"
+
+[[invariants]]
+id = "INV-35"
+scope = "StartingHands"
+doc = "unused slots are blank"
+
+[[invariants]]
+id = "INV-36"
+scope = "BoxedCards"
+doc = "a blank marks an undealt slot"
+
+[[invariants]]
+id = "INV-37"
+scope = "SortedHeadsUp"
+doc = "`new` puts the higher `Two` first"
+
+[[invariants]]
+id = "INV-38"
+scope = "Masked"
+doc = "masks are derived from `shu`"
+
+[[invariants]]
+id = "INV-39"
+scope = "Cards"
+doc = "no blanks"
+
+[[invariants]]
+id = "INV-40"
+scope = "Cards"
+doc = "no duplicates"
+
+[[invariants]]
+id = "INV-41"
+scope = "Cards"
+doc = "insertion order kept"
+
+[[invariants]]
+id = "INV-42"
+scope = "Card"
+doc = "a valid CKC number or blank"
+
+[[invariants]]
+id = "INV-43"
+scope = "Card"
+doc = "blank is `0`"
+
+[[invariants]]
+id = "INV-44"
+scope = "CardNumber"
+doc = "only the 52 valid CKC numbers"
+
+[[invariants]]
+id = "INV-45"
+scope = "Bard"
+doc = "one bit per card"
+
+[[invariants]]
+id = "INV-46"
+scope = "Bard"
+doc = "blank is `0`"
+
+[[invariants]]
+id = "INV-47"
+scope = "Suit"
+doc = "`BLANK` is no suit"
+
+[[invariants]]
+id = "INV-48"
+scope = "Deck"
+doc = "the 52 cards in canonical order"
+
+[[invariants]]
+id = "INV-49"
+scope = "Deck"
+doc = "only instance is `POKER_DECK`"
+
+# ---------------------------------------------------------------------------
+# Transitions — tell. The surface is PokerSession (EPIC-124 0c), plus the
+# Table creator a session wraps. Table's own methods are concepts here.
+#
+# PKError carries no `domain error` role yet (EPIC-124 0d, option A), so no
+# transition has a `fails-with`. The PKError cases each one raises are listed
+# as comments, for the PKError split.
+# ---------------------------------------------------------------------------
+
+[[transitions]]
+id = "TR-from_seats_with_id"
+ref = "casino::table::Table::from_seats_with_id"
+doc = "Open a table: seat the players, fix the game and the forced bets."
+emits = ["TableOpen", "PlayerSeated", "Dealt"]
+
+[[transitions.arguments]]
+param = "seats"
+class = "fact"
+
+[[transitions.arguments]]
+param = "game"
+class = "selection"
+
+[[transitions.arguments]]
+param = "forced"
+class = "selection"
+
+[[transitions.arguments]]
+param = "id"
+class = "entropy"
+
+[[transitions]]
+id = "TR-new"
+ref = "casino::session::PokerSession::new"
+doc = "Wrap a table in a session that sequences its hands."
+emits = []
+
+[[transitions.arguments]]
+param = "table"
+class = "state"
+
+[[transitions]]
+id = "TR-restore"
+ref = "casino::session::PokerSession::restore"
+doc = "Rebuild a session from the bytes snapshot wrote."
+emits = []
+# raises: SnapshotCorrupt, SnapshotVersion, InvalidCardIndex (all shell)
+
+[[transitions.arguments]]
+param = "bytes"
+class = "state"
+
+[[transitions]]
+id = "TR-set_blinds"
+ref = "casino::session::PokerSession::set_blinds"
+doc = "Change the forced bets; a change during a hand waits for the next start (INV-5)."
+emits = []
+
+[[transitions.arguments]]
+param = "forced"
+class = "selection"
+
+[[transitions]]
+id = "TR-eliminate_busted"
+ref = "casino::session::PokerSession::eliminate_busted"
+doc = "Remove every seat with no chips, between hands."
+emits = []
+
+[[transitions]]
+id = "TR-start_hand"
+ref = "casino::session::PokerSession::start_hand"
+doc = "Shuffle with OS randomness and start a hand. Only with the `entropy` feature; start_hand_with is the pure twin."
+emits = ["ForcedBetSmallBlind", "ForcedBetBigBlind", "BetAnteForced", "ActionTo", "DealingXCards", "DealtPlayers", "Dealt", "StudBringInPost"]
+# raises: whatever forced bets or dealing raise, e.g. NotEnoughCards
+
+[[transitions]]
+id = "TR-start_hand_with"
+ref = "casino::session::PokerSession::start_hand_with"
+doc = "Shuffle with the caller's RNG, post forced bets, deal the first cards."
+emits = ["ForcedBetSmallBlind", "ForcedBetBigBlind", "BetAnteForced", "ActionTo", "DealingXCards", "DealtPlayers", "Dealt", "StudBringInPost"]
+
+[[transitions.arguments]]
+param = "rng"
+class = "entropy"
+
+[[transitions]]
+id = "TR-start_hand_with_deck"
+ref = "casino::session::PokerSession::start_hand_with_deck"
+doc = "Start a hand from the caller's deck, without shuffling it."
+emits = ["ForcedBetSmallBlind", "ForcedBetBigBlind", "BetAnteForced", "ActionTo", "DealingXCards", "DealtPlayers", "Dealt", "StudBringInPost"]
+# raises: InvalidCardCount when the deck is not 52 cards
+
+[[transitions.arguments]]
+param = "deck"
+class = "entropy"
+
+[[transitions]]
+id = "TR-next_actor"
+ref = "casino::session::PokerSession::next_actor"
+doc = "Name the seat to act; when betting on a street is closed, sweep the bets and deal the next street first."
+emits = ["BringItIn", "PotSize", "DealtFlop", "DealtTurn", "DealtRiver", "DealingXCards", "Dealt"]
+# raises: NotEnoughCards, AlreadyDealt — after the sweep, so the street can
+# half-happen (OB-5, docs/KERNEL_ADR.md §5)
+
+[[transitions]]
+id = "TR-next_step"
+ref = "casino::session::PokerSession::next_step"
+doc = "As next_actor, but folds every outcome into one SessionStep."
+emits = ["BringItIn", "PotSize", "DealtFlop", "DealtTurn", "DealtRiver", "DealingXCards", "Dealt"]
+
+[[transitions]]
+id = "TR-apply_action"
+ref = "casino::session::PokerSession::apply_action"
+doc = "One seat acts: changes that seat, the bet and the street counters; never the board or the phase."
+emits = ["Check", "Bet", "Call", "Raise", "AllIn", "Fold", "ActionTo", "BringItIn", "PotSize", "MuckPlayerCards", "TakePlayerCards"]
+# raises: TableActionOutOfOrder, InsufficientChips, InvalidBetSize,
+# RaiseCapReached, InvalidAction, ...
+
+[[transitions.arguments]]
+param = "seat"
+class = "fact"
+
+[[transitions.arguments]]
+param = "action"
+class = "judgment"
+
+[[transitions]]
+id = "TR-end_hand"
+ref = "casino::session::PokerSession::end_hand"
+doc = "Show down, pay the pots, audit the chips and reset the table for the next hand."
+emits = ["PlayerWins", "PlayerLoses", "PlayerWinsMainPot", "PlayerWinsSidePot", "CloseItOut", "BringItIn", "PotSize", "EndHand", "ResetTable", "DeckPassesAudit", "MuckCards", "MuckPlayerCards", "TakePlayerCards"]
+# raises: ActionIsntFinished when the hand is not over; ChipAuditFailed
+
+[[transitions]]
+id = "TR-abort_hand"
+ref = "casino::session::PokerSession::abort_hand"
+doc = "Refund every chip put in this hand and reset the table."
+emits = ["HandAborted", "ResetTable", "DeckPassesAudit", "MuckCards", "MuckPlayerCards", "TakePlayerCards"]
+# raises: ChipAuditFailed when the unwind does not balance
+
+# ---------------------------------------------------------------------------
+# Reads — ask
+# ---------------------------------------------------------------------------
+
+[[reads]]
+id = "RD-view"
+ref = "casino::session::PokerSession::view"
+answers = "What may this viewer see of the table right now?"
+
+[[reads.arguments]]
+param = "viewer"
+class = "selection"
+
+[[reads.does-not-answer]]
+question = "Who is winning the hand?"
+where = "analysis::equity, or Table::equity, on the unredacted table. A view carries no equity and no deck (INV-10)."
+
+[[reads]]
+id = "RD-legal_actions"
+ref = "casino::table::Table::legal_actions"
+answers = "Which actions may this seat take now?"
+
+[[reads.arguments]]
+param = "seat_id"
+class = "fact"
+
+[[reads.does-not-answer]]
+question = "Which of these actions is a good one?"
+where = "The bot module, or the player. The kernel never picks an action."
+
+[[reads]]
+id = "RD-is_hand_complete"
+ref = "casino::session::PokerSession::is_hand_complete"
+answers = "Is the current hand over, so end_hand may run?"
+
+[[reads.arguments]]
+param = "self"
+class = "state"
+
+[[reads]]
+id = "RD-is_hand_in_progress"
+ref = "casino::session::PokerSession::is_hand_in_progress"
+answers = "Has a hand started and not yet ended?"
+
+[[reads.arguments]]
+param = "self"
+class = "state"
+
+[[reads]]
+id = "RD-count_funded"
+ref = "casino::session::PokerSession::count_funded"
+answers = "How many seats have chips to play the next hand?"
+
+[[reads.arguments]]
+param = "self"
+class = "state"
+
+[[reads]]
+id = "RD-forced_at_hand_start"
+ref = "casino::session::PokerSession::forced_at_hand_start"
+answers = "Which forced bets did this hand post?"
+
+[[reads.arguments]]
+param = "self"
+class = "state"
+
+[[reads]]
+id = "RD-snapshot"
+ref = "casino::session::PokerSession::snapshot"
+answers = "What is the whole session, as versioned bytes restore accepts?"
+
+[[reads.arguments]]
+param = "self"
+class = "state"
+# raises: SnapshotCorrupt (shell)
+
+[[reads.does-not-answer]]
+question = "What may a player see?"
+where = "RD-view. A snapshot holds the deck and every hole card; it is for the store, never the wire."
+
+# ---------------------------------------------------------------------------
+# Obligations — what the shell must do, and why
+# ---------------------------------------------------------------------------
+
+[[obligations]]
+id = "OB-1"
+about = "PokerSession"
+doc = "Write no table state. Change a table only through the transitions above; show it only through view."
+rationale = "One owner, others ask (docs/KERNEL_ADR.md §6). A shell that writes chips or redacts cards keeps a second copy of the rule. The 22 public mutable fields stay open until purity audit fix 12 seals them."
+
+[[obligations]]
+id = "OB-2"
+about = "casino::session::PokerSession::apply_action"
+doc = "Do not re-check a rule apply_action enforces. Ask legal_actions before, and pass apply_action's error through after."
+rationale = "A second check drifts from the kernel's (INV-2). The error from apply_action is the answer."
+
+[[obligations]]
+id = "OB-3"
+about = "PokerSession"
+doc = "Own every clock: action timers, time banks, blind levels by time."
+rationale = "The kernel reads no clock. A blind level is a set_blinds call the shell makes when its clock says so."
+
+[[obligations]]
+id = "OB-4"
+about = "casino::session::PokerSession::start_hand_with"
+doc = "Supply the randomness: an RNG to start_hand_with, or a shuffled deck to start_hand_with_deck. Keep the seed or the deck to replay the hand."
+rationale = "The `--no-default-features` kernel has no randomness of its own (docs/KERNEL_PURITY_AUDIT.md fix 8). start_hand reads the OS only with the `entropy` feature."
+
+[[obligations]]
+id = "OB-5"
+about = "casino::session::PokerSession::next_actor"
+doc = "On an error from next_actor or next_step, call abort_hand. Do not continue the hand."
+rationale = "Advancing a street sweeps the bets, then deals. If the deal fails, the street is half done and no GamePhase names that state (docs/KERNEL_ADR.md §5, purity audit fix 5)."
+
+[[obligations]]
+id = "OB-6"
+about = "casino::table::Table::button_up"
+doc = "Move the button between hands: call session.table.button_up() after end_hand. This is the one table write OB-1 allows today."
+rationale = "PokerSession never moves the button; only Dealer does. Until a session step owns it, no transition on this surface emits MoveButton (EPIC-124 follow-up)."

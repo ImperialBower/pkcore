@@ -47,6 +47,7 @@ impl HupCache {
     ///
     /// # Domain
     ///
+    /// - **Role:** read model
     /// - **Invariants:**
     ///   - `None` when the matchup is absent or the embedded data failed to decode
     ///

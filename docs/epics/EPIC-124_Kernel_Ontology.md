@@ -15,7 +15,9 @@
   tests in both directions (checks O1–O7), and prints an integrator ledger.
 - **Proves it:** `check_ontology.py .` exits 0 with no HARD finding, and
   `--ledger` renders `docs/PKCORE_LEDGER.md`.
-- **Status:** Planned. Nothing landed. Grounded at `44b484ee`, 26 October 2026.
+- **Status:** In progress (0.20.3). Phases 0–4 and 7 landed in the file;
+  the checker reports 25 HARD (O2 events) and 98 WARN (unpinned, uncited
+  invariants). Grounded at `44b484ee`, 26 October 2026.
 
 ---
 
@@ -79,18 +81,73 @@ the code changes the contract exposes as follow-ups.
 
 | Component | Status |
 |---|---|
-| dddocs HARD finding fixed (`hup_cache.rs:63`) | Planned |
-| Kernel scope decided; `[[not-this-kernel]]` written | Planned |
-| Surface decided (`Table` vs `PokerSession`) | Planned |
-| Transitions and reads declared by hand | Planned |
-| Error strategy for `PKError` decided | Planned |
-| Argument classes declared | Planned |
-| Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | Planned |
+| dddocs HARD finding fixed (`hup_cache.rs:63`) | ✅ 0.20.3 |
+| Kernel scope decided; `[[not-this-kernel]]` written | ✅ (B) default features; 11 entries |
+| Surface decided (`Table` vs `PokerSession`) | ✅ `PokerSession` |
+| Transitions and reads declared by hand | ✅ 13 transitions, 7 reads; 25 event cases unmapped |
+| Error strategy for `PKError` decided | ✅ (A) ontology first, split later |
+| Argument classes declared | ✅ in the file; not in `**Inputs:**` (see Findings) |
+| Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | 🟡 pruned 87 → 49; prefixes not added |
 | `pins: INV-n` markers in tests | Planned |
-| Obligations and "does not answer" written | Planned |
+| Obligations and "does not answer" written | ✅ 6 obligations |
 | `make ontology` target | Planned |
 | CI gate | Planned |
 | `docs/PKCORE_LEDGER.md` generated | Planned |
+
+### Decisions taken (26 October 2026)
+
+| Item | Choice | Note |
+|---|---|---|
+| 0b scope | **(B)** the default feature set | Not the recommendation. Kernel = `casino`, cards and arrays, `games` (not `kuhn`), `play`, `analysis` evaluation, equity, player stats and the HUP chart |
+| 0c surface | `PokerSession` | plus `Table::from_seats_with_id`, the creator a session wraps |
+| 0d `PKError` | (A) ontology first | no `fails-with` yet; each transition lists the cases it raises as comments |
+| 0e `Dealer` | not this kernel | |
+| 4b `apply_action(action)` | `judgment` | `seat` is `fact` |
+| 4b `view(viewer)` | `selection` | |
+| 4b `start_hand_with_deck(deck)` | `entropy` | |
+
+Chosen without asking (not `judgment` or `private`): `set_blinds(forced)`
+and `from_seats_with_id(game, forced)` are `selection`; `from_seats_with_id(seats)`
+is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
+
+### Findings
+
+1. **25 `TableAction` cases no `PokerSession` step emits** (the 25 HARD).
+   - **17 are emitted by no kernel code at all:** `Pause`, `SetButton`,
+     `ForcedBets`, `ForcedBet`, `ForceDealt`, `SplitPots`, `MainPot`,
+     `SidePot`, `SplitPot`, `TakeBoardCards`, `ClosesTheAction`, `Showdown`,
+     `PlayerMucksCards`, `AllFoldedTo`, `PlayerLosesSidePot`,
+     `PlayerLosesMainPot`, `InvalidSeatNumber`. Only `analysis::nubibus`
+     builds them, from Pluribus logs.
+   - **5 are diagnostics on a failure path, not events of play:**
+     `InvalidAction`, `InvalidPlayerAction`, `NotEnoughCards`,
+     `TooManyCards`, `ChipAuditFailed`.
+   - **3 are emitted only by `Dealer`:** `NewHand`, `ShuffleDeck`,
+     `MoveButton`.
+2. **`PokerSession` never moves the button.** Only `Dealer` calls
+   `Table::button_up`. Every session caller (`examples/bot_selfplay.rs:93`,
+   `tests/replay_consistency.rs:152`) writes `session.table.button_up()` by
+   hand. The file records this as OB-6.
+3. **The driver table in `src/casino/mod.rs:38` is wrong.** It says
+   `PokerSession::start_hand` composes `act_shuffle_deck` and `act_new_hand`.
+   It calls neither: it shuffles the deck in place, so no `ShuffleDeck` or
+   `NewHand` event is logged.
+4. **The checker skips O7 for method refs.** It looks a ref up by bare item
+   name, so `casino::session::PokerSession::apply_action` never meets its
+   `# Domain` block. Roles and `**Inputs:**` on methods are not compared.
+   This is a dkskills gap, not a pkcore one.
+5. **`analysis::player_stats` depends on `hand_history` and `bot::sim`**,
+   which are not this kernel. Under scope (B) a kernel type reads shell types.
+
+### Follow-ups
+
+- Decide the 25 event cases: delete the 17 dead ones, and move the 5
+  diagnostics out of `TableAction` (breaking; its own EPIC with the
+  `PKError` split).
+- Make the button a session step (`PokerSession::end_hand` or `start_hand`),
+  so it emits `MoveButton` and OB-6 can go.
+- Fix the `src/casino/mod.rs` driver table.
+- Report finding 4 to dkskills.
 
 ---
 
@@ -188,10 +245,10 @@ IDs are the stable part, which is the point of the file.
 
 ### Phase 0 — Prerequisites and decisions
 
-- [ ] **0a.** Fix the dddocs HARD finding: `src/analysis/store/embedded/hup_cache.rs:63`
+- [x] **0a.** Fix the dddocs HARD finding: `src/analysis/store/embedded/hup_cache.rs:63`
   `lookup_odds` — make the first bullet `- **Role:** <role>`. Check:
   `python3 $DKSKILLS/skills/dddocs/scripts/check_dddocs.py --report .` shows `HARD (fix first): 0`.
-- [ ] **0b.** **Decide the kernel scope.** Two readings exist:
+- [x] **0b.** **Decide the kernel scope.** Two readings exist:
   - **(A) The ADR reading** — `docs/KERNEL_ADR.md:17-27`: one hand, one table.
     The kernel is `casino` (table, session, actions) plus the card and
     evaluation value objects it uses. `analysis`, `bot`, `pokerbench`,
@@ -203,14 +260,14 @@ IDs are the stable part, which is the point of the file.
   Recommended: **(A)**. The ADR is the accepted boundary record. (B) answers
   "what is pure", not "what does the kernel promise". Equity can stay pure and
   still be not-this-kernel.
-- [ ] **0c.** **Decide the surface.** One `transitions` list only. Either the
+- [x] **0c.** **Decide the surface.** One `transitions` list only. Either the
   `Table` methods (`apply_action`, `bring_it_in`, `deal_*`, `showdown`,
   `end_hand`) or the `PokerSession` methods (`start_hand*`, `apply_action`,
   `end_hand`, `abort_hand`). Recommended: **`PokerSession`** as the surface,
   because it is the canonical driver (`src/casino/dealer.rs:8`) and it keeps
   the half-step `advance_street` private (`docs/KERNEL_ADR.md:105-118`).
   `Table` methods then appear as concepts, not transitions.
-- [ ] **0d.** **Decide the `PKError` strategy.** O1 requires every
+- [x] **0d.** **Decide the `PKError` strategy.** O1 requires every
   `fails-with` to name a case of a `domain error`, and O2 requires every case
   of a `domain error` to be named. `PKError` has 55 cases, several of them
   shell failures (see Context).
@@ -224,35 +281,35 @@ IDs are the stable part, which is the point of the file.
 
   Recommended: **(A)**, then (B) as its own EPIC. Do not block the gate on a
   breaking change.
-- [ ] **0e.** Decide whether `Dealer` and `DealerError` (`src/casino/dealer.rs`)
+- [x] **0e.** Decide whether `Dealer` and `DealerError` (`src/casino/dealer.rs`)
   are kernel or `[[not-this-kernel]]`. If `Dealer` stays in the kernel, every
   `DealerError` case needs a precondition.
 
 ### Phase 1 — Draft
 
-- [ ] **1a.** Generate the skeleton:
+- [x] **1a.** Generate the skeleton:
   `python3 $DKSKILLS/skills/kernel-ontology/scripts/check_ontology.py --draft . > pkcore.ontology.toml`.
-- [ ] **1b.** Add one `[[not-this-kernel]]` entry per module from 0b, each with a
+- [x] **1b.** Add one `[[not-this-kernel]]` entry per module from 0b, each with a
   `why`. Delete their concepts from the draft. Check: the checker prints no
   "`not-this-kernel` ref matches no kernel item" WARN.
-- [ ] **1c.** Fill `package`, `world`, `summary`. Fill `doc` on each remaining
+- [x] **1c.** Fill `package`, `world`, `summary`. Fill `doc` on each remaining
   concept.
 
 ### Phase 2 — Transitions and reads (by hand)
 
-- [ ] **2a.** Declare each transition on the surface chosen in 0c, with a method
+- [x] **2a.** Declare each transition on the surface chosen in 0c, with a method
   ref (`casino::session::PokerSession::apply_action`). Candidates:
   `start_hand` (`src/casino/session.rs:321`), `start_hand_with` (`:352`),
   `start_hand_with_deck` (`:401`), `apply_action` (`:582`), `end_hand` (`:667`),
   `abort_hand` (`:701`), `set_blinds` (`:232`), `eliminate_busted` (`:263`).
-- [ ] **2b.** Declare each read: `view` (`:951`), `is_hand_complete` (`:458`),
+- [x] **2b.** Declare each read: `view` (`:951`), `is_hand_complete` (`:458`),
   `is_hand_in_progress` (`:488`), `count_funded` (`:286`), and
   `Table::legal_actions` (`src/casino/table/transition.rs:63`). Note that
   `next_actor` (`:527`) and `next_step` (`:623`) take `&mut self` — decide
   whether each is a read or a transition.
-- [ ] **2c.** Write `answers` for each read and one `does-not-answer` per read
+- [x] **2c.** Write `answers` for each read and one `does-not-answer` per read
   where a reader would expect more (e.g. `view` does not answer who is winning).
-- [ ] **2d.** Map every `TableAction` case (`src/casino/action.rs:96`) to the
+- [x] **2d.** Map every `TableAction` case (`src/casino/action.rs:96`) to the
   transition that `emits` it. O2 is HARD on any case no transition emits.
   Cases that are not events of play (`DeckPassesAudit`, `ChipAuditFailed`,
   `InvalidAction`) are a sign the enum mixes events with diagnostics — record
@@ -262,14 +319,14 @@ IDs are the stable part, which is the point of the file.
 
 - [ ] **3a.** For each error case the 0d choice keeps in the kernel, write the
   rule it stands for as a precondition on the transition that raises it.
-- [ ] **3b.** An error with no rule belongs to the shell. List it in the
+- [x] **3b.** An error with no rule belongs to the shell. List it in the
   follow-up for the `PKError` split.
 
 ### Phase 4 — Argument classes
 
-- [ ] **4a.** Give every transition and read argument a class: `state`, `fact`,
+- [x] **4a.** Give every transition and read argument a class: `state`, `fact`,
   `judgment`, `selection`, `private`, `clock`, `entropy`.
-- [ ] **4b.** Decide these by hand — do not let anyone guess them:
+- [x] **4b.** Decide these by hand — do not let anyone guess them:
   - `PokerSession::apply_action(seat, action)` — is `action` a `judgment`
     (a player's choice made outside the kernel)?
   - `PokerSession::view(viewer: Option<Principal>)` — `selection` or `private`?
@@ -281,7 +338,7 @@ IDs are the stable part, which is the point of the file.
 
 ### Phase 5 — Invariants
 
-- [ ] **5a.** Prune the 87 drafted invariants to the kernel scope from 0b.
+- [x] **5a.** Prune the 87 drafted invariants to the kernel scope from 0b.
 - [ ] **5b.** Add the `INV-n:` prefix to each kept invariant in its `# Domain`
   block, starting with `Table` (`src/casino/table.rs:81-85`) and
   `PokerSession` (`src/casino/session.rs:103-107`). Use `/dddocs write`.
@@ -299,12 +356,12 @@ IDs are the stable part, which is the point of the file.
 
 ### Phase 7 — Obligations
 
-- [ ] **7a.** Write `[[obligations]]` from the ADR. Seeds:
+- [x] **7a.** Write `[[obligations]]` from the ADR. Seeds:
   - The shell writes no table state; it asks through `view`
     (`docs/KERNEL_ADR.md:130-161`).
   - The shell must not re-check a rule the kernel enforces.
   - The kernel reads no clock; the shell owns time.
-- [ ] **7b.** Record the known "can half-happen" step — `advance_street`
+- [x] **7b.** Record the known "can half-happen" step — `advance_street`
   (`docs/KERNEL_ADR.md:105-127`, purity audit fix 5) — as a `does-not-answer`
   or an obligation until `Table::advance_street` lands.
 

@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.3] - 2026-10-26
+
+### Added
+
+- **`pkcore.ontology.toml`, the kernel's written contract** (EPIC-124, Phases
+  0–4 and 7). One file at the crate root says what the Rust signatures cannot:
+  which modules are not the kernel, what each kernel type means, 49
+  invariants, the 13 `PokerSession` steps that change a table and the 7 that
+  only ask, the class of each argument (a player's `action` is a judgment, a
+  shuffled deck is entropy), and 6 obligations the shell carries. Integrators
+  (`pkdealer`, `pkcore.js`, `pkwasm`) can now read the rules instead of
+  guessing and re-checking them. The kernel is the default feature set; the
+  bots, hand histories, Kuhn, the GTO solver, storage and `Dealer` are listed
+  as not the kernel. The dkskills checker does not pass yet: 25 `TableAction`
+  cases are emitted by no `PokerSession` step, and no test pins an invariant.
+  See [EPIC-124](docs/epics/EPIC-124_Kernel_Ontology.md).
+
+### Fixed
+
+- `HupCache::lookup_odds` now names its domain role (`read model`). Its
+  `# Domain` block had none, which stopped every `/dddocs` and ontology check.
+
 ## [0.20.2] - 2026-10-26
 
 ### Fixed
