@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   found). The ledger target writes `docs/PKCORE_LEDGER.md` only when the
   check passes. None is in `make ayce` or CI yet, because the check is
   still red.
+- **The ontology now says a failed chip audit is logged.** `end_hand` and
+  `abort_hand` declare `ChipAuditFailed` under `emits-on-error`: when the
+  audit fails they return `Err` *and* leave the entry in the event log,
+  beside the hand it broke. Needs the dkskills checker with
+  `emits-on-error`. The other 24 event cases are planned in
+  [EPIC-124a](docs/epics/EPIC-124a_TableAction_Event_Log.md).
 
 ### Fixed
 

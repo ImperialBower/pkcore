@@ -935,6 +935,8 @@ id = "TR-end_hand"
 ref = "casino::session::PokerSession::end_hand"
 doc = "Show down, pay the pots, audit the chips and reset the table for the next hand."
 emits = ["PlayerWins", "PlayerLoses", "PlayerWinsMainPot", "PlayerWinsSidePot", "CloseItOut", "BringItIn", "PotSize", "EndHand", "ResetTable", "DeckPassesAudit", "MuckCards", "MuckPlayerCards", "TakePlayerCards"]
+# The failed audit stays in the log beside the hand it broke (EPIC-124a, B1).
+emits-on-error = ["ChipAuditFailed"]
 # raises: ActionIsntFinished when the hand is not over; ChipAuditFailed
 
 [[transitions]]
@@ -942,6 +944,8 @@ id = "TR-abort_hand"
 ref = "casino::session::PokerSession::abort_hand"
 doc = "Refund every chip put in this hand and reset the table."
 emits = ["HandAborted", "ResetTable", "DeckPassesAudit", "MuckCards", "MuckPlayerCards", "TakePlayerCards"]
+# The refund and reset have happened when the audit fails (EPIC-124a, B1).
+emits-on-error = ["ChipAuditFailed"]
 # raises: ChipAuditFailed when the unwind does not balance
 
 # ---------------------------------------------------------------------------

@@ -114,17 +114,22 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
 ### Findings
 
 1. **25 `TableAction` cases no `PokerSession` step emits** (the 25 HARD).
-   - **17 are emitted by no kernel code at all:** `Pause`, `SetButton`,
+   - **17 are built by no code at all:** `Pause`, `SetButton`,
      `ForcedBets`, `ForcedBet`, `ForceDealt`, `SplitPots`, `MainPot`,
      `SidePot`, `SplitPot`, `TakeBoardCards`, `ClosesTheAction`, `Showdown`,
      `PlayerMucksCards`, `AllFoldedTo`, `PlayerLosesSidePot`,
-     `PlayerLosesMainPot`, `InvalidSeatNumber`. Only `analysis::nubibus`
-     builds them, from Pluribus logs.
+     `PlayerLosesMainPot`, `InvalidSeatNumber`. `analysis::nubibus` only
+     reads them, to export a table to the Pluribus format
+     (`src/analysis/nubibus.rs:510-635`). *(Corrected 27 October 2026; an
+     earlier text said `nubibus` built them.)*
    - **5 are diagnostics on a failure path, not events of play:**
      `InvalidAction`, `InvalidPlayerAction`, `NotEnoughCards`,
      `TooManyCards`, `ChipAuditFailed`.
-   - **3 are emitted only by `Dealer`:** `NewHand`, `ShuffleDeck`,
-     `MoveButton`.
+   - **3 are emitted only by drivers that are not the kernel:** `NewHand`,
+     `ShuffleDeck` (`Dealer`), and `MoveButton` (`Dealer` and `SimTable`,
+     `src/bot/sim.rs:617`).
+   - Case-by-case breakdown and plan:
+     [EPIC-124a](EPIC-124a_TableAction_Event_Log.md).
 2. **`PokerSession` never moves the button.** Only `Dealer` calls
    `Table::button_up`. Every session caller (`examples/bot_selfplay.rs:93`,
    `tests/replay_consistency.rs:152`) writes `session.table.button_up()` by
@@ -159,9 +164,8 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
 
 ### Follow-ups
 
-- Decide the 25 event cases: delete the 17 dead ones, and move the 5
-  diagnostics out of `TableAction` (breaking; its own EPIC with the
-  `PKError` split).
+- Decide the 25 event cases: see
+  [EPIC-124a](EPIC-124a_TableAction_Event_Log.md).
 - Make the button a session step (`PokerSession::end_hand` or `start_hand`),
   so it emits `MoveButton` and OB-6 can go.
 - Fix the `src/casino/mod.rs` driver table.
