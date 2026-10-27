@@ -1,4 +1,4 @@
-.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools doctor watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
+.PHONY: lint check-purity-fs test-serial clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools doctor watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes diary-links perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench ontology ontology-report ontology-ledger ontology-checker
 
 # Default target
 default: ayce
@@ -48,6 +48,9 @@ help:
 	@echo "  make deny            - Run full cargo-deny checks"
 	@echo "  make audit           - Run advisory-only security audit"
 	@echo "  make validate-okf    - Check .okf/ knowledge bundle conformance (OKF v0.1, strict)"
+	@echo "  make ontology        - Check pkcore.ontology.toml against the code and tests (needs DKSKILLS)"
+	@echo "  make ontology-report - The same check, with unpinned invariants as warnings"
+	@echo "  make ontology-ledger - Regenerate docs/PKCORE_LEDGER.md (only when the check passes)"
 	@echo "  make release-notes   - Preview release notes for TAG=vX.Y.Z"
 	@echo "  make diary-links     - Regenerate DIARY_LINKED.md (each DIARY.md line linked to its commit)"
 	@echo ""
@@ -182,6 +185,31 @@ validate-okf:
 		python3 scripts/okf_validate.py .okf --strict; \
 	fi
 
+# EPIC-124: check pkcore.ontology.toml, the kernel's written contract, against
+# the code and the tests. The checker lives in a dkskills checkout; set DKSKILLS
+# to point at it. Not in ayce yet: 25 TableAction cases that no PokerSession
+# step emits keep the check red.
+DKSKILLS ?= ../../folkengine/dkskills
+ONTOLOGY_CHECK := $(DKSKILLS)/skills/kernel-ontology/scripts/check_ontology.py
+PKCORE_LEDGER := docs/PKCORE_LEDGER.md
+
+ontology-checker:
+	@test -f $(ONTOLOGY_CHECK) || { echo "No checker at $(ONTOLOGY_CHECK). Set DKSKILLS to a folkengine/dkskills checkout."; exit 1; }
+
+ontology: ontology-checker
+	python3 $(ONTOLOGY_CHECK) .
+
+ontology-report: ontology-checker
+	python3 $(ONTOLOGY_CHECK) --report .
+
+# The ledger is generated: regenerate it, never edit it. The checker prints
+# no ledger while a HARD finding remains, so the old file stays in place.
+ontology-ledger: ontology-checker
+	@python3 $(ONTOLOGY_CHECK) --ledger . > $(PKCORE_LEDGER).tmp \
+		&& mv $(PKCORE_LEDGER).tmp $(PKCORE_LEDGER) \
+		&& echo "Wrote $(PKCORE_LEDGER)" \
+		|| { cat $(PKCORE_LEDGER).tmp; rm -f $(PKCORE_LEDGER).tmp; exit 1; }
+
 # Regenerate DIARY_LINKED.md: every DIARY.md line linked to the commit that wrote it.
 diary-links:
 	@python3 scripts/link_diary.py DIARY.md DIARY_LINKED.md
@@ -296,6 +324,7 @@ doctor:
 	echo "Optional targets:"; \
 	check "actionlint" "command -v actionlint" "brew install actionlint"; \
 	check "uv or python3" "command -v uv || command -v python3" "brew install uv"; \
+	check "dkskills checkout" "test -f $(ONTOLOGY_CHECK)" "git clone folkengine/dkskills, then set DKSKILLS"; \
 	check "nightly toolchain" "rustup run nightly rustc --version" "rustup toolchain install nightly"; \
 	check "cargo-deny" "cargo deny --version" "make install-tools"; \
 	check "cargo-udeps" "cargo +nightly udeps --version" "make install-tools"; \

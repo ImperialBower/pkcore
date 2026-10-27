@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   invalid number is a blank, each card is one `Bard` bit, the deck is in
   card-number order, and more. One invariant stays unpinned and says why:
   `Deck` having one value is held by the compiler, not a test.
+- **`make ontology`, `make ontology-report` and `make ontology-ledger`**
+  (EPIC-124, Phase 8). They run the dkskills checker on the ontology; set
+  `DKSKILLS` to a dkskills checkout (`make doctor` says whether one is
+  found). The ledger target writes `docs/PKCORE_LEDGER.md` only when the
+  check passes. None is in `make ayce` or CI yet, because the check is
+  still red.
 
 ### Fixed
 

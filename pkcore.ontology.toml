@@ -1,5 +1,5 @@
 # The pkcore kernel ontology (EPIC-124). Checked by the dkskills
-# kernel-ontology checker; `make ontology` once Phase 8 lands.
+# kernel-ontology checker: `make ontology` (set DKSKILLS to a dkskills checkout).
 #
 # Roles live in the `# Domain` blocks and pins in the tests; this file holds
 # neither. IDs are stable: never renumber an INV-, TR-, RD- or OB- id.

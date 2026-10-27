@@ -17,7 +17,8 @@
   `--ledger` renders `docs/PKCORE_LEDGER.md`.
 - **Status:** In progress (0.20.3). Phases 0–7 landed. `--report` gives
   25 HARD (O2: event cases no step emits) and 1 WARN (INV-49, held by the
-  compiler). Findings 6–8 fixed as DEFECT_045–047. Grounded at `44b484ee`, 26 October 2026.
+  compiler). Findings 6–8 fixed as DEFECT_045–047. Phase 8: Make targets and links
+  done; CI and the ledger wait for the event clean-up. Grounded at `44b484ee`, 26 October 2026.
 
 ---
 
@@ -90,9 +91,9 @@ the code changes the contract exposes as follow-ups.
 | Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | ✅ 87 → 49; all 49 cited |
 | `pins: INV-n` markers in tests | ✅ 48 of 49 pinned; 20 new tests |
 | Obligations and "does not answer" written | ✅ 6 obligations |
-| `make ontology` target | Planned |
-| CI gate | Planned |
-| `docs/PKCORE_LEDGER.md` generated | Planned |
+| `make ontology` target | ✅ `ontology`, `ontology-report`, `ontology-ledger`; not in `ayce` while red |
+| CI gate | ⏸ Deferred until the 25 event cases are fixed |
+| `docs/PKCORE_LEDGER.md` generated | ⛔ Blocked: the checker prints no ledger while a HARD finding remains |
 
 ### Decisions taken (26 October 2026)
 
@@ -165,6 +166,8 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
   so it emits `MoveButton` and OB-6 can go.
 - Fix the `src/casino/mod.rs` driver table.
 - Report finding 4 to dkskills.
+- Once the event cases are fixed: add `ontology` to `ayce` and to CI (8b),
+  and run `make ontology-ledger` (8c).
 
 ---
 
@@ -384,13 +387,13 @@ IDs are the stable part, which is the point of the file.
 
 ### Phase 8 — Gate and ledger
 
-- [ ] **8a.** Add a `make ontology` target that runs the checker on `.`, with
+- [x] **8a.** Add a `make ontology` target that runs the checker on `.`, with
   `DKSKILLS` as a Make variable. Add it to `ayce` (`Makefile:262`).
 - [ ] **8b.** Add a CI step once the file is stable. CI must fetch the dkskills
   checker (a pinned checkout of `folkengine/dkskills`).
 - [ ] **8c.** Generate `docs/PKCORE_LEDGER.md` with `--ledger`. Mark it
   generated at the top; regenerate it, never edit it.
-- [ ] **8d.** Link `pkcore.ontology.toml` and the ledger from
+- [x] **8d.** Link `pkcore.ontology.toml` and the ledger from
   `docs/KERNEL_ADR.md` §7 and from `README.md`.
 
 ---

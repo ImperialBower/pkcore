@@ -86,6 +86,11 @@ For comprehensive API documentation, run:
 cargo doc --open
 ````
 
+What the kernel promises — its invariants, the steps that change a table, and
+what a caller must do — is written down in
+[`pkcore.ontology.toml`](pkcore.ontology.toml). `make ontology` checks it
+against the code and the tests.
+
 ## Examples
 
 ### The Hand
