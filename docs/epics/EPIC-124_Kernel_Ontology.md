@@ -16,8 +16,8 @@
 - **Proves it:** `check_ontology.py .` exits 0 with no HARD finding, and
   `--ledger` renders `docs/PKCORE_LEDGER.md`.
 - **Status:** In progress (0.20.3). Phases 0–7 landed. `--report` gives
-  25 HARD (O2: event cases no step emits) and 3 WARN (INV-31, INV-33,
-  INV-49 unpinned, each with a `note`). Grounded at `44b484ee`, 26 October 2026.
+  25 HARD (O2: event cases no step emits) and 1 WARN (INV-49, held by the
+  compiler). Findings 6–8 fixed as DEFECT_045–047. Grounded at `44b484ee`, 26 October 2026.
 
 ---
 
@@ -88,7 +88,7 @@ the code changes the contract exposes as follow-ups.
 | Error strategy for `PKError` decided | ✅ (A) ontology first, split later |
 | Argument classes declared | ✅ in the file; not in `**Inputs:**` (see Findings) |
 | Invariants pruned, `INV-n:` prefixes in `# Domain` blocks | ✅ 87 → 49; all 49 cited |
-| `pins: INV-n` markers in tests | ✅ 46 of 49 pinned; 15 new tests |
+| `pins: INV-n` markers in tests | ✅ 48 of 49 pinned; 20 new tests |
 | Obligations and "does not answer" written | ✅ 6 obligations |
 | `make ontology` target | Planned |
 | CI gate | Planned |
@@ -138,16 +138,19 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
    This is a dkskills gap, not a pkcore one.
 5. **`analysis::player_stats` depends on `hand_history` and `bot::sim`**,
    which are not this kernel. Under scope (B) a kernel type reads shell types.
-6. **INV-31 and INV-33 are not true.** `Six::hand_rank_value`
+6. ✅ **INV-31 and INV-33 were not true** — fixed,
+   [`DEFECT_045`](../defects/DEFECT_045_six_and_seven_rank_a_hand_with_a_blank.md). `Six::hand_rank_value`
    (`src/arrays/six.rs:124`) and `Seven::hand_rank_value`
    (`src/arrays/seven.rs:179`) have no `is_dealt` guard. A hand with a blank
    slot still ranks its real cards. `Five` has the guard. Both stay unpinned,
    with a `note`.
-7. **`SevenEval` breaks the `Ord`/`Eq` contract.** `Eq` compares `hand_rank`
+7. ✅ **`SevenEval` broke the `Ord`/`Eq` contract** — fixed,
+   [`DEFECT_046`](../defects/DEFECT_046_seven_eval_ord_disagrees_with_eq.md). `Eq` compares `hand_rank`
    only (`src/analysis/eval.rs:503`), but `Ord` is derived and compares
    `seven` first. Two equal values can sort as unequal. The INV-17 test checks
    `==` only.
-8. **`StartingHands: From<Vec<Two>>` panics on more than nine hands**
+8. ✅ **`StartingHands: From<Vec<Two>>` panicked on more than nine hands** —
+   fixed, [`DEFECT_047`](../defects/DEFECT_047_starting_hands_panics_past_nine_hands.md)
    (`src/arrays/hole_cards/twos.rs:321`, an index out of bounds in library
    code). INV-34 is pinned on the nine-slot array, not on this path.
 9. **INV-49 needs a compile-fail test.** `Deck` has a private field and no
@@ -162,9 +165,6 @@ is `fact` and its `id` is `entropy`; `legal_actions(seat_id)` is `fact`.
   so it emits `MoveButton` and OB-6 can go.
 - Fix the `src/casino/mod.rs` driver table.
 - Report finding 4 to dkskills.
-- Findings 6–8 are bugs. Each one wants a DEFECT doc and a fix: an
-  `is_dealt` guard on `Six` and `Seven`, a hand-written `Ord` for
-  `SevenEval`, and a `TryFrom<Vec<Two>>` that returns an error.
 
 ---
 

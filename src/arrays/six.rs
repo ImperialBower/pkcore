@@ -122,6 +122,9 @@ impl HandRanker for Six {
     }
 
     fn hand_rank_value(&self) -> HandRankValue {
+        if !self.is_dealt() {
+            return NO_HAND_RANK_VALUE;
+        }
         let mut best_hrv = NO_HAND_RANK_VALUE;
 
         for perm in Six::FIVE_CARD_PERMUTATIONS {
@@ -135,6 +138,9 @@ impl HandRanker for Six {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        if !self.is_dealt() {
+            return (NO_HAND_RANK_VALUE, Five::default());
+        }
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();
 
@@ -313,5 +319,22 @@ mod arrays__six_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    /// `DEFECT_045`: a royal flush plus one blank slot is not a dealt `Six`.
+    #[test]
+    fn hand_rank_value__a_blank_slot_gets_no_rank() {
+        // pins: INV-31
+        let six = Six::from([
+            Card::BLANK,
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+        ]);
+
+        assert_eq!(six.hand_rank_value(), NO_HAND_RANK_VALUE);
+        assert_eq!(six.hand_rank_value_and_hand(), (NO_HAND_RANK_VALUE, Five::default()));
     }
 }

@@ -494,7 +494,7 @@ mod hand_rank__eval_tests {
 /// - **Invariants:**
 ///   - INV-17: equal when `hand_rank` is equal
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SevenEval {
     pub seven: Seven,
     pub five: Five,
@@ -516,6 +516,19 @@ impl PartialEq for SevenEval {
     }
 }
 impl Eq for SevenEval {}
+
+/// Ordered by `HandRank` only, to agree with `PartialEq` (`DEFECT_046`).
+impl Ord for SevenEval {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.hand_rank.cmp(&other.hand_rank)
+    }
+}
+
+impl PartialOrd for SevenEval {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -629,5 +642,19 @@ mod hand_rank__seven_eval_tests {
 
         assert_eq!(spades, hearts);
         assert_ne!(spades, quads);
+    }
+
+    /// `DEFECT_046`: `Ord` must agree with `Eq`, which ignores the cards.
+    #[test]
+    fn cmp__agrees_with_eq() {
+        // pins: INV-17
+        let spades = SevenEval::from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 2♥ 3♦").unwrap());
+        let hearts = SevenEval::from(Seven::from_str("A♥ K♥ Q♥ J♥ T♥ 2♠ 3♣").unwrap());
+        let quads = SevenEval::from(Seven::from_str("A♠ A♥ A♦ A♣ K♠ 2♥ 3♦").unwrap());
+
+        assert_eq!(spades.cmp(&hearts), std::cmp::Ordering::Equal);
+        assert_eq!(hearts.cmp(&spades), std::cmp::Ordering::Equal);
+        assert_eq!(spades.cmp(&quads), spades.hand_rank.cmp(&quads.hand_rank));
+        assert!(spades > quads);
     }
 }

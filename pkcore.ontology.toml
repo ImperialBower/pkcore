@@ -712,7 +712,6 @@ doc = "exactly six card slots"
 id = "INV-31"
 scope = "Six"
 doc = "ranked only when dealt"
-note = "Not true today: Six::hand_rank_value has no is_dealt guard, so a Six with a blank slot ranks its five real cards (EPIC-124 finding 6). Unpinned until fixed."
 
 [[invariants]]
 id = "INV-32"
@@ -723,7 +722,6 @@ doc = "exactly seven card slots"
 id = "INV-33"
 scope = "Seven"
 doc = "ranked only when dealt"
-note = "Not true today: Seven::hand_rank_value has no is_dealt guard, so a Seven with a blank slot ranks its best real five (EPIC-124 finding 6). Unpinned until fixed."
 
 [[invariants]]
 id = "INV-34"
