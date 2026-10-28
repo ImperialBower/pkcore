@@ -699,6 +699,7 @@ mod analysis__equity__engine_tests {
 
     #[test]
     fn compute__oracle_exact_turn_aa_vs_kk() {
+        // pins: INV-11
         let report = EquityEngine::compute(&oracle_exact_turn_request()).unwrap();
         assert_eq!(Method::Exact, report.method);
         assert_eq!(44, report.samples);

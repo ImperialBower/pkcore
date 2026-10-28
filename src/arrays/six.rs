@@ -17,8 +17,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly six card slots
-///   - ranked only when dealt
+///   - INV-30: exactly six card slots
+///   - INV-31: ranked only when dealt
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Six([Card; 6]);
 
@@ -122,6 +122,9 @@ impl HandRanker for Six {
     }
 
     fn hand_rank_value(&self) -> HandRankValue {
+        if !self.is_dealt() {
+            return NO_HAND_RANK_VALUE;
+        }
         // Alternative: PokerHandEvaluator's `evaluate_6cards` (cpp/src/evaluator6.c,
         // https://github.com/HenryRLee/PokerHandEvaluator) ranks six cards with one
         // hash lookup instead of trying all six five-card subsets.
@@ -138,6 +141,9 @@ impl HandRanker for Six {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        if !self.is_dealt() {
+            return (NO_HAND_RANK_VALUE, Five::default());
+        }
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();
 
@@ -257,6 +263,7 @@ mod arrays__six_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-30
         assert_eq!(Six::from_str("AD 2D 3D 4D 5d 6d").unwrap(), Six::from(CARDS));
         assert_eq!(Six::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(
@@ -315,5 +322,22 @@ mod arrays__six_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    /// `DEFECT_048`: a royal flush plus one blank slot is not a dealt `Six`.
+    #[test]
+    fn hand_rank_value__a_blank_slot_gets_no_rank() {
+        // pins: INV-31
+        let six = Six::from([
+            Card::BLANK,
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+        ]);
+
+        assert_eq!(six.hand_rank_value(), NO_HAND_RANK_VALUE);
+        assert_eq!(six.hand_rank_value_and_hand(), (NO_HAND_RANK_VALUE, Five::default()));
     }
 }

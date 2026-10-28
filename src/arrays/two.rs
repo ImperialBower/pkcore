@@ -19,8 +19,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly two card slots
-///   - `new` rejects blanks and duplicates
+///   - INV-24: exactly two card slots
+///   - INV-25: `new` rejects blanks and duplicates
 #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Two(#[serde(deserialize_with = "Two::deserialize_two_index")] [Card; 2]);
 
@@ -1849,6 +1849,7 @@ mod arrays__two_tests {
     /// are ok.
     #[test]
     fn new__not_unique() {
+        // pins: INV-25
         assert!(Two::new(Card::KING_HEARTS, Card::KING_HEARTS).is_err());
     }
 
@@ -2268,6 +2269,7 @@ mod arrays__two_tests {
     #[case(vec![Card::KING_HEARTS, Card::BLANK], PKError::BlankCard)]
     #[case(vec![Card::BLANK, Card::BLANK], PKError::BlankCard)]
     fn try_from__card_slice__blank(#[case] v: Vec<Card>, #[case] err: PKError) {
+        // pins: INV-24
         let slice: &[Card] = v.as_slice();
 
         assert!(Two::try_from(slice).is_err());
@@ -2293,5 +2295,12 @@ mod arrays__two_tests {
         // round trip is canonical rather than byte-exact. 98.4% of the
         // Pluribus corpus logs at least one player low-card-first.
         assert_eq!(Two::from_pluribus("8sAs").unwrap().to_pluribus(), "As8s");
+    }
+
+    #[test]
+    fn new__blank() {
+        // pins: INV-25
+        assert!(Two::new(Card::BLANK, Card::KING_HEARTS).is_err());
+        assert!(Two::new(Card::KING_HEARTS, Card::BLANK).is_err());
     }
 }

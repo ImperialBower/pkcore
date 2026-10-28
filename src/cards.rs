@@ -35,9 +35,9 @@ use strum::IntoEnumIterator;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - no blanks
-///   - no duplicates
-///   - insertion order kept
+///   - INV-39: no blanks
+///   - INV-40: no duplicates
+///   - INV-41: insertion order kept
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Cards(pub IndexSet<Card>);
 
@@ -1470,6 +1470,7 @@ mod cards_tests {
 
     #[test]
     fn insert() {
+        // pins: INV-41
         let mut cards = Cards::default();
 
         cards.insert(Card::ACE_HEARTS);
@@ -1569,6 +1570,7 @@ mod cards_tests {
     // Rust
     #[test]
     fn add__combines_preserving_order_and_uniqueness() {
+        // pins: INV-40
         let left = cards!("A♠ K♠ Q♠");
         let right = cards!("J♠ T♠ Q♠"); // Q♠ is a dupe
 
@@ -1629,6 +1631,7 @@ mod cards_tests {
 
     #[test]
     fn from__card() {
+        // pins: INV-39
         assert_eq!(Cards::from_str("3♣").unwrap(), Cards::from(&Card::TREY_CLUBS));
         assert_eq!(Cards::default(), Cards::from(&Card::BLANK));
     }
@@ -1757,6 +1760,7 @@ mod cards_tests {
 
     #[test]
     fn try_from__card() {
+        // pins: INV-39
         assert!(Cards::try_from(Card::FOUR_DIAMONDS).is_ok());
         assert!(Cards::try_from(Card::BLANK).is_err());
     }
@@ -2011,5 +2015,14 @@ mod cards_tests {
     fn suit_shift__opposite() {
         let spades = Cards::from_str("A♠ K♠").unwrap();
         assert_eq!(Cards::from_str("A♦ K♦").unwrap(), spades.opposite());
+    }
+
+    #[test]
+    fn insert__blank_is_refused() {
+        // pins: INV-39
+        let mut cards = Cards::default();
+
+        assert!(!cards.insert(Card::BLANK));
+        assert!(cards.is_empty());
     }
 }

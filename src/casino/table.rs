@@ -79,10 +79,10 @@ pub enum VisibleHandMode {
 ///
 /// - **Role:** consistency boundary (DDD: aggregate)
 /// - **Invariants:**
-///   - chips are conserved across a hand (`audit_chip_total`)
-///   - every action in `legal_actions` is accepted by `apply_action`
-///   - raise count is capped per street under fixed limit
-///   - street counters reset at each street
+///   - INV-1: chips are conserved across a hand (`audit_chip_total`)
+///   - INV-2: every action in `legal_actions` is accepted by `apply_action`
+///   - INV-3: raise count is capped per street under fixed limit
+///   - INV-4: street counters reset at each street
 ///
 /// # Examples
 ///
@@ -4363,6 +4363,7 @@ mod casino__table_tests {
     /// after the snapshot must be caught — and logged.
     #[test]
     fn audit_chip_total_reports_a_mismatch_and_logs_it() {
+        // pins: INV-1
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
 

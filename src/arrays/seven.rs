@@ -18,8 +18,8 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly seven card slots
-///   - ranked only when dealt
+///   - INV-32: exactly seven card slots
+///   - INV-33: ranked only when dealt
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Seven([Card; 7]);
 
@@ -183,6 +183,9 @@ impl HandRanker for Seven {
     ///   test, then one `flush` or `noflush7` lookup. It returns the same
     ///   1..=7462 classes as `HandRankValue`, so it would be a drop-in change.
     fn hand_rank_value(&self) -> HandRankValue {
+        if !self.is_dealt() {
+            return NO_HAND_RANK_VALUE;
+        }
         let mut best_hrv = NO_HAND_RANK_VALUE;
 
         for perm in Seven::FIVE_CARD_PERMUTATIONS {
@@ -196,6 +199,9 @@ impl HandRanker for Seven {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        if !self.is_dealt() {
+            return (NO_HAND_RANK_VALUE, Five::default());
+        }
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();
 
@@ -339,6 +345,7 @@ mod arrays__seven_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-32
         assert_eq!(Seven::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap(), Seven::from(CARDS));
         assert_eq!(Seven::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(
@@ -402,5 +409,23 @@ mod arrays__seven_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    /// `DEFECT_048`: a royal flush plus blank slots is not a dealt `Seven`.
+    #[test]
+    fn hand_rank_value__a_blank_slot_gets_no_rank() {
+        // pins: INV-33
+        let seven = Seven::from([
+            Card::BLANK,
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+            Card::DEUCE_CLUBS,
+        ]);
+
+        assert_eq!(seven.hand_rank_value(), NO_HAND_RANK_VALUE);
+        assert_eq!(seven.hand_rank_value_and_hand(), (NO_HAND_RANK_VALUE, Five::default()));
     }
 }

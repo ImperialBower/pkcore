@@ -22,7 +22,7 @@ use std::str::FromStr;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - exactly four card slots
+///   - INV-27: exactly four card slots
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Four(pub(crate) [Card; 4]);
 
@@ -391,6 +391,7 @@ mod arrays__four_tests {
 
     #[test]
     fn try_from__cards__error() {
+        // pins: INV-27
         assert_eq!(PKError::NotEnoughCards, Four::try_from(Cards::default()).unwrap_err());
         assert_eq!(
             PKError::NotEnoughCards,

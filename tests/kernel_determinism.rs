@@ -117,6 +117,7 @@ fn without_entropy_the_commentary_faces_are_fixed() {
 
 #[test]
 fn a_played_hand_conserves_chips() {
+    // pins: INV-1
     let mut session = PokerSession::new(heads_up_table());
     let before: usize = stacks(&session.table).iter().sum();
     session

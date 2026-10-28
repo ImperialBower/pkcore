@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor,
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - bit `n` is seat `n`
+///   - INV-13: bit `n` is seat `n`
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Seatbit(pub u16);
 
@@ -290,5 +290,16 @@ mod casino__equity__seatbit_tests {
         assert!(seats.contains(3));
         assert!(!seats.contains(1));
         assert!(!seats.contains(2));
+    }
+
+    #[test]
+    fn from__bit_n_is_seat_n() {
+        // pins: INV-13
+        for seat in 0..Seatbit::CAPACITY {
+            let seatbit = Seatbit::from(seat);
+            assert_eq!(seatbit, Seatbit(1 << seat));
+            assert!(seatbit.contains(seat));
+        }
+        assert_eq!(Seatbit::from(Seatbit::CAPACITY), Seatbit::NONE);
     }
 }

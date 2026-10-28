@@ -62,7 +62,7 @@ impl PlayerEquity {
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - one `PlayerEquity` per request seat, in input order
+///   - INV-11: one `PlayerEquity` per request seat, in input order
 #[derive(Clone, Debug)]
 pub struct EquityReport {
     /// Per-seat equity, aligned with the request's `players`.

@@ -46,7 +46,7 @@ pub const POSITION_COUNT: usize = 11;
 ///
 /// - **Role:** read model
 /// - **Invariants:**
-///   - ratios return `None` when there were no opportunities
+///   - INV-14: ratios return `None` when there were no opportunities
 ///
 /// # Examples
 ///
@@ -217,7 +217,7 @@ impl PlayerStats {
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - `Low` below 50 hands, `Medium` below 200, `High` otherwise
+///   - INV-15: `Low` below 50 hands, `Medium` below 200, `High` otherwise
 ///
 /// # Examples
 ///
@@ -1034,6 +1034,7 @@ mod tests {
 
     #[test]
     fn ratios_handle_division_by_zero() {
+        // pins: INV-14
         let s = PlayerStats::default();
         assert_eq!(None, s.vpip());
         assert_eq!(None, s.pfr());
@@ -1050,6 +1051,7 @@ mod tests {
 
     #[test]
     fn confidence_thresholds() {
+        // pins: INV-15
         assert_eq!(Confidence::Low, Confidence::from_sample_size(0));
         assert_eq!(Confidence::Low, Confidence::from_sample_size(49));
         assert_eq!(Confidence::Medium, Confidence::from_sample_size(50));

@@ -29,8 +29,8 @@ use std::thread;
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - at most nine hands
-///   - unused slots are blank
+///   - INV-34: at most nine hands
+///   - INV-35: unused slots are blank
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StartingHands([Two; 9]);
 
@@ -314,11 +314,12 @@ impl From<[Two; 2]> for StartingHands {
     }
 }
 
+/// Keeps the first nine hands; any more do not fit (`DEFECT_050`).
 impl From<Vec<Two>> for StartingHands {
     fn from(v: Vec<Two>) -> Self {
         let mut twos = StartingHands::default();
-        for (i, two) in v.iter().enumerate() {
-            twos.0[i] = *two;
+        for (slot, two) in twos.0.iter_mut().zip(v) {
+            *slot = two;
         }
         twos
     }
@@ -389,10 +390,11 @@ impl TryFrom<Cards> for StartingHands {
     type Error = PKError;
 
     fn try_from(cards: Cards) -> Result<Self, Self::Error> {
-        match cards.clone().as_twos() {
-            Ok(t) => Ok(StartingHands::from(t)),
-            Err(e) => Err(e),
+        let twos = cards.as_twos()?;
+        if twos.len() > 9 {
+            return Err(PKError::TooManyCards);
         }
+        Ok(StartingHands::from(twos))
     }
 }
 
@@ -442,6 +444,7 @@ mod arrays__hole_cards__twos_tests {
 
     #[test]
     fn from_str() {
+        // pins: INV-35
         let expected = [
             HERO,
             VILLAIN,
@@ -479,5 +482,31 @@ mod arrays__hole_cards__twos_tests {
 
         assert_eq!(expected, twos.array());
         assert_eq!(vec![HERO, VILLAIN, MINION], twos.vec());
+    }
+
+    #[test]
+    fn array__has_nine_slots() {
+        // pins: INV-34
+        assert_eq!(StartingHands::default().array().len(), 9);
+    }
+
+    /// `DEFECT_050`: ten hands do not fit in nine slots.
+    #[test]
+    fn from__vec__keeps_the_first_nine_hands() {
+        // pins: INV-34
+        let ten: Vec<Two> = Cards::deck().as_twos().unwrap().into_iter().take(10).collect();
+
+        let hands = StartingHands::from(ten.clone());
+
+        assert_eq!(hands.array().to_vec(), ten[..9].to_vec());
+    }
+
+    /// `DEFECT_050`: twenty cards make ten hands, one more than a table seats.
+    #[test]
+    fn try_from__cards__more_than_nine_hands_is_an_error() {
+        // pins: INV-34
+        let twenty = Cards::from(Cards::deck().iter().take(20).copied().collect::<Vec<Card>>());
+
+        assert_eq!(StartingHands::try_from(twenty), Err(PKError::TooManyCards));
     }
 }

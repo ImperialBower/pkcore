@@ -205,7 +205,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - equal and ordered by `hand_rank` only; the cards are ignored
+///   - INV-16: equal and ordered by `hand_rank` only; the cards are ignored
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct Eval {
     pub hand_rank: HandRank,
@@ -418,6 +418,7 @@ mod hand_rank__eval_tests {
 
     #[test]
     fn eq() {
+        // pins: INV-16
         assert_eq!(
             Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
             Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
@@ -442,6 +443,7 @@ mod hand_rank__eval_tests {
 
     #[test]
     fn ord() {
+        // pins: INV-16
         assert_eq!(
             Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
             Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
@@ -473,6 +475,15 @@ mod hand_rank__eval_tests {
 
         assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
     }
+
+    #[test]
+    fn cmp__ignores_the_cards() {
+        // pins: INV-16
+        let spades = Eval::from(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap());
+        let hearts = Eval::from(Five::from_str("A♥ K♥ Q♥ J♥ T♥").unwrap());
+
+        assert_eq!(spades.cmp(&hearts), std::cmp::Ordering::Equal);
+    }
 }
 
 /// A seven-card hand with its best five cards and their `HandRank`.
@@ -481,9 +492,9 @@ mod hand_rank__eval_tests {
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - equal when `hand_rank` is equal
+///   - INV-17: equal when `hand_rank` is equal
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SevenEval {
     pub seven: Seven,
     pub five: Five,
@@ -505,6 +516,19 @@ impl PartialEq for SevenEval {
     }
 }
 impl Eq for SevenEval {}
+
+/// Ordered by `HandRank` only, to agree with `PartialEq` (`DEFECT_049`).
+impl Ord for SevenEval {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.hand_rank.cmp(&other.hand_rank)
+    }
+}
+
+impl PartialOrd for SevenEval {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -607,5 +631,30 @@ mod hand_rank__seven_eval_tests {
         assert_eq!(eval.hand_rank.value, 271);
         assert_eq!(eval.hand_rank.name, HandRankName::FullHouse);
         assert_eq!(eval.hand_rank.class, HandRankClass::SixesOverFives);
+    }
+
+    #[test]
+    fn eq__same_hand_rank_different_cards() {
+        // pins: INV-17
+        let spades = SevenEval::from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 2♥ 3♦").unwrap());
+        let hearts = SevenEval::from(Seven::from_str("A♥ K♥ Q♥ J♥ T♥ 2♠ 3♣").unwrap());
+        let quads = SevenEval::from(Seven::from_str("A♠ A♥ A♦ A♣ K♠ 2♥ 3♦").unwrap());
+
+        assert_eq!(spades, hearts);
+        assert_ne!(spades, quads);
+    }
+
+    /// `DEFECT_049`: `Ord` must agree with `Eq`, which ignores the cards.
+    #[test]
+    fn cmp__agrees_with_eq() {
+        // pins: INV-17
+        let spades = SevenEval::from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 2♥ 3♦").unwrap());
+        let hearts = SevenEval::from(Seven::from_str("A♥ K♥ Q♥ J♥ T♥ 2♠ 3♣").unwrap());
+        let quads = SevenEval::from(Seven::from_str("A♠ A♥ A♦ A♣ K♠ 2♥ 3♦").unwrap());
+
+        assert_eq!(spades.cmp(&hearts), std::cmp::Ordering::Equal);
+        assert_eq!(hearts.cmp(&spades), std::cmp::Ordering::Equal);
+        assert_eq!(spades.cmp(&quads), spades.hand_rank.cmp(&quads.hand_rank));
+        assert!(spades > quads);
     }
 }

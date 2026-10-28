@@ -5,6 +5,61 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.4] - 2026-10-28
+
+### Added
+
+- **`pkcore.ontology.toml`, the kernel's written contract** (EPIC-124, Phases
+  0–4 and 7). One file at the crate root says what the Rust signatures cannot:
+  which modules are not the kernel, what each kernel type means, 49
+  invariants, the 13 `PokerSession` steps that change a table and the 7 that
+  only ask, the class of each argument (a player's `action` is a judgment, a
+  shuffled deck is entropy), and 6 obligations the shell carries. Integrators
+  (`pkdealer`, `pkcore.js`, `pkwasm`) can now read the rules instead of
+  guessing and re-checking them. The kernel is the default feature set; the
+  bots, hand histories, Kuhn, the GTO solver, storage and `Dealer` are listed
+  as not the kernel. The dkskills checker does not pass yet: 25 `TableAction`
+  cases are emitted by no `PokerSession` step.
+  See [EPIC-124](docs/epics/EPIC-124_Kernel_Ontology.md).
+- **Each invariant now names its ID and its tests** (EPIC-124, Phases 5–6).
+  The 49 `# Domain` invariant bullets start with `INV-n:`, and 48 are pinned
+  by a `// pins: INV-n` marker in a test. 15 new tests fill the gaps: the
+  fixed-limit raise cap refuses a third raise and changes nothing, the
+  street counters reset when the bets are swept, a blank card is `0`, an
+  invalid number is a blank, each card is one `Bard` bit, the deck is in
+  card-number order, and more. One invariant stays unpinned and says why:
+  `Deck` having one value is held by the compiler, not a test.
+- **`make ontology`, `make ontology-report` and `make ontology-ledger`**
+  (EPIC-124, Phase 8). They run the dkskills checker on the ontology; set
+  `DKSKILLS` to a dkskills checkout (`make doctor` says whether one is
+  found). The ledger target writes `docs/PKCORE_LEDGER.md` only when the
+  check passes. None is in `make ayce` or CI yet, because the check is
+  still red.
+- **The ontology now says a failed chip audit is logged.** `end_hand` and
+  `abort_hand` declare `ChipAuditFailed` under `emits-on-error`: when the
+  audit fails they return `Err` *and* leave the entry in the event log,
+  beside the hand it broke. Needs the dkskills checker with
+  `emits-on-error`. The other 24 event cases are planned in
+  [EPIC-124a](docs/epics/EPIC-124a_TableAction_Event_Log.md).
+
+### Fixed
+
+- **`Six` and `Seven` no longer rank a hand with a blank slot.** A royal
+  flush plus one blank ranked as a royal flush; it now gets no rank (`0`),
+  the same as `Five`. Code that ranks a hand before every card is out no
+  longer reads a hand that does not exist.
+  [`DEFECT_048`](docs/defects/DEFECT_048_six_and_seven_rank_a_hand_with_a_blank.md).
+- **`SevenEval` now sorts by hand rank, the same way it compares equal.** It
+  compared equal by rank but sorted by its cards, so two equal hands could
+  sort as different and a worse hand could sort above a better one.
+  [`DEFECT_049`](docs/defects/DEFECT_049_seven_eval_ord_disagrees_with_eq.md).
+- **`StartingHands` no longer panics on more than nine hands.** Parsing or
+  converting 20 or more cards now returns `PKError::TooManyCards`;
+  `StartingHands::from(Vec<Two>)` keeps the first nine hands.
+  [`DEFECT_050`](docs/defects/DEFECT_050_starting_hands_panics_past_nine_hands.md).
+- `HupCache::lookup_odds` now names its domain role (`read model`). Its
+  `# Domain` block had none, which stopped every `/dddocs` and ontology check.
+
 ## [0.20.3] - 2026-10-28
 
 ### Changed

@@ -31,7 +31,7 @@ pub const OMAHA_BOARD_PERMUTATIONS: [[usize; 3]; 10] = [
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - a hand plays exactly two hole cards and three board cards
+///   - INV-23: a hand plays exactly two hole cards and three board cards
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[allow(clippy::pedantic)]
 pub struct OmahaHigh {
@@ -297,6 +297,7 @@ mod games__omaha_high_tests {
 
     #[test]
     fn eval_returns_a_hand_of_exactly_two_hole_cards_and_three_board_cards() {
+        // pins: INV-23
         let hand = OmahaHigh::from(ROBL_HAND);
         let board = Five::from(BOARD);
 

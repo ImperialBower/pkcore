@@ -77,7 +77,7 @@ pub static SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT: std::sync::LazyLock<HashSet<Sorted
 ///
 /// - **Role:** value object
 /// - **Invariants:**
-///   - `new` puts the higher `Two` first
+///   - INV-37: `new` puts the higher `Two` first
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
@@ -983,6 +983,7 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn new() {
+        // pins: INV-37
         assert_eq!(
             HANDS_7D_7C_V_6S_6H,
             SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_7D_7C)
