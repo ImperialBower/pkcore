@@ -9,8 +9,8 @@ brackets, where they first appear.*
 | Kernel | `pkcore` |
 | Status | Accepted |
 | Date | 2026-09-16 |
-| Contract | None language-neutral yet. The contract is the Rust public API at `0.15.0`; a WIT world is [`/domain-kernel` Mode C](KERNEL_PURITY_AUDIT.md) and has not been started |
-| Closes | [`docs/KERNEL_PURITY_AUDIT.md`](KERNEL_PURITY_AUDIT.md) fix 4; answers invariants 7 and 8 |
+| Contract | None language-neutral yet. The contract is the Rust public API at `0.15.0`; a WIT world is [`/domain-kernel` Mode C](audits/KERNEL_PURITY_AUDIT.md) and has not been started |
+| Closes | [`audits/KERNEL_PURITY_AUDIT.md`](audits/KERNEL_PURITY_AUDIT.md) fix 4; answers invariants 7 and 8 |
 
 ---
 

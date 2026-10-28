@@ -76,7 +76,7 @@ the copies in this repo's `docs/` are canonical:
 
 Parent design docs: [`../../epics/EPIC-79_Mental_Poker.md`](../../epics/EPIC-79_Mental_Poker.md)
 (the spike/decision-gate EPIC) and
-[`docs/ANALYSIS_Mental_Poker.md`](../../ANALYSIS_Mental_Poker.md) (the source
+[`docs/analysis/ANALYSIS_Mental_Poker.md`](../../analysis/ANALYSIS_Mental_Poker.md) (the source
 analysis).
 
 ## Verification status (at packaging, rustc 1.75 / edition 2021)

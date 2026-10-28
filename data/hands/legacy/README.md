@@ -10,7 +10,7 @@ specification of what pkcore should do.**
 | `pkarena0-session_neverends.yaml` | 75 | pkcore `0.0.54` |
 
 They moved here from `data/hands/` on 2026-08-17. Older documents — notably
-`docs/RCA_Table_Mechanic_2026.md` and `docs/releases/RELEASE_0.0.53.md` — still
+`../../../docs/defects/RCA_Table_Mechanic_2026.md` and `docs/releases/RELEASE_0.0.53.md` — still
 cite the original `data/hands/pkarena0-session_*.yaml` paths. Those citations
 are correct for the versions they describe and were left alone.
 

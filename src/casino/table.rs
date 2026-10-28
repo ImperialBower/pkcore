@@ -5,7 +5,7 @@
 //!
 //! Until EPIC-83 this sat beside `TableCelled`, an interior-mutability twin
 //! built on `Cell` / `RefCell` / `BintCell` / `CardsCell`. That engine is gone;
-//! `docs/ANALYSIS_TableCelled_vs_Table.md` is the retrospective.
+//! `docs/analysis/ANALYSIS_TableCelled_vs_Table.md` is the retrospective.
 
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
@@ -193,7 +193,7 @@ impl Table {
     /// assert_eq!(4, table.deck.len(), "only the primed cards are in the deck");
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn nlh_primed(seats: Seats, dealt: &Cards, forced: ForcedBets) -> Self {
@@ -245,7 +245,7 @@ impl Table {
     /// assert_eq!(0, t.pot);
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
@@ -307,7 +307,7 @@ impl Table {
     /// ));
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn limit_holdem_from_seats(seats: Seats, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
@@ -378,7 +378,7 @@ impl Table {
     /// assert_eq!(4, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn plo_from_seats(seats: Seats, blinds: (usize, usize)) -> Self {
@@ -446,7 +446,7 @@ impl Table {
     /// [`Self::MAX_STUD_SEATS`]. Nine-handed stud needs 54 cards to reach 6th
     /// street and 63 to reach 7th, against a 52-card deck, so the table could
     /// never be dealt (`DEFECT_018`).
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn stud_hi_from_seats(
@@ -560,7 +560,7 @@ impl Table {
     ///
     /// [`PKError::TooManyPlayers`] if `seats` holds more than
     /// [`Self::MAX_STUD_SEATS`] (`DEFECT_018`).
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn razz_from_seats(
@@ -631,7 +631,7 @@ impl Table {
     /// assert_eq!(GameType::NoLimitHoldem, t.game);
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fixes 1a and 8: a random id reads OS
     // entropy, so this shim needs `entropy`. The `_with_id` twin is the kernel path.
     #[cfg(feature = "entropy")]
     pub fn from_seats(seats: Seats, game: GameType, forced: ForcedBets) -> Self {
@@ -664,7 +664,7 @@ impl Table {
     /// assert_eq!(Some(&TableAction::TableOpen(id)), t.event_log.first());
     /// ```
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 1a: the id-taking constructor, so equal inputs give an equal `Table`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 1a: the id-taking constructor, so equal inputs give an equal `Table`.
     pub fn from_seats_with_id(mut seats: Seats, game: GameType, forced: ForcedBets, id: Uuid) -> Self {
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
@@ -1589,7 +1589,7 @@ impl Table {
     /// assert_eq!(GamePhase::ShuffleNewDeck, table.phase);
     /// assert_eq!(dealt_before, table.deck.len(), "shuffling loses no cards");
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `act_shuffle_deck_with` is the seeded twin.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 8: shuffles with OS entropy; `act_shuffle_deck_with` is the seeded twin.
     #[cfg(feature = "entropy")]
     pub fn act_shuffle_deck(&mut self) {
         self.act_shuffle_deck_with(&mut rand::rng());
@@ -3311,7 +3311,7 @@ impl Default for Table {
                 })
                 .collect(),
         );
-        // `docs/KERNEL_PURITY_AUDIT.md` fix 1a: nil from the start, so `TableOpen` logs nil too.
+        // `docs/audits/KERNEL_PURITY_AUDIT.md` fix 1a: nil from the start, so `TableOpen` logs nil too.
         let mut table = Table::nlh_from_seats_with_id(seats, ForcedBets::new(50, 100), Uuid::nil());
         table.name = "Default No Limit Hold'em Table".to_string();
         table

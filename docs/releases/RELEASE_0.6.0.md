@@ -20,7 +20,7 @@ so this is a minor bump with a breaking surface. There is no new feature
 code; the one new EPIC (`EPIC-79b`) is a design doc.
 
 Downstream: `pkpy` and `pkdealer` do not compile against `0.6.0` without
-small edits. See [`RELEASE_AUDIT_0.6.0.md`](../RELEASE_AUDIT_0.6.0.md) for
+small edits. See [`RELEASE_AUDIT_0.6.0.md`](../audits/RELEASE_AUDIT_0.6.0.md) for
 the file:line list.
 
 ---
@@ -353,7 +353,7 @@ Adds `*.wat` (WebAssembly text) under a new `# wasm` comment.
 | `docs/defects/DEFECT_021_pluribus_cumulative_amounts.md` | Logged amounts are cumulative, not per-street. |
 | `docs/defects/DEFECT_022_next_to_act_restarts_under_the_gun.md` | Action order wrong after a re-raise. |
 | `docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md` | Zero minimum raise and four panicking methods. |
-| `docs/RELEASE_AUDIT_0.6.0.md` | Downstream compile audit: `pkpy` FAIL, `pkdealer` FAIL, three web repos PASS with version bump. |
+| `../audits/RELEASE_AUDIT_0.6.0.md` | Downstream compile audit: `pkpy` FAIL, `pkdealer` FAIL, three web repos PASS with version bump. |
 
 ### Updated docs
 

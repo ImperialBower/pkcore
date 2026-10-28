@@ -1529,7 +1529,7 @@ is also the profiling target in Phase 5.
 
 No `clap` — argument parsing is hand-rolled, keeping the perf crate's
 dependency surface minimal and avoiding the clap-in-graph pattern
-`docs/DEPENDENCY_AUDIT.md` flags.
+`../../audits/DEPENDENCY_AUDIT.md` flags.
 
 - [ ] **Step 1: Write the binary**
 

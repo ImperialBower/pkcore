@@ -27,7 +27,7 @@ Status as of `main` @ `934f5525` (pkcore) and `align` @ `55af15e` (ckc-rs),
 | Serde wire-format equivalence test (hand-history YAML) | Planned |
 | Differential test: pkcore evaluator == ckc-rs evaluator, all 2,598,960 hands | Planned |
 | `ROADMAP.md` block claim (80–89) + Epics row | Planned |
-| `docs/DEPENDENCY_AUDIT.md` re-run with the new graph | Planned |
+| `../audits/DEPENDENCY_AUDIT.md` re-run with the new graph | Planned |
 
 ---
 
@@ -206,7 +206,7 @@ already.
 `--no-default-features` builds an empty ckc-rs.
 
 **Net graph change:** ckc-rs 0.2 is zero-dependency, so this adds exactly **one
-crate**. `docs/DEPENDENCY_AUDIT.md` reports a 140-crate host shipping graph at
+crate**. `../audits/DEPENDENCY_AUDIT.md` reports a 140-crate host shipping graph at
 `baa919e`; this takes it to 141 while removing 1,108 lines of table data and
 ~4,600 lines of evaluator from `src/`. It also removes pkcore's *only* uses of
 `strum::EnumIter` on `Suit` (`src/suit.rs:7`) and `CardNumber`
@@ -533,9 +533,9 @@ outright — `hands`, and the module path itself, are load-bearing.
 - [ ] **6c.** Add the EPIC-81 row to `ROADMAP.md`'s Epics table.
 - [ ] **6d.** Update `README.md:21` — "Folded ckc-rs crate into the repo" is now
       historical and actively misleading.
-- [ ] **6e.** Re-run `/untangle` and update `docs/DEPENDENCY_AUDIT.md`: new
-      crate count, a `ckc-rs` dossier (expected score 5 / `keep`), and a note on
-      whether `strum` survives §7.
+- [ ] **6e.** Re-run `/untangle` and update `../audits/DEPENDENCY_AUDIT.md`: new
+  crate count, a `ckc-rs` dossier (expected score 5 / `keep`), and a note on
+  whether `strum` survives §7.
 - [ ] **6f.** `CHANGELOG.md` entry for the next pkcore minor.
 - [ ] **6g.** DIARY entry with the real before/after line counts.
 
@@ -585,7 +585,7 @@ outright — `hands`, and the module path itself, are load-bearing.
 | `src/analysis/name.rs`, `src/analysis/class.rs` | → 2 lines each |
 | `src/prelude.rs` | add `PkHandRanker` + the `*Ext` traits; existing 8 kernel re-exports unedited |
 | `ROADMAP.md` | claim block 80–89 (`:415`); Epics row |
-| `docs/DEPENDENCY_AUDIT.md` | re-run |
+| `../audits/DEPENDENCY_AUDIT.md` | re-run |
 
 ---
 
@@ -640,9 +640,9 @@ outright — `hands`, and the module path itself, are load-bearing.
 - **Built on:** **EPIC-80** (`ckc-rs` @ `dd61697`, "extract no_std Cactus Kev
   kernel into standard52") — the extraction this EPIC consumes.
 - **Related:** **EPIC-66 Serialization** (the wire formats Phase 5b protects);
-  `docs/DEPENDENCY_AUDIT.md` (the graph this changes); EPIC-29 Variant Engine
+  `../audits/DEPENDENCY_AUDIT.md` (the graph this changes); EPIC-29 Variant Engine
   Foundation and EPIC-33 Razz (the Razz ladder `PkHandRanker` preserves);
-  `docs/ANALYSIS_SIMD_Opportunities.md` and `docs/audits/` — a future
+  `../analysis/ANALYSIS_SIMD_Opportunities.md` and `docs/audits/` — a future
   vectorization of the evaluator now belongs in `ckc-rs`, not here.
 - **Blocked by:** Work Item **0a**. ckc-rs 0.2.0 is unpublished as of 2026-08-07.
 

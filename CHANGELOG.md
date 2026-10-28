@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.6] - 2026-10-28
+
+### Changed
+
+- **The `docs/` folder is sorted into subfolders.** Analyses and reports are
+  in `docs/analysis/`, audits in `docs/audits/`, root-cause notes and reviews
+  in `docs/defects/`, feature notes and the gRPC guides in `docs/features/`,
+  and the 0.2.0 migration guide in `docs/releases/`. All Markdown links, the
+  `.okf` bundle's GitHub links, and the code comments that cite
+  `docs/audits/KERNEL_PURITY_AUDIT.md` now use the new paths. This also fixes
+  four links in `AI-BOM.md` and `ROADMAP.md` that an earlier search-and-replace
+  had broken.
+
 ## [0.20.5] - 2026-10-28
 
 ### Added
@@ -245,7 +258,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **A guide to how pkcore reads card and range strings.**
-  [docs/ANALYSIS_String_Parsing.md](docs/ANALYSIS_String_Parsing.md) walks
+  [docs/ANALYSIS_String_Parsing.md](docs/analysis/ANALYSIS_String_Parsing.md) walks
   both parser families: card strings (`AS KD 9C` → `Card`, `Cards`, `Two`,
   `Board`, `HoleCards`, the Pluribus log form) and range strings
   (`66+, AJo, JJ-99, AA:0.5` → `Combo`, `Combos`, `WeightedCombos`, `Twos`).
@@ -877,7 +890,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.15.0] - 2026-09-15
 
 Fixes 1, 1a–1c, 2 and 8 of
-[docs/KERNEL_PURITY_AUDIT.md](docs/KERNEL_PURITY_AUDIT.md). pkcore is pure by
+[docs/KERNEL_PURITY_AUDIT.md](docs/audits/KERNEL_PURITY_AUDIT.md). pkcore is pure by
 default: a plain `cargo add pkcore` compiles no format crate, file helper or
 thread pool. The filesystem, console and embedded-chart code that was compiled
 into every build is behind features, each with a pure twin. The kernel build
@@ -1391,7 +1404,7 @@ Recorded in full in the EPIC-39 corrigendum:
   the board, the hole cards and the phase untouched, so a spectator UI can
   render the result *before* the table resets. Previously the only way to see
   that state was to `clone` the whole `Table` and diff it.
-  ([MURATORI_AUDIT.md](docs/REUSABILITY_AUDIT.md) recommendation 3 — granularity
+  ([MURATORI_AUDIT.md](docs/audits/REUSABILITY_AUDIT.md) recommendation 3 — granularity
   4/5 → 5/5.) Use one tier or the other: `showdown()` zeroes the pot, so a
   following `end_hand()` would resolve an empty one.
 
@@ -1483,7 +1496,7 @@ Recorded in full in the EPIC-39 corrigendum:
   each of the other two is for, and that moving a call site between them is a
   rewrite rather than a swap. `TableManager` gets the module and item docs it
   never had, including that it is a multi-table sketch with no hand-lifecycle
-  gating of its own. ([MURATORI_AUDIT.md](docs/REUSABILITY_AUDIT.md)
+  gating of its own. ([MURATORI_AUDIT.md](docs/audits/REUSABILITY_AUDIT.md)
   recommendation 2 — redundancy 3/5 → 4/5.)
 
 ### Changed
@@ -1787,9 +1800,9 @@ unexplained residue.
 - `examples/the_hand.rs` is now the `Table` version — the former
   `the_hand_no_cell.rs`, renamed into its place. `examples/table0.rs` drives a
   `Table`.
-- `docs/ANALYSIS_TableCelled_vs_Table.md` is now a retrospective: the original
+- `docs/analysis/ANALYSIS_TableCelled_vs_Table.md` is now a retrospective: the original
   analysis is kept intact, with a closing section on what the fork actually
-  cost and why generics were not the way out. `docs/DIARY_TableCelled_RIP.md`
+  cost and why generics were not the way out. `docs/analysis/DIARY_TableCelled_RIP.md`
   gained the autopsy numbers, and the `.okf/` decision record was updated.
 
 ### Fixed

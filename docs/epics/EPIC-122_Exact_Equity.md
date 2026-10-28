@@ -222,7 +222,7 @@ pkcore has computed equity at least four ways before this EPIC: brute force thro
 ### 5. Copying the parallel shape copies its flaw
 
 - **Before:** `CaseEvals::from_holdem_at_deal` spawned one thread per runout and cloned the hands into each one: 1,712,304 threads heads-up (`15ca3ece`, 2023-04-03). `1b09d630` (`0.1.4`) replaced that with `par_bridge()` over `combinations()`, and the engine copied the same shape (`engine.rs:207-210`; `src/analysis/case_evals.rs:48`, `:71`).
-- **What it cost:** the thread-per-runout code lived for three years. Its replacement is flagged too. `par_bridge` feeds items one at a time from a sequential iterator behind a mutex, with no chunking; the audit calls this "false parallelism" (`docs/PARALLELISM_AUDIT.md:121-127`, F2). TODO-PAR-5 is still open (`:281-286`). The measurements disagree:
+- **What it cost:** the thread-per-runout code lived for three years. Its replacement is flagged too. `par_bridge` feeds items one at a time from a sequential iterator behind a mutex, with no chunking; the audit calls this "false parallelism" (`docs/audits/PARALLELISM_AUDIT.md:121-127`, F2). TODO-PAR-5 is still open (`:281-286`). The measurements disagree:
   - `docs/perf/PROFILING.md:348` shows `equity.exact.hu_preflop` 2.12× faster at 4 threads.
   - The committed sweep (`docs/perf/results/aarch64-apple-darwin-sweep-2026-07-31.json`) shows it flat: 16.4 s on 1 thread and 16.6 s on 8.
 - **Lesson:** parallelise over an indexed source, and re-measure thread scaling whenever the cost per item changes.

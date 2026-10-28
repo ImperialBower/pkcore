@@ -3,7 +3,7 @@
 # Default target
 default: ayce
 
-# Default features are the pure kernel since 0.15.0 (docs/KERNEL_PURITY_AUDIT.md
+# Default features are the pure kernel since 0.15.0 (docs/audits/KERNEL_PURITY_AUDIT.md
 # fix 1). Dev targets build and test with `full`, which restores everything that
 # used to be on by default — YAML, bots, rayon, JSON, CSV, file and console
 # helpers — plus the SQLite/zstd `store` layer. test-kernel and check-purity
@@ -381,7 +381,7 @@ check-wasm:
 # a harmless plain line locally.
 # Two lists, on purpose. HARD is what the crate already keeps out of the pure
 # build, and it fails the gate. WARN is the rest of the domain-kernel skill's
-# banned set (docs/KERNEL_PURITY_AUDIT.md) — those crates are still in the pure
+# banned set (docs/audits/KERNEL_PURITY_AUDIT.md) — those crates are still in the pure
 # tree today, so naming them here reports without blocking. As each one leaves
 # the pure tree, move it from WARN to HARD and the gate ratchets shut.
 #
@@ -433,7 +433,7 @@ check-purity: check-purity-fs
 		if [ -n "$$watched" ]; then \
 			echo "::warning::Not yet pure ($$label) — these banned crates survive:"; \
 			echo "$$watched"; \
-			echo "See docs/KERNEL_PURITY_AUDIT.md. This does not fail the build yet."; \
+			echo "See docs/audits/KERNEL_PURITY_AUDIT.md. This does not fail the build yet."; \
 		fi; \
 	done
 

@@ -37,7 +37,7 @@
 > **0 `TODO DEFECT`** in `src/` (the one `TODO TD DEFECT` is in
 > `examples/preflop.rs:210`). Still no `FIXME`, `HACK`, `XXX` or bare `BUG`.
 > Still open from the kernel-purity audit's human-authored ranked list
-> ([`KERNEL_PURITY_AUDIT.md` §Ranked fixes](KERNEL_PURITY_AUDIT.md#ranked-fixes)):
+> ([`audits/KERNEL_PURITY_AUDIT.md` §Ranked fixes](audits/KERNEL_PURITY_AUDIT.md#ranked-fixes)):
 > #3 (pkdealer adopts `PokerSession::view`), #5 (all-or-nothing street
 > boundary), #6 (`Table::cap_stacks`), #7 (`csv.rs` CWD reads), #13 (Mode B
 > enforcement), and the breaking batch #9–#12. Not duplicated here.
@@ -513,12 +513,12 @@ names as a starting point, not a checklist._
 These are full re-runnable audits, not one-line debt items. Read them before
 attacking the areas they cover.
 
-- [`docs/KERNEL_PURITY_AUDIT.md`](KERNEL_PURITY_AUDIT.md) — the eight kernel invariants, with a ranked fix list. Refreshed against 0.15.0.
-- [`docs/TESTKIT_AUDIT.md`](TESTKIT_AUDIT.md) — controllability: fake data, textures and state coverage (T1–T7). **Stale — still headed `0.8.0` (2026-08-25); the repo is at `0.20.1`.**
-- [`docs/DOMAIN_ROLES_REPORT.md`](DOMAIN_ROLES_REPORT.md) — every `pub` type with its `# Domain` role, from `/dddocs list` at `0.15.4`. Re-run with `/dddocs check` after adding public types.
-- [`docs/DEPENDENCY_AUDIT.md`](DEPENDENCY_AUDIT.md) — dependency entanglement and extraction cost.
-- [`docs/REUSABILITY_AUDIT.md`](REUSABILITY_AUDIT.md) — public-API reusability against the five Muratori characteristics.
-- [`docs/PARALLELISM_AUDIT.md`](PARALLELISM_AUDIT.md) — SIMD / SWAR / MIMD opportunities in the evaluator hot path.
+- [`audits/KERNEL_PURITY_AUDIT.md`](audits/KERNEL_PURITY_AUDIT.md) — the eight kernel invariants, with a ranked fix list. Refreshed against 0.15.0.
+- [`audits/TESTKIT_AUDIT.md`](audits/TESTKIT_AUDIT.md) — controllability: fake data, textures and state coverage (T1–T7). **Stale — still headed `0.8.0` (2026-08-25); the repo is at `0.20.1`.**
+- [`analysis/DOMAIN_ROLES_REPORT.md`](analysis/DOMAIN_ROLES_REPORT.md) — every `pub` type with its `# Domain` role, from `/dddocs list` at `0.15.4`. Re-run with `/dddocs check` after adding public types.
+- [`audits/DEPENDENCY_AUDIT.md`](audits/DEPENDENCY_AUDIT.md) — dependency entanglement and extraction cost.
+- [`audits/REUSABILITY_AUDIT.md`](audits/REUSABILITY_AUDIT.md) — public-API reusability against the five Muratori characteristics.
+- [`audits/PARALLELISM_AUDIT.md`](audits/PARALLELISM_AUDIT.md) — SIMD / SWAR / MIMD opportunities in the evaluator hot path.
 - [`docs/audits/`](audits/) — four independent model audits of the codebase (Claude Code max, Fable 5, Gemini 3.1, GPT-5.4).
 
 And the decision record the purity audit feeds:

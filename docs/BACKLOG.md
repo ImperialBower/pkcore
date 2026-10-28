@@ -65,7 +65,7 @@ Ranked by risk first, then by how cheap the fix is.
    Gherkin acceptance suite** (cucumber-rs, 101 scenarios). Opened
    2026-10-04 against `0.15.4`; now five minors behind. Merge or close.
 7. **Kernel-purity fixes still open**
-   ([`KERNEL_PURITY_AUDIT.md` §Ranked fixes](KERNEL_PURITY_AUDIT.md#ranked-fixes)):
+   ([`audits/KERNEL_PURITY_AUDIT.md` §Ranked fixes](audits/KERNEL_PURITY_AUDIT.md#ranked-fixes)):
    #5 all-or-nothing street boundary, #6 `Table::cap_stacks`, #7 `csv.rs`
    CWD reads, #13 Mode B enforcement. #9–#12 are one breaking batch.
    Audit not touched since 2026-09-16.
@@ -90,12 +90,12 @@ Ranked by risk first, then by how cheap the fix is.
   pkdealer, pkgto-web, pkkuhn-web, pktui, pkcore.py, pkcore.js, pkwasm
   `0.11.0`; pkodds `0.1.4`. The pkodds `Method::Hup` `cargo check` failure
   and the silent 4× `max_samples` cut are still unchecked
-  ([`RELEASE_AUDIT_0.11.0.md`](RELEASE_AUDIT_0.11.0.md#the-one-finding-that-matters)).
+  ([`audits/RELEASE_AUDIT_0.11.0.md`](audits/RELEASE_AUDIT_0.11.0.md#the-one-finding-that-matters)).
 - **pkgto-web / pkkuhn-web** build with default features into WASM. Since
   `0.15.0` the default set has no `parallel`, so the bump may fix the
   `rayon` problem — verify, do not assume.
 - **pkdealer** must decide what `--preflop-charts solver` means before it
-  bumps ([`RELEASE_AUDIT_0.12.1.md`](RELEASE_AUDIT_0.12.1.md#recommended-actions)).
+  bumps ([`audits/RELEASE_AUDIT_0.12.1.md`](audits/RELEASE_AUDIT_0.12.1.md#recommended-actions)).
 
 ---
 
@@ -202,6 +202,6 @@ Not authored by the user. Keep, edit, or delete.
 - 🤖 **`docs/sidequests/SQ_graphify_comments.md` looks like stray tool
   output.** Fourth pass open.
 - 🤖 **Re-check the `pkodds` `Method::Hup` `cargo check` failure.**
-- 🤖 **Re-run `TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`.
+- 🤖 **Re-run `audits/TESTKIT_AUDIT.md`** (`/kernel-testkit`). Headed `0.8.0`.
 - 🤖 **Check whether `src/cards.rs:125` ("pass in burn cards") is now
   covered by EPIC-123's `dead` field.** If so, delete the marker.

@@ -94,7 +94,7 @@ rotting.
 - **Formalizing the existing `Instant::now()` examples** — fails structurally.
   Examples pull dev-dependencies (`clap`, `clap-repl`, `reedline`), so the
   measurement would include harness overhead, and examples cannot target
-  `wasm32` at all. `docs/DEPENDENCY_AUDIT.md` already flags clap in the shipping
+  `wasm32` at all. `../../audits/DEPENDENCY_AUDIT.md` already flags clap in the shipping
   graph; routing perf measurement through examples would re-entangle exactly
   what the kernel work separates.
 

@@ -1,7 +1,7 @@
 # Used only by `make check-purity-fs` (via CLIPPY_CONF_DIR), never by a normal
 # clippy run. The lean builds (`--no-default-features` and the defaults) must
 # not touch the filesystem: file access sits behind `persistence` and the other
-# IO features (docs/KERNEL_PURITY_AUDIT.md, DEFECT_038). Clippy sees only the
+# IO features (docs/audits/KERNEL_PURITY_AUDIT.md, DEFECT_038). Clippy sees only the
 # code a build compiles, so any hit here is file IO that leaked into the kernel.
 disallowed-methods = [
     { path = "std::fs::copy", reason = "file IO belongs behind `persistence`" },

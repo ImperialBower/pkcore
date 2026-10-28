@@ -51,6 +51,6 @@ Two behaviours changed with the switch and are worth knowing:
 
 # Citations
 
-[1] [ANALYSIS_TableCelled_vs_Table](https://github.com/ImperialBower/pkcore/blob/main/docs/ANALYSIS_TableCelled_vs_Table.md)
+[1] [ANALYSIS_TableCelled_vs_Table](https://github.com/ImperialBower/pkcore/blob/main/docs/analysis/ANALYSIS_TableCelled_vs_Table.md)
 [2] [EPIC-83 Table Decelled](https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-83_Table_Decelled.md)
-[3] [DIARY_TableCelled_RIP](https://github.com/ImperialBower/pkcore/blob/main/docs/DIARY_TableCelled_RIP.md)
+[3] [DIARY_TableCelled_RIP](https://github.com/ImperialBower/pkcore/blob/main/docs/analysis/DIARY_TableCelled_RIP.md)

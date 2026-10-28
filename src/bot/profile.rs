@@ -887,7 +887,7 @@ impl BotProfile {
     /// BotProfile::gto().to_file("/tmp/gto.yaml").unwrap();
     /// # }
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `to_yaml_string`, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `to_yaml_string`, so it needs `persistence`.
     #[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn to_file(&self, path: impl AsRef<Path>) -> Result<(), BotError> {
         let yaml = self.to_yaml_string()?;
@@ -914,7 +914,7 @@ impl BotProfile {
     /// assert_eq!(profile.name, "gto");
     /// # }
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `from_yaml_str`, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over `from_yaml_str`, so it needs `persistence`.
     #[cfg(all(feature = "bot-profiles", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self, BotError> {
         let contents = std::fs::read_to_string(path)?;
@@ -1316,7 +1316,7 @@ mod bot__profile_tests {
     }
 
     /// Reads a `data/bots` file in the test, so the YAML check runs without the
-    /// `persistence` wrappers (`docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2).
+    /// `persistence` wrappers (`docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2).
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
     fn load_data_bot(path: &str) -> BotProfile {
         let yaml = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {path}: {e}"));

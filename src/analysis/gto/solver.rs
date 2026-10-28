@@ -149,7 +149,7 @@ impl From<std::io::Error> for SolverError {
     }
 }
 
-// `docs/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
+// `docs/audits/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
 #[cfg(feature = "json")]
 #[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_json::Error> for SolverError {
@@ -317,7 +317,7 @@ impl SolverResult {
     /// let json = result.to_json_string().unwrap();
     /// assert!(json.contains("iterations"));
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
     #[cfg(feature = "json")]
     pub fn to_json_string(&self) -> Result<String, SolverError> {
         Ok(serde_json::to_string_pretty(self)?)
@@ -352,7 +352,7 @@ impl SolverResult {
     /// let loaded = pkcore::analysis::gto::solver::SolverResult::from_json_str(&json).unwrap();
     /// assert_eq!(loaded.iterations, result.iterations);
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §3, fix 1: `serde_json` is optional, behind `json`.
     #[cfg(feature = "json")]
     pub fn from_json_str(s: &str) -> Result<Self, SolverError> {
         Ok(serde_json::from_str(s)?)
@@ -395,7 +395,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save("/tmp/my_solve.bin").unwrap();
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         #[cfg(feature = "debug-json")]
@@ -428,7 +428,7 @@ impl SolverResult {
     /// let result = SolverResult::load("/tmp/my_solve.bin").unwrap();
     /// println!("iterations={} exploitability={:.4}", result.iterations, result.exploitability);
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         #[cfg(feature = "debug-json")]
@@ -463,7 +463,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_binary("/tmp/my_solve.bin").unwrap();
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save_binary(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         let bytes = self.to_binary_bytes()?;
@@ -485,7 +485,7 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_binary("/tmp/my_solve.bin").unwrap();
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load_binary(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let bytes = std::fs::read(path)?;
@@ -514,7 +514,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_json("/tmp/my_solve.json").unwrap();
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         let json = self.to_json_string()?;
@@ -536,7 +536,7 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_json("/tmp/my_solve.json").unwrap();
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1b, fix 2: a file wrapper over the pure byte form, so it needs `persistence`.
     #[cfg(all(feature = "json", feature = "persistence", not(target_arch = "wasm32")))]
     pub fn load_json(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let json = std::fs::read_to_string(path)?;

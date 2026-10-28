@@ -69,4 +69,4 @@ module around it, see [analysis](/modules/analysis.md).
 
 # Citations
 
-[1] [ANALYSIS_String_Parsing](https://github.com/ImperialBower/pkcore/blob/main/docs/ANALYSIS_String_Parsing.md)
+[1] [ANALYSIS_String_Parsing](https://github.com/ImperialBower/pkcore/blob/main/docs/analysis/ANALYSIS_String_Parsing.md)

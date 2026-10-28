@@ -778,4 +778,4 @@ citation or a measurement.
 - Liedtke (1995), *On µ-Kernel Construction*, SOSP.
 - `sel4-and-the-domain-kernel.md` — the essay this EPIC implements (§5, §7).
 - `docs/epics/EPIC-89_Bare_Metal_Kernel.md` — the tiers this EPIC consumes.
-- `docs/KERNEL_ADR.md`, `docs/KERNEL_PURITY_AUDIT.md`, `docs/TESTKIT_AUDIT.md`.
+- `docs/KERNEL_ADR.md`, `../audits/KERNEL_PURITY_AUDIT.md`, `../audits/TESTKIT_AUDIT.md`.

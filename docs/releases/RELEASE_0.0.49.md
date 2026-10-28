@@ -295,11 +295,11 @@ the `pkarena0-web` WASM client without Rust compilation:
 | File | Description |
 |------|-------------|
 | `docs/BOT_MODULE_GUIDE.md` | Comprehensive guide to the `bot` module: `BotProfile`, `RuleBasedDecider`, `SimTable`, decision trees, YAML profiles, and EPIC cross-references |
-| `docs/FEATURE_BotProfile_ActivateBluffFields.md` | Feature spec: wiring bluff/check-raise/c-bet frequencies into `RuleBasedDecider` |
-| `docs/FEATURE_BotProfile_PositionAwareDecisions.md` | Feature spec: `Playbook`, `PositionRanges`, `PositionalBetting`, `TableSnapshot::position()` |
-| `docs/FEATURE_BotProfile_TypeSafety.md` | Feature spec: `PlayStyle` enum, `Percentage` newtype |
-| `docs/FEATURE_BotProfile_StreetAggression.md` | Feature spec: `StreetAggression`, `aggression_for_phase()` |
-| `docs/FEATURE_BotProfile_HandStrengthDecisions.md` | Feature spec: equity proxy, pot-odds calldown, `open_raise_contains`, `value_threshold` |
+| `../features/FEATURE_BotProfile_ActivateBluffFields.md` | Feature spec: wiring bluff/check-raise/c-bet frequencies into `RuleBasedDecider` |
+| `../features/FEATURE_BotProfile_PositionAwareDecisions.md` | Feature spec: `Playbook`, `PositionRanges`, `PositionalBetting`, `TableSnapshot::position()` |
+| `../features/FEATURE_BotProfile_TypeSafety.md` | Feature spec: `PlayStyle` enum, `Percentage` newtype |
+| `../features/FEATURE_BotProfile_StreetAggression.md` | Feature spec: `StreetAggression`, `aggression_for_phase()` |
+| `../features/FEATURE_BotProfile_HandStrengthDecisions.md` | Feature spec: equity proxy, pot-odds calldown, `open_raise_contains`, `value_threshold` |
 | `docs/defects/DEFECT_002_bot_escalation.md` | Post-mortem: deterministic raise-war escalation under equity-based decisions; probabilistic gate fix |
 | `docs/defects/DEFECT_001_shortstack_bb_call_amount.md` | Post-mortem: short-stack BB setting incorrect call target for other players |
 | `../epics/EPIC_FEATURE_wasm_wamr.md` | Planning doc: WASM bot profile integration for `pkarena0-web` |
@@ -345,11 +345,11 @@ the `pkarena0-web` WASM client without Rust compilation:
 `data/bots/tight_passive.yaml` *(new)*
 
 **Documentation (9 files, new; 2 files updated):**  
-`docs/BOT_MODULE_GUIDE.md` *(new)*, `docs/FEATURE_BotProfile_ActivateBluffFields.md` *(new)*,
-`docs/FEATURE_BotProfile_HandStrengthDecisions.md` *(new)*,
-`docs/FEATURE_BotProfile_PositionAwareDecisions.md` *(new)*,
-`docs/FEATURE_BotProfile_StreetAggression.md` *(new)*,
-`docs/FEATURE_BotProfile_TypeSafety.md` *(new)*,
+`docs/BOT_MODULE_GUIDE.md` *(new)*, `../features/FEATURE_BotProfile_ActivateBluffFields.md` *(new)*,
+`../features/FEATURE_BotProfile_HandStrengthDecisions.md` *(new)*,
+`../features/FEATURE_BotProfile_PositionAwareDecisions.md` *(new)*,
+`../features/FEATURE_BotProfile_StreetAggression.md` *(new)*,
+`../features/FEATURE_BotProfile_TypeSafety.md` *(new)*,
 `docs/defects/DEFECT_001_shortstack_bb_call_amount.md` *(new)*,
 `docs/defects/DEFECT_002_bot_escalation.md` *(new)*,
 `../epics/EPIC_FEATURE_wasm_wamr.md` *(new)*,

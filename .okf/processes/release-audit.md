@@ -19,7 +19,7 @@ renames, removals, new error variants, or prelude changes.
 3. Record findings in `docs/RELEASE_AUDIT_<version>.md` in the pkcore
    repo.
 4. File follow-up work per affected repo; large migrations get their
-   own doc (see `docs/DOWNSTREAM_MIGRATION_0.2.0.md` as the precedent).
+   own doc (see `../../docs/releases/DOWNSTREAM_MIGRATION_0.2.0.md` as the precedent).
 
 # Notes
 

@@ -425,7 +425,7 @@ impl SimTable {
 
     /// The RNG a new `SimTable` starts with: seeded from the OS with the
     /// `entropy` feature, from [`Self::DEFAULT_SEED`] without it.
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: one RNG, always present, so the
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 8: one RNG, always present, so the
     // kernel build has no thread-local fallback that reads OS entropy.
     fn unseeded_rng() -> rand::rngs::SmallRng {
         use rand::SeedableRng as _;
@@ -1152,7 +1152,7 @@ impl SimTable {
         #[cfg(feature = "entropy")]
         use std::time::{SystemTime, UNIX_EPOCH};
 
-        // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the wall clock is OS
+        // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the wall clock is OS
         // nondeterminism too, so it rides the `entropy` feature; the kernel
         // build stamps 0.
         #[cfg(feature = "entropy")]

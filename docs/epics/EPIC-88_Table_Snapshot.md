@@ -6,7 +6,7 @@ identically. One serializable **`TableState`** DTO, one `snapshot` / `restore`
 pair on both tiers, and a chip-conservation acceptance test that compares a
 resumed hand against an uninterrupted control.
 
-This is the last open discontinuity in `docs/REUSABILITY_AUDIT.md` — the one
+This is the last open discontinuity in `../audits/REUSABILITY_AUDIT.md` — the one
 finding that survived the 0.11.0 fixes.
 
 **Why this is its own EPIC and not EPIC-37 Phase 3.** The capability was
@@ -452,7 +452,7 @@ SnapshotCorrupt,
 | `src/casino/winnings.rs` | serde on `Winnings` (`:6`). |
 | `src/lib.rs` | Two `PKError` variants (`:509`). |
 | `src/prelude.rs` | Export `TableState`. |
-| `docs/REUSABILITY_AUDIT.md` | Retention 3/5 → 4/5. |
+| `../audits/REUSABILITY_AUDIT.md` | Retention 3/5 → 4/5. |
 | `docs/epics/EPIC-37_Mobile_Engine.md` | Phase 3 lifted out; Status row repointed. |
 | `ROADMAP.md` | Numbering policy: next free → `EPIC-89`. |
 
@@ -499,7 +499,7 @@ SnapshotCorrupt,
   `Table` to serialize instead of two; `EPIC-87 Pluribus Export`, whose
   `TryFrom` pair is the precedent.
 - **Related:** `EPIC-82 The Betting Kernel` — `TableState` is the `state` in
-  `apply(state, action) -> state`. `docs/REUSABILITY_AUDIT.md` recommends running
+  `apply(state, action) -> state`. `../audits/REUSABILITY_AUDIT.md` recommends running
   `/domain-kernel` Mode A **before** this lands, so the state type is designed
   against the kernel invariants rather than retrofitted onto them.
 

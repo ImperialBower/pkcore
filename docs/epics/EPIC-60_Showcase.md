@@ -216,7 +216,7 @@ Act II's claim ("the same kernel") is only honest if it's true:
 0.3.0 → current (`pkarena0-web/Cargo.toml:14`), pkdealer's workspace pin is
 verified, and each repo's own test suite gates the bump. Any API break found
 becomes a named migration note, not a silent patch — that friction is itself
-showcase material (the kernel's compatibility story, `docs/DOWNSTREAM_MIGRATION_0.2.0.md`
+showcase material (the kernel's compatibility story, `../releases/DOWNSTREAM_MIGRATION_0.2.0.md`
 precedent).
 
 ---

@@ -154,7 +154,7 @@ impl HandOrder {
     /// - **Role:** cohesive mechanism
     #[doc(hidden)]
     #[must_use]
-    // `docs/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §3 (hup-charts caveat), fix 2: reads the embedded chart, as do its two helpers.
     #[cfg(feature = "hup-charts")]
     pub fn derive() -> Vec<(Combo, f64)> {
         let field: Vec<Two> = Cards::deck()

@@ -350,7 +350,7 @@ pip3 install --require-hashes -r "$(dirname "$0")/requirements-grpc.txt"
 `grpcio` ships per-platform wheels, so the file carries one hash per wheel
 and must be regenerated when the pin moves. Alternative with less upkeep:
 delete the script and the two docs that cite it
-(`docs/GRPC_QUICK_START.md:21`, `docs/GRPC_IMPLEMENTATION_SUMMARY.md:63`),
+(`docs/features/GRPC_QUICK_START.md:21`, `docs/features/GRPC_IMPLEMENTATION_SUMMARY.md:63`),
 since pkcore itself has no gRPC dependency (no `tonic`/`prost` in
 `Cargo.toml`) and the Python client belongs to the dealer service. **This is
 the one decision in the EPIC** — see Phase 0.
@@ -445,8 +445,8 @@ scores 5.
 ### Phase 5′ — Remove the script (if 0b chose "remove")
 
 - [ ] **15′.** Delete `scripts/setup_python_grpc.sh`; drop the three
-      references in `docs/GRPC_QUICK_START.md` and
-      `docs/GRPC_IMPLEMENTATION_SUMMARY.md`. Same proof as 15.
+  references in `../features/GRPC_QUICK_START.md` and
+      `../features/GRPC_IMPLEMENTATION_SUMMARY.md`. Same proof as 15.
 
 ### Phase 6 — Best Practices badge
 
@@ -536,7 +536,7 @@ There is no `#[test]` for a workflow. Each phase has one observable proof:
 - **Built on:** PR #145 (`0f5e02ea`, 0.15.5 Scorecard hardening); EPIC-93
   (`HandHistory::validate`, the third fuzz target).
 - **Related:** EPIC-90 Superuser Countermeasures (threat model that
-  provenance serves); `docs/DEPENDENCY_AUDIT.md` (supply-chain surface).
+  provenance serves); `../audits/DEPENDENCY_AUDIT.md` (supply-chain surface).
 
 ## Verification
 

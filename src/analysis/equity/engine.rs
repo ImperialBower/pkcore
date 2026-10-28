@@ -389,7 +389,7 @@ impl EquityEngine {
 
     /// The Monte Carlo seed for a request that names none: a fresh one from the OS
     /// with the `entropy` feature, [`EquityOptions::DEFAULT_SEED`] without it.
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the fallback seed was `rand::random`, the one part that was not injectable.
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 8: the fallback seed was `rand::random`, the one part that was not injectable.
     fn unseeded() -> u64 {
         #[cfg(feature = "entropy")]
         {

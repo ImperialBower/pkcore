@@ -38,4 +38,4 @@ distilled invariants before changing betting-completion logic.
 
 # Citations
 
-[1] [ANALYSIS_TableCelled_vs_Table](https://github.com/ImperialBower/pkcore/blob/main/docs/ANALYSIS_TableCelled_vs_Table.md)
+[1] [ANALYSIS_TableCelled_vs_Table](https://github.com/ImperialBower/pkcore/blob/main/docs/analysis/ANALYSIS_TableCelled_vs_Table.md)

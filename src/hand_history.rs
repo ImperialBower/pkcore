@@ -709,7 +709,7 @@ impl HandHistory {
         // semantics — the only difference at replay time is which
         // `*_from_seats` constructor sets the `GameType` tag, which
         // drives the showdown evaluator dispatch.
-        // `docs/KERNEL_PURITY_AUDIT.md` fix 8: ids are the record's own, not random, so a
+        // `docs/audits/KERNEL_PURITY_AUDIT.md` fix 8: ids are the record's own, not random, so a
         // replay is the same table every time: players keep their recorded ids,
         // the table is named by the hand id.
         let table_id = Uuid::new_v5(&REPLAY_ID_NAMESPACE, self.hand.id.as_bytes());
@@ -1654,7 +1654,7 @@ impl HandCollection {
     /// assert!(path.starts_with("generated/my_session_"));
     /// # }
     /// ```
-    // `docs/KERNEL_PURITY_AUDIT.md` §1a, fix 2: clock, fixed `generated/` path and file write, so it
+    // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 2: clock, fixed `generated/` path and file write, so it
     // needs `persistence`. `to_yaml` is the pure half.
     #[cfg(feature = "persistence")]
     pub fn save(&self, run_name: &str) -> Result<String, Box<dyn std::error::Error>> {

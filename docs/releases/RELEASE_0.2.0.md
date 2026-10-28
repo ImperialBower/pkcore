@@ -20,7 +20,7 @@ error surfaces, makes the storage and terminal layers optional cargo features,
 fixes six confirmed variant-engine rule bugs (PLO pot sizing, Razz ace-low
 bring-in, Stud/Razz action order, fixed-limit exactness, dead antes), and makes
 the exploit trainer reproducible. Downstream consumers should read
-`docs/DOWNSTREAM_MIGRATION_0.2.0.md` — it carries the exact rename map and a
+`DOWNSTREAM_MIGRATION_0.2.0.md` — it carries the exact rename map and a
 per-repo checklist.
 
 ---
@@ -350,7 +350,7 @@ public contract that `pkpy` and hand-history YAML rely on.
 | File | Description |
 |------|-------------|
 | `docs/AUDIT_Fable_5.md` | The full Fable 5 audit: variant-engine bugs (Part II), domain-kernel purity assessment, P0–P9 action plan. |
-| `docs/DOWNSTREAM_MIGRATION_0.2.0.md` | Exact rename map + per-repo checklist for every ImperialBower consumer of pkcore. |
+| `DOWNSTREAM_MIGRATION_0.2.0.md` | Exact rename map + per-repo checklist for every ImperialBower consumer of pkcore. |
 | `../epics/EPIC-36_Configurable_Bot_Capabilities.md` | Planning doc for configurable bot capabilities. |
 | `docs/superpowers/specs/2026-07-06-casino-reorg-design.md` | Design spec for the casino package reorganization. |
 
@@ -358,8 +358,8 @@ public contract that `pkpy` and hand-history YAML rely on.
 
 | File | What changed |
 |------|-------------|
-| `docs/ANALYSIS_TableCelled_vs_Table.md` | Renamed from `…_vs_TableNoCell.md`; updated for the `Table`/`TableCelled` naming. |
-| `docs/public_structs_prelude_report.md` | Regenerated against the reorganized prelude. |
+| `../analysis/ANALYSIS_TableCelled_vs_Table.md` | Renamed from `…_vs_TableNoCell.md`; updated for the `Table`/`TableCelled` naming. |
+| `../analysis/public_structs_prelude_report.md` | Regenerated against the reorganized prelude. |
 | `CHANGELOG.md` | `[0.2.0]` section added. |
 | `README.md`, `ROADMAP.md` | Updated for the reorg and feature set. |
 

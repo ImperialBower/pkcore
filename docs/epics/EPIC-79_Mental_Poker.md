@@ -13,7 +13,7 @@ candidate crypto crates, define the signed-event schema, and lay out a
 phased path with explicit gates the user can approve **before any code
 is written**.
 
-It is grounded entirely in [`docs/ANALYSIS_Mental_Poker.md`](../ANALYSIS_Mental_Poker.md),
+It is grounded entirely in [`docs/analysis/ANALYSIS_Mental_Poker.md`](../analysis/ANALYSIS_Mental_Poker.md),
 which explores serverless, trustless distributed poker. That analysis
 separates two concerns people conflate when they say "server":
 
@@ -639,14 +639,14 @@ not modified by this spike.
 | `src/play/visibility.rs` | `Visibility` (`Down`/`Up`) — the two-state model the masked/known/public refactor extends |
 | `Cargo.toml` | feature-gate pattern (`bot-profiles`, `hand-histories`, `equity`) the future `mental-log` gate would follow |
 | `ROADMAP.md` | the pkcore → pkdealer sibling-repo pattern `pkmental` mirrors |
-| `docs/ANALYSIS_Mental_Poker.md` | source analysis this EPIC distills |
+| `../analysis/ANALYSIS_Mental_Poker.md` | source analysis this EPIC distills |
 | `docs/files/mentalpoker/` | the archived exploration workspace: `pkcore-mp/` (the reference-harness spike `pkmental` Phase 1 productionizes), `tricktaking/`, `mp-toy/`, and `pktable/` — see its `README.md` |
 
 ---
 
 ## Dependencies
 
-- **Source:** [`docs/ANALYSIS_Mental_Poker.md`](../ANALYSIS_Mental_Poker.md).
+- **Source:** [`../analysis/ANALYSIS_Mental_Poker.md`](../analysis/ANALYSIS_Mental_Poker.md).
 - **Relates to ROADMAP Phase 4** (the distributed platform) as an
   *alternative, trustless* transport model.
 - **Contrast with pkdealer:** pkdealer is the trusted-server gRPC dealer

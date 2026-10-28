@@ -14,7 +14,7 @@ poker at a table — and neither is a subset of the other.
 | Showdown | `Showdown::process(&TableCelled)` (`src/casino/table_celled/showdown.rs:14`) | inline, `src/casino/table.rs:1758` |
 | Event log | `TableLog` (`src/casino/table_celled/event.rs:13`) — `RefCell<Vec<TableAction>>` | `Vec<TableAction>` field |
 
-`docs/ANALYSIS_TableCelled_vs_Table.md:32-34` justifies the pair on three
+`docs/analysis/ANALYSIS_TableCelled_vs_Table.md:32-34` justifies the pair on three
 grounds: make the interior-mutability design visible by contrast, provide a
 benchmark target, and serve as a teaching tool. `Table`'s own module doc
 (`src/casino/table.rs:1-7`) calls `TableCelled` its *"teaching/benchmark twin"*
@@ -455,15 +455,15 @@ but this EPIC is a long mechanical sweep where per-item progress is the point.)
 - [x] **3g.** Prune `src/prelude.rs`: lines `54` (`GameState`), `55`
       (`TableCelled`), `56` (`TableLog` — repoint), `57` (`SeatsCell`), `58`
       (`SeatCell`), `116` (`HandResult`), `117` (`Showdown`).
-- [x] **3h.** Rewrite `docs/ANALYSIS_TableCelled_vs_Table.md` as a retrospective:
+- [x] **3h.** Rewrite `../analysis/ANALYSIS_TableCelled_vs_Table.md` as a retrospective:
       why the twin existed, what it taught, why it was retired, and what the
-      measured divergence was. Keep the interior-mutability explanation — it is
-      good teaching material that outlives the code.
+  measured divergence was. Keep the interior-mutability explanation — it is
+  good teaching material that outlives the code.
 - [x] **3i.** Update `src/casino/table.rs`'s module doc, which still calls
       `TableCelled` its "teaching/benchmark twin."
-- [x] **3j.** Update `ROADMAP.md` and `docs/ANALYSIS_Table_State_Machine.md:222`,
+- [x] **3j.** Update `ROADMAP.md` and `docs/analysis/ANALYSIS_Table_State_Machine.md:222`,
       `:329`, which cross-reference the celled engine.
-- [x] **3k.** Fold the working notes into `docs/DIARY_TableCelled_RIP.md`.
+- [x] **3k.** Fold the working notes into `../analysis/DIARY_TableCelled_RIP.md`.
 - [x] **3l.** Bump `Cargo.toml` `0.7.1` → `0.8.0`; run `cargo build` so
       `Cargo.lock` picks it up. Finalise the `## [Unreleased]` block.
 - [x] **3m.** `make ayce` and `make check-purity` green. Run the
@@ -526,8 +526,8 @@ belongs in the corrigendum.
 | `src/arrays/sliced.rs`, `src/play/hole_cards.rs` | Need plain-`Seats` conversions before `SeatsCell` can die. |
 | `src/util/data.rs`, `src/util/mod.rs` | Test fixtures; need a `Table::nlh_primed`. |
 | `src/prelude.rs` | Seven lines pruned in Phase 3. |
-| `docs/ANALYSIS_TableCelled_vs_Table.md` | Rewritten as a retrospective. |
-| `docs/DIARY_TableCelled_RIP.md` | The narrative journal for this work. |
+| `../analysis/ANALYSIS_TableCelled_vs_Table.md` | Rewritten as a retrospective. |
+| `../analysis/DIARY_TableCelled_RIP.md` | The narrative journal for this work. |
 
 ## Reuse (do NOT recreate)
 
@@ -568,7 +568,7 @@ belongs in the corrigendum.
 
 - **Blocks:** nothing currently open.
 - **Built on:** the July 2026 casino reorganization recorded in
-  `docs/ANALYSIS_TableCelled_vs_Table.md:8-16`, which renamed
+  `docs/analysis/ANALYSIS_TableCelled_vs_Table.md:8-16`, which renamed
   `TableNoCell` → `Table` and moved the plain family under `casino::table::`.
   This EPIC finishes what that rename started.
 - **Related:** `EPIC-79b_Sealed_Deck.md` — **abandoned**, and deliberately not a

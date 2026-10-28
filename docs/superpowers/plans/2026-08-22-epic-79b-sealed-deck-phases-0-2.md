@@ -1672,7 +1672,7 @@ Run: `cargo tree --no-default-features -e no-dev | wc -l`
 Expected: the **same number** as on `main` before this work. Capture the
 before-number first if you have not:
 `git stash list` is not needed — just run it once on a clean checkout, or
-compare against `docs/DEPENDENCY_AUDIT.md`.
+compare against `../../audits/DEPENDENCY_AUDIT.md`.
 
 - [ ] **Step 2: Prove the default build cannot reach the double**
 

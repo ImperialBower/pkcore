@@ -1054,7 +1054,7 @@ rationale = "The kernel reads no clock. A blind level is a set_blinds call the s
 id = "OB-4"
 about = "casino::session::PokerSession::start_hand_with"
 doc = "Supply the randomness: an RNG to start_hand_with, or a shuffled deck to start_hand_with_deck. Keep the seed or the deck to replay the hand."
-rationale = "The `--no-default-features` kernel has no randomness of its own (docs/KERNEL_PURITY_AUDIT.md fix 8). start_hand reads the OS only with the `entropy` feature."
+rationale = "The `--no-default-features` kernel has no randomness of its own (docs/audits/KERNEL_PURITY_AUDIT.md fix 8). start_hand reads the OS only with the `entropy` feature."
 
 [[obligations]]
 id = "OB-5"

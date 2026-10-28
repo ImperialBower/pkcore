@@ -35,7 +35,7 @@ dependency tree, not calls to `std::fs`.
 ## Root cause
 
 The `0.15.0` split moved each file wrapper behind `persistence`
-(`docs/KERNEL_PURITY_AUDIT.md` fix 2), but missed the `solver_cache` module.
+(`../audits/KERNEL_PURITY_AUDIT.md` fix 2), but missed the `solver_cache` module.
 
 ---
 
@@ -75,6 +75,6 @@ failed on `solver_cache.rs`.
 
 ## Related
 
-- [`KERNEL_PURITY_AUDIT.md`](../KERNEL_PURITY_AUDIT.md) — the lean kernel
+- [`KERNEL_PURITY_AUDIT.md`](../audits/KERNEL_PURITY_AUDIT.md) — the lean kernel
   rules.
 - [`TECHNICAL_DEBT.md`](../TECHNICAL_DEBT.md)

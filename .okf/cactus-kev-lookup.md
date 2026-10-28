@@ -92,4 +92,4 @@ costs about 100 times more than ranking it. For how strings become cards, see
 
 [1] [Cactus Kev's Poker Hand Evaluator](https://suffe.cool/poker/evaluator.html)
 [2] [pokereval-rs](https://github.com/vsupalov/pokereval-rs)
-[3] [ANALYSIS_String_Parsing](https://github.com/ImperialBower/pkcore/blob/main/docs/ANALYSIS_String_Parsing.md)
+[3] [ANALYSIS_String_Parsing](https://github.com/ImperialBower/pkcore/blob/main/docs/analysis/ANALYSIS_String_Parsing.md)

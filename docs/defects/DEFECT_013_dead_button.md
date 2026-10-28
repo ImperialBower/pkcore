@@ -161,7 +161,7 @@ all-in case*, and that framing is what made it extend for free.
 ### Both table types
 
 `TableCelled` carries a structurally identical trio and got the identical fix, so the
-pair stays parallel as `docs/ANALYSIS_TableCelled_vs_Table.md` intends. It needs no
+pair stays parallel as `docs/analysis/ANALYSIS_TableCelled_vs_Table.md` intends. It needs no
 54-B counterpart: `TableCelled` has no pot-limit sizing at all — no `max_raise`, no
 `raise_bounds`, no `effective_pot` — so there is nothing there for a shortfall to feed.
 
@@ -279,7 +279,7 @@ exists.
   `docs/defects/DEFECT_009_substantial_action_predicate.md` — sibling promotions
 - `data/hands/legacy/README.md` — why the recorded sessions are archived rather than
   migrated
-- `docs/ANALYSIS_TableCelled_vs_Table.md` — why both table types change together
+- `../analysis/ANALYSIS_TableCelled_vs_Table.md` — why both table types change together
 - `tda_parsed/tda_2024.yaml` — Rule 32 verbatim, and the absence of any dead-BB rule
 - `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
 

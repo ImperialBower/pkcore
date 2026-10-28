@@ -30,7 +30,7 @@ The kernel boundary is already decided, and it is written down.
 "everything else belongs to a shell". The single all-or-nothing step is
 `Table::apply_action` (`src/casino/table/transition.rs:147`).
 
-The `# Domain` doc blocks are mostly in place. `docs/DOMAIN_ROLES_REPORT.md`
+The `# Domain` doc blocks are mostly in place. `../analysis/DOMAIN_ROLES_REPORT.md`
 counts 195 of 254 `pub` types with a role (76%). Both aggregates carry their
 invariants in prose: `Table` at `src/casino/table.rs:78-85` (chips conserved,
 `legal_actions` accepted by `apply_action`, raise cap, street counters reset),
@@ -427,7 +427,7 @@ IDs are the stable part, which is the point of the file.
 
 - `docs/KERNEL_ADR.md` — the boundary, the all-or-nothing step and the
   ownership rule. The ontology cites it; it does not restate it.
-- `docs/DOMAIN_ROLES_REPORT.md` — the role inventory.
+- `../analysis/DOMAIN_ROLES_REPORT.md` — the role inventory.
 - The `# Domain` blocks — roles and invariants already live in the code.
 - `Table::audit_chip_total` (`src/casino/table.rs:3121`) — the chip
   conservation check to pin.
@@ -442,8 +442,8 @@ IDs are the stable part, which is the point of the file.
 
 ## Dependencies
 
-- **Built on:** `docs/KERNEL_ADR.md`, `docs/KERNEL_PURITY_AUDIT.md`,
-  `docs/DOMAIN_ROLES_REPORT.md`; dkskills `kernel-ontology` and `dddocs`.
+- **Built on:** `docs/KERNEL_ADR.md`, `../audits/KERNEL_PURITY_AUDIT.md`,
+  `../analysis/DOMAIN_ROLES_REPORT.md`; dkskills `kernel-ontology` and `dddocs`.
 - **Related:** EPIC-82 (The Betting Kernel — transition refs move when it
   lands), EPIC-88 (Table Snapshot & Restore — `snapshot`/`restore` are reads
   or transitions to classify), EPIC-38 (Observability — `TableAction` events).

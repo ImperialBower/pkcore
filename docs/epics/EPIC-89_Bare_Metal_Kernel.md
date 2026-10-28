@@ -477,7 +477,7 @@ let req = EquityRequest::with_rng(&mut rng, …);  // existing twin
 | `src/arrays/matchups/masks/suit_mask.rs:5–7, 70` | only `bitvec` use |
 | `Makefile:226, 241, 279, 325` | `test-kernel`, `check-features`, `check-wasm`, `check-purity` — `check-embedded` joins them |
 | `tests/tda_conformance.rs` | exemplar of a no-`required-features` test |
-| `docs/KERNEL_PURITY_AUDIT.md` §1, §3 | the coarse cut this EPIC refines |
+| `../audits/KERNEL_PURITY_AUDIT.md` §1, §3 | the coarse cut this EPIC refines |
 
 ## Reuse (do NOT recreate)
 

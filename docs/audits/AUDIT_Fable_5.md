@@ -541,7 +541,7 @@ Package verified with `cargo package --list` and a real `--no-verify` build:
   (`prelude.rs:45`), `TableLog` (`:54`), `SeatCell` (`:57`), `TableCelled`
   (`:52`); `bint::BintCell` still leaks as a public field
   (`table.rs:147`).
-- `docs/public_structs_prelude_report.md` was an inventory that asked "which
+- `../analysis/public_structs_prelude_report.md` was an inventory that asked "which
   should we add?" — and ~15 of its listed items were added. Its direction was
   expansion; expansion happened. No curation pass has ever run.
 - Deprecation hygiene: `cards_cell.rs:41` says `#[deprecated(since =

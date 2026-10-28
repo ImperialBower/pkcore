@@ -6,7 +6,7 @@
 > rewrites of the same chat server and names [Rustler](https://github.com/rusterlium/rustler)
 > as the proof that the BEAM/Rust trade-off is real. The companion analysis of
 > that article's performance lessons is
-> [`ANALYSIS_Load_Isolation_and_Backpressure.md`](../ANALYSIS_Load_Isolation_and_Backpressure.md).
+> [`ANALYSIS_Load_Isolation_and_Backpressure.md`](../analysis/ANALYSIS_Load_Isolation_and_Backpressure.md).
 > This is a contract doc. The implementation lands in a new sibling repo,
 > `pkcore.ex`, the same split [EPIC-85](EPIC-85_Node_Bindings.md) used for
 > `pkcore.js`.
@@ -606,7 +606,7 @@ Phase 0, since npm already refused the unscoped `pkcore` (EPIC-86:16-17).
   [EPIC-88](EPIC-88_Table_Snapshot.md) (snapshot/restore).
 - **Related:** [EPIC-37](EPIC-37_Mobile_Engine.md) (`SolveJob`),
   [EPIC-38](EPIC-38_Observability.md) (progress seams),
-  [`ANALYSIS_Load_Isolation_and_Backpressure.md`](../ANALYSIS_Load_Isolation_and_Backpressure.md)
+  [`ANALYSIS_Load_Isolation_and_Backpressure.md`](../analysis/ANALYSIS_Load_Isolation_and_Backpressure.md)
   (the multi-table load work this binding makes possible).
 - **Blocks:** nothing.
 

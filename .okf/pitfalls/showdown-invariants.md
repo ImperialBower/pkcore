@@ -35,4 +35,4 @@ reorders it breaks invariant C.
 
 # Citations
 
-[1] [RCA_Table_Mechanic_2026](https://github.com/ImperialBower/pkcore/blob/main/docs/RCA_Table_Mechanic_2026.md)
+[1] [RCA_Table_Mechanic_2026](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/RCA_Table_Mechanic_2026.md)
