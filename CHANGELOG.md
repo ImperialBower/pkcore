@@ -14,20 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [PokerHandEvaluator](https://github.com/HenryRLee/PokerHandEvaluator)
   (Apache-2.0) is referenced in `lookups`, `Five::find_in_products`,
   `Six`/`Seven::hand_rank_value` and `OmahaHigh::eval`. It ranks hands by
-  perfect hash and needs no best-5-of-N loop. b-inary's
-  [postflop-solver](https://github.com/b-inary/postflop-solver) and
-  [wasm-postflop](https://github.com/b-inary/wasm-postflop) (AGPL-3.0) are
-  referenced at six places in `analysis::gto`:
-  - `Discounts::for_iteration` (its DCFR schedule)
-  - `Solver::iterate` (reach vectors, threads in the browser)
-  - `build_showdown_map` (showdowns settled by sorted sweeps)
-  - `RegretAccumulator` (flat 16-bit node storage)
-  - the river chance node (suit isomorphism)
-  - `build_facing_bet_node` (raises and all-in thresholds), along with
-    `BetSize` (its size syntax) and `SolverCache` (storing only some streets).
-
-  Each comment names the upstream file. The AGPL-3.0 ones say to reimplement
-  the idea, not copy the code. There is no change in behaviour.
+  perfect hash and needs no best-5-of-N loop.
 
 ### Fixed
 
