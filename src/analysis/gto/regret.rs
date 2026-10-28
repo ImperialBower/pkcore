@@ -90,6 +90,8 @@ use std::collections::HashMap;
 /// let acc = RegretAccumulator::new(&tree, &oop, &ip);
 /// assert!(!acc.is_empty());
 /// ```
+///
+/// TODO: Can `regrets` be refactored as a slice?
 #[derive(Clone, Debug)]
 pub struct RegretAccumulator {
     regrets: HashMap<NodeId, HashMap<Two, Vec<f64>>>,

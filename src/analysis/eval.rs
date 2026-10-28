@@ -517,7 +517,7 @@ impl PartialEq for SevenEval {
 }
 impl Eq for SevenEval {}
 
-/// Ordered by `HandRank` only, to agree with `PartialEq` (`DEFECT_046`).
+/// Ordered by `HandRank` only, to agree with `PartialEq` (`DEFECT_049`).
 impl Ord for SevenEval {
     fn cmp(&self, other: &Self) -> Ordering {
         self.hand_rank.cmp(&other.hand_rank)
@@ -644,7 +644,7 @@ mod hand_rank__seven_eval_tests {
         assert_ne!(spades, quads);
     }
 
-    /// `DEFECT_046`: `Ord` must agree with `Eq`, which ignores the cards.
+    /// `DEFECT_049`: `Ord` must agree with `Eq`, which ignores the cards.
     #[test]
     fn cmp__agrees_with_eq() {
         // pins: INV-17

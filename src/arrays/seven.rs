@@ -176,6 +176,12 @@ impl HandRanker for Seven {
         (CaliforniaHandRank::from(best_hrv), best_hand.sort())
     }
 
+    /// TODO: Alternatives to evaluating all 21 five-card subsets. This is the hot
+    /// path for equity and for the solver's showdown maps.
+    /// - `PokerHandEvaluator`'s `evaluate_7cards` (cpp/src/evaluator7.c,
+    ///   <https://github.com/HenryRLee/PokerHandEvaluator>) does one suit-hash
+    ///   test, then one `flush` or `noflush7` lookup. It returns the same
+    ///   1..=7462 classes as `HandRankValue`, so it would be a drop-in change.
     fn hand_rank_value(&self) -> HandRankValue {
         if !self.is_dealt() {
             return NO_HAND_RANK_VALUE;
@@ -405,7 +411,7 @@ mod arrays__seven_tests {
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
     }
 
-    /// `DEFECT_045`: a royal flush plus blank slots is not a dealt `Seven`.
+    /// `DEFECT_048`: a royal flush plus blank slots is not a dealt `Seven`.
     #[test]
     fn hand_rank_value__a_blank_slot_gets_no_rank() {
         // pins: INV-33

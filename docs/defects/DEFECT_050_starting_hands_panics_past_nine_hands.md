@@ -1,6 +1,6 @@
 # Defect: `StartingHands` panics on more than nine hands
 
-**File:** `docs/defects/DEFECT_047_starting_hands_panics_past_nine_hands.md`  
+**File:** `docs/defects/DEFECT_050_starting_hands_panics_past_nine_hands.md`  
 **Date:** 2026-10-27  
 **Severity:** Medium — a panic in library code, reachable from user input:
 a string or `Cards` of more than 18 cards  

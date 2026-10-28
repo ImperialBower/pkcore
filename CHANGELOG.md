@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.20.3] - 2026-10-27
+## [0.20.4] - 2026-10-28
 
 ### Added
 
@@ -48,17 +48,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   flush plus one blank ranked as a royal flush; it now gets no rank (`0`),
   the same as `Five`. Code that ranks a hand before every card is out no
   longer reads a hand that does not exist.
-  [`DEFECT_045`](docs/defects/DEFECT_045_six_and_seven_rank_a_hand_with_a_blank.md).
+  [`DEFECT_048`](docs/defects/DEFECT_048_six_and_seven_rank_a_hand_with_a_blank.md).
 - **`SevenEval` now sorts by hand rank, the same way it compares equal.** It
   compared equal by rank but sorted by its cards, so two equal hands could
   sort as different and a worse hand could sort above a better one.
-  [`DEFECT_046`](docs/defects/DEFECT_046_seven_eval_ord_disagrees_with_eq.md).
+  [`DEFECT_049`](docs/defects/DEFECT_049_seven_eval_ord_disagrees_with_eq.md).
 - **`StartingHands` no longer panics on more than nine hands.** Parsing or
   converting 20 or more cards now returns `PKError::TooManyCards`;
   `StartingHands::from(Vec<Two>)` keeps the first nine hands.
-  [`DEFECT_047`](docs/defects/DEFECT_047_starting_hands_panics_past_nine_hands.md).
+  [`DEFECT_050`](docs/defects/DEFECT_050_starting_hands_panics_past_nine_hands.md).
 - `HupCache::lookup_odds` now names its domain role (`read model`). Its
   `# Domain` block had none, which stopped every `/dddocs` and ontology check.
+
+## [0.20.3] - 2026-10-28
+
+### Changed
+
+- **Source comments now point to other ways of doing the same work.** Two
+  open-source projects do some of pkcore's jobs differently. HenryRLee's
+  [PokerHandEvaluator](https://github.com/HenryRLee/PokerHandEvaluator)
+  (Apache-2.0) is referenced in `lookups`, `Five::find_in_products`,
+  `Six`/`Seven::hand_rank_value` and `OmahaHigh::eval`. It ranks hands by
+  perfect hash and needs no best-5-of-N loop.
+
+### Fixed
+
+- **`make lint` and `cargo doc` pass again.** The new `Seven::hand_rank_value`
+  comment had a bare type name and a bare URL. Clippy (`doc_markdown`) and
+  rustdoc (`bare_urls`) both reject those under `-D warnings`. The name is
+  now in backticks and the URL is in `<` `>`. There is no change in
+  behaviour.
 
 ## [0.20.2] - 2026-10-26
 

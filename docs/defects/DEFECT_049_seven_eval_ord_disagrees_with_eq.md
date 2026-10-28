@@ -1,6 +1,6 @@
 # Defect: `SevenEval` sorts by its cards but compares equal by rank
 
-**File:** `docs/defects/DEFECT_046_seven_eval_ord_disagrees_with_eq.md`  
+**File:** `docs/defects/DEFECT_049_seven_eval_ord_disagrees_with_eq.md`  
 **Date:** 2026-10-27  
 **Severity:** Low — no code in the crate sorts `SevenEval` today, but a
 caller that sorts, dedups or keys a `BTreeMap` on it gets results that break

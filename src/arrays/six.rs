@@ -125,6 +125,9 @@ impl HandRanker for Six {
         if !self.is_dealt() {
             return NO_HAND_RANK_VALUE;
         }
+        // Alternative: PokerHandEvaluator's `evaluate_6cards` (cpp/src/evaluator6.c,
+        // https://github.com/HenryRLee/PokerHandEvaluator) ranks six cards with one
+        // hash lookup instead of trying all six five-card subsets.
         let mut best_hrv = NO_HAND_RANK_VALUE;
 
         for perm in Six::FIVE_CARD_PERMUTATIONS {
@@ -321,7 +324,7 @@ mod arrays__six_tests {
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
     }
 
-    /// `DEFECT_045`: a royal flush plus one blank slot is not a dealt `Six`.
+    /// `DEFECT_048`: a royal flush plus one blank slot is not a dealt `Six`.
     #[test]
     fn hand_rank_value__a_blank_slot_gets_no_rank() {
         // pins: INV-31

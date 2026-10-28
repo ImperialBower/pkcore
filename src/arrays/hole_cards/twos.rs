@@ -314,7 +314,7 @@ impl From<[Two; 2]> for StartingHands {
     }
 }
 
-/// Keeps the first nine hands; any more do not fit (`DEFECT_047`).
+/// Keeps the first nine hands; any more do not fit (`DEFECT_050`).
 impl From<Vec<Two>> for StartingHands {
     fn from(v: Vec<Two>) -> Self {
         let mut twos = StartingHands::default();
@@ -490,7 +490,7 @@ mod arrays__hole_cards__twos_tests {
         assert_eq!(StartingHands::default().array().len(), 9);
     }
 
-    /// `DEFECT_047`: ten hands do not fit in nine slots.
+    /// `DEFECT_050`: ten hands do not fit in nine slots.
     #[test]
     fn from__vec__keeps_the_first_nine_hands() {
         // pins: INV-34
@@ -501,7 +501,7 @@ mod arrays__hole_cards__twos_tests {
         assert_eq!(hands.array().to_vec(), ten[..9].to_vec());
     }
 
-    /// `DEFECT_047`: twenty cards make ten hands, one more than a table seats.
+    /// `DEFECT_050`: twenty cards make ten hands, one more than a table seats.
     #[test]
     fn try_from__cards__more_than_nine_hands_is_an_error() {
         // pins: INV-34

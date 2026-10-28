@@ -1,6 +1,6 @@
 # Defect: `Six` and `Seven` rank a hand with a blank slot
 
-**File:** `docs/defects/DEFECT_045_six_and_seven_rank_a_hand_with_a_blank.md`  
+**File:** `docs/defects/DEFECT_048_six_and_seven_rank_a_hand_with_a_blank.md`  
 **Date:** 2026-10-27  
 **Severity:** Medium — a partly dealt six- or seven-card hand gets a real
 rank; any code that ranks a hand before every card is out reads a hand that
