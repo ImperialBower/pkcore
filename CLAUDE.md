@@ -56,13 +56,6 @@ Stricter than Rust norms — both kinds of test are required, not just one:
 - Implement `Clone` and `Copy` when semantically appropriate
 - Document non-obvious trait behaviour at the implementation
 
-### Code Organization
-
-- Keep functions focused and single-purpose
-- Extract complex logic into well-named helper functions
-- Group related functions and types in logical modules
-- Use visibility modifiers (`pub`, `pub(crate)`, private) appropriately
-
 ## Changelog and version — required on every change
 
 Every change that touches code is done only when these two are done as well,

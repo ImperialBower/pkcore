@@ -135,6 +135,11 @@ impl Five {
     #[must_use]
     #[allow(clippy::comparison_chain)]
     pub fn find_in_products(&self) -> usize {
+        // Alternative: PokerHandEvaluator (https://github.com/HenryRLee/PokerHandEvaluator)
+        // has no binary search. It counts cards per rank into a base-5 array and
+        // turns that into a direct table index with `hash_quinary` (cpp/src/hash.c).
+        // That is a fixed 13 steps, against up to 13 probes of the 4,888-entry
+        // `PRODUCTS` table here.
         let key = self.multiply_primes();
 
         let mut low = 0;
