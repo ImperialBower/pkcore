@@ -3,7 +3,7 @@ type: Process
 title: Supply-chain security
 description: OpenSSF Scorecard posture — SHA-pinned actions, least-privilege workflow tokens, CodeQL, private vulnerability reporting, and the published Scorecard badge.
 tags: [security, ci, scorecard, github-actions]
-timestamp: '2026-10-12T00:00:00Z'
+timestamp: '2026-10-28T00:00:00Z'
 ---
 
 # Scorecard
@@ -36,7 +36,8 @@ only for the checks that read files.
   `toolchain: stable`, `taiki-e/install-action` takes `tool: cargo-deny`.
 * **Top-level `permissions: contents: read`** in every workflow. A job that
   needs more declares it at job level — `release.yml` grants `contents: write`
-  to the release job only; `codeql.yml` and `scorecard.yml` grant
+  and, for signing, `id-token: write` and `attestations: write` to the release
+  job only; `codeql.yml` and `scorecard.yml` grant
   `security-events: write` to their analysis jobs.
 * `scorecard.yml` has extra rules because it publishes: no top-level write
   permissions, no top-level `env`/`defaults`, and only the approved actions.
@@ -44,9 +45,26 @@ only for the checks that read files.
 
 # Checks that stay low
 
-Code-Review, Contributors, and Branch-Protection reward multi-maintainer
-review; CII-Best-Practices, Fuzzing, Signed-Releases, and Packaging need
-separate projects. These are known and not gated on.
+The published score on 2026-10-28 was **7.1/10**.
+
+Code-Review and Contributors reward multi-maintainer review and stay at 0.
+Branch-Protection is capped for the same reason. CII-Best-Practices needs a
+manual sign-up at bestpractices.dev. Packaging stays inconclusive (-1, not
+scored) because crates.io publishing is done by hand, not from CI. These are
+known and not gated on.
+
+# Checks fixed in 0.20.5
+
+* **Fuzzing**: `fuzz/` holds `cargo-fuzz` targets (`card_strings`,
+  `range_strings`). Scorecard finds them by the `libfuzzer_sys` import.
+  `make fuzz` runs one; `make fuzz-check` lints the crate.
+* **Signed-Releases**: `release.yml` signs its assets with
+  `actions/attest-build-provenance` and attaches the bundle as
+  `pkcore-vX.Y.Z.sigstore.json`. Scorecard only reads asset *names*
+  (`*.sigstore.json` counts as signed) over the last five releases, so the
+  score rises one release at a time.
+* **SAST** counts only commits that went through a PR; a direct push to `main`
+  is an unchecked commit.
 
 # Citations
 
