@@ -25,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`.github/CODEOWNERS`**, so the "Require review from Code Owners" branch
   rule has an owner to ask.
 
+### Fixed
+
+- **`Combo::from_str` no longer prints to stdout.** An unknown range token
+  printed `Unable to process …` before it returned
+  `Err(PKError::InvalidComboIndex)`, so every caller of `Combo`, `Combos` and
+  `WeightedCombos` parsing got output it did not ask for. The fuzz run found
+  it: 1.9 million lines in 60 seconds. The error is unchanged.
+
 ## [0.20.4] - 2026-10-28
 
 ### Added
