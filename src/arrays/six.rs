@@ -121,7 +121,6 @@ impl HandRanker for Six {
         (CaliforniaHandRank::from(best_hrv), best_hand.sort())
     }
 
-    
     fn hand_rank_value(&self) -> HandRankValue {
         // Alternative: PokerHandEvaluator's `evaluate_6cards` (cpp/src/evaluator6.c,
         // https://github.com/HenryRLee/PokerHandEvaluator) ranks six cards with one
