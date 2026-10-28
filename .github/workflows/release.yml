@@ -16,9 +16,12 @@ jobs:
   release:
     name: Publish GitHub Release
     # Least privilege that can create a release. The job never writes to the
-    # repo: no CHANGELOG mutation, no commits, no pushes.
+    # repo: no CHANGELOG mutation, no commits, no pushes. id-token and
+    # attestations are for signing the assets (see "Sign release assets").
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -71,6 +74,24 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: ./scripts/release_notes.sh "$TAG" coverage-summary.txt > release-body.md
 
+      # Keyless Sigstore signature with SLSA build provenance over both assets
+      # (OpenSSF Scorecard "Signed-Releases"). The bundle ships as a release
+      # asset because Scorecard only looks at asset names (*.sigstore.json).
+      # Verify with: gh attestation verify lcov.info -R ImperialBower/pkcore
+      - name: Sign release assets
+        id: attest
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            coverage-html.tar.gz
+            lcov.info
+
+      - name: Stage signature bundle
+        env:
+          TAG: ${{ github.ref_name }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: cp "$BUNDLE" "pkcore-$TAG.sigstore.json"
+
       - name: Create release
         env:
           TAG: ${{ github.ref_name }}
@@ -87,4 +108,5 @@ jobs:
             --notes-file release-body.md \
             $prerelease \
             coverage-html.tar.gz \
-            lcov.info
+            lcov.info \
+            "pkcore-$TAG.sigstore.json"

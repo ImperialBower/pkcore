@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.5] - 2026-10-28
+
+### Added
+
+- **Fuzz targets for the string parsers** (`fuzz/`, OpenSSF Scorecard
+  "Fuzzing"). Two `cargo-fuzz` targets feed random text to the card parsers
+  (`Cards`, `Board`, `HoleCards`, `Five`, `Seven`, then rank the hand) and the
+  range parsers (`Combos`, `WeightedCombos`, then expand to `Twos`). A first
+  60-second run of each found no panic. `fuzz/` is its own workspace, like
+  `perf/`, and is not in the published crate. Run it with `make fuzz`
+  (nightly and `cargo install cargo-fuzz`); lint it with `make fuzz-check`.
+- **Signed release assets** (Scorecard "Signed-Releases"). `release.yml` now
+  makes a keyless Sigstore signature with SLSA build provenance over
+  `coverage-html.tar.gz` and `lcov.info`, and attaches the bundle as
+  `pkcore-vX.Y.Z.sigstore.json`. Check an asset with
+  `gh attestation verify lcov.info -R ImperialBower/pkcore`. Releases before
+  0.20.5 stay unsigned.
+- **`.github/CODEOWNERS`**, so the "Require review from Code Owners" branch
+  rule has an owner to ask.
+
+### Fixed
+
+- **`Combo::from_str` no longer prints to stdout.** An unknown range token
+  printed `Unable to process …` before it returned
+  `Err(PKError::InvalidComboIndex)`, so every caller of `Combo`, `Combos` and
+  `WeightedCombos` parsing got output it did not ask for. The fuzz run found
+  it: 1.9 million lines in 60 seconds. The error is unchanged.
+
 ## [0.20.4] - 2026-10-28
 
 ### Added

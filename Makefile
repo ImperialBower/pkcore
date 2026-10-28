@@ -51,6 +51,8 @@ help:
 	@echo "  make ontology        - Check pkcore.ontology.toml against the code and tests (needs DKSKILLS)"
 	@echo "  make ontology-report - The same check, with unpinned invariants as warnings"
 	@echo "  make ontology-ledger - Regenerate docs/PKCORE_LEDGER.md (only when the check passes)"
+	@echo "  make fuzz            - Fuzz a string parser (FUZZ_TARGET=card_strings|range_strings, nightly + cargo-fuzz)"
+	@echo "  make fuzz-check      - fmt + clippy the fuzz/ crate"
 	@echo "  make release-notes   - Preview release notes for TAG=vX.Y.Z"
 	@echo "  make diary-links     - Regenerate DIARY_LINKED.md (each DIARY.md line linked to its commit)"
 	@echo ""
@@ -613,3 +615,17 @@ perf-check:
 	cd perf && cargo build --bins --features "equity sim"
 	cd perf && cargo test
 	cd perf && cargo test --features "equity sim"
+
+# cargo-fuzz targets for the card and range string parsers. fuzz/ is its own
+# workspace root, like perf/. Running needs nightly and `cargo install
+# cargo-fuzz`; fuzz-check builds on the pinned toolchain.
+# Usage: make fuzz FUZZ_TARGET=range_strings FUZZ_SECONDS=300
+FUZZ_TARGET ?= card_strings
+FUZZ_SECONDS ?= 60
+.PHONY: fuzz fuzz-check
+fuzz:
+	cd fuzz && cargo +nightly fuzz run $(FUZZ_TARGET) -- -max_total_time=$(FUZZ_SECONDS)
+
+fuzz-check:
+	cd fuzz && cargo fmt --check
+	cd fuzz && cargo clippy --bins -- -D warnings

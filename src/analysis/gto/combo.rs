@@ -3686,11 +3686,7 @@ impl FromStr for Combo {
             "32s+" => Ok(Combo::COMBO_32s_PLUS),
             "32o+" => Ok(Combo::COMBO_32o_PLUS),
             "32+" => Ok(Combo::COMBO_32_PLUS),
-            _ => {
-                // TODO: Add logging
-                println!("Unable to process {s}");
-                Err(PKError::InvalidComboIndex)
-            }
+            _ => Err(PKError::InvalidComboIndex),
         }
     }
 }
@@ -4189,6 +4185,15 @@ mod arrays__ranges__combo_tests {
         assert_eq!(Combo::from_str(s), Ok(combo));
     }
     // endregion
+
+    #[rstest]
+    #[case("")]
+    #[case("XX")]
+    #[case("AKx")]
+    #[case("AK++")]
+    fn from_str__unknown_token_is_invalid_combo_index(#[case] s: &str) {
+        assert_eq!(Combo::from_str(s), Err(PKError::InvalidComboIndex));
+    }
 
     #[test]
     fn sort() {

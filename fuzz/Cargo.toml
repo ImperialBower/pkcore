@@ -1,0 +1,32 @@
+[package]
+name = "pkcore-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "cargo-fuzz targets for pkcore's string parsers. Not published."
+
+[package.metadata]
+cargo-fuzz = true
+
+# LOAD-BEARING: declares this crate its own workspace root so Cargo does not
+# walk up to pkcore's manifest and adopt it (same layout as perf/).
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+# The lean kernel: both parser families are ungated.
+pkcore = { path = "..", default-features = false }
+
+[[bin]]
+name = "card_strings"
+path = "fuzz_targets/card_strings.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "range_strings"
+path = "fuzz_targets/range_strings.rs"
+test = false
+doc = false
+bench = false
