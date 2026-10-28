@@ -82,6 +82,13 @@ impl OmahaHigh {
         // a `Seven` of two hole cards plus the whole board — as this did before
         // `DEFECT_017` — hands that choice to a best-5-of-7 search that knows
         // nothing about Omaha.
+        //
+        // Alternative: PokerHandEvaluator's `evaluate_plo4_cards`
+        // (cpp/src/evaluator_plo4.c, https://github.com/HenryRLee/PokerHandEvaluator)
+        // hashes the board and the hole cards separately and builds the
+        // two-from-hand rule into its tables, so it never visits the 60
+        // combinations. Its PLO4 tables take about 30 MB, and PLO5/6 take more,
+        // which is too much for the lean kernel. It would fit behind a feature.
         for five in self.permutations(&Five::from(*board)) {
             let eval = five.eval();
             if eval > best_eval {

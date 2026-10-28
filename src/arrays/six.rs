@@ -122,6 +122,9 @@ impl HandRanker for Six {
     }
 
     fn hand_rank_value(&self) -> HandRankValue {
+        // Alternative: PokerHandEvaluator's `evaluate_6cards` (cpp/src/evaluator6.c,
+        // https://github.com/HenryRLee/PokerHandEvaluator) ranks six cards with one
+        // hash lookup instead of trying all six five-card subsets.
         let mut best_hrv = NO_HAND_RANK_VALUE;
 
         for perm in Six::FIVE_CARD_PERMUTATIONS {

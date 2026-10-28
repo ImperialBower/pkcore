@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.3] - 2026-10-28
+
+### Changed
+
+- **Source comments now point to other ways of doing the same work.** Two
+  open-source projects do some of pkcore's jobs differently. HenryRLee's
+  [PokerHandEvaluator](https://github.com/HenryRLee/PokerHandEvaluator)
+  (Apache-2.0) is referenced in `lookups`, `Five::find_in_products`,
+  `Six`/`Seven::hand_rank_value` and `OmahaHigh::eval`. It ranks hands by
+  perfect hash and needs no best-5-of-N loop.
+
+### Fixed
+
+- **`make lint` and `cargo doc` pass again.** The new `Seven::hand_rank_value`
+  comment had a bare type name and a bare URL. Clippy (`doc_markdown`) and
+  rustdoc (`bare_urls`) both reject those under `-D warnings`. The name is
+  now in backticks and the URL is in `<` `>`. There is no change in
+  behaviour.
+
 ## [0.20.2] - 2026-10-26
 
 ### Fixed
