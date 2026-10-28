@@ -103,13 +103,6 @@ pub fn cache_key(config: &SolverConfig) -> u64 {
 /// assert!(cache.is_empty());
 /// ```
 pub struct SolverCache {
-    // Alternative: postflop-solver's src/file.rs (https://github.com/b-inary/postflop-solver)
-    // starts each saved file with a header that names its compression, zstd or
-    // none; zstd sits behind a `zstd` feature. Before saving,
-    // `set_target_storage_mode` can drop the strategies for later streets, for
-    // example to keep only the flop and turn, so a large solve stores only the
-    // part someone will look at. AGPL-3.0: reimplement the idea, do not copy
-    // the code.
     dir: PathBuf,
 }
 

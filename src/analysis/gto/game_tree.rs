@@ -800,17 +800,6 @@ impl GameTree {
         aggressor: Player,
         runout: Option<(&[Card], &[BetSize])>,
     ) -> NodeId {
-        // Alternative: postflop-solver's `TreeConfig` and `ActionTree`
-        // (src/action_tree.rs, https://github.com/b-inary/postflop-solver) allow
-        // raises and limit how many, and allow donk bets. They also clean up
-        // bet sizes against the stack. `add_allin_threshold` adds an all-in
-        // when it is close to the pot. `force_allin_threshold` turns a bet that
-        // leaves little behind into an all-in. `merging_threshold` merges
-        // sizes that are nearly equal. `add_line` and `remove_line` edit single
-        // lines after the tree is built. Here `BetSize::chips` is not capped by
-        // `effective_stack`. AGPL-3.0: reimplement the idea, do not copy the
-        // code. EPIC-132 tracks trees for pkcore.
-        //
         // DEFECT_029: the uncalled bet goes back, so the fold pot is `pot`.
         let call_pot = pot + 2 * bet_chips;
         let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, pot, None);
@@ -856,14 +845,6 @@ impl GameTree {
         runout_cards: &[Card],
         river_sizes: &[BetSize],
     ) -> NodeId {
-        // Alternative: postflop-solver's `isomorphism` (src/card.rs,
-        // https://github.com/b-inary/postflop-solver) leaves out runouts that a
-        // suit swap makes identical. A suit counts only when both ranges are
-        // symmetric in it and the board does not tell it apart. When the solver
-        // needs the result for a skipped card, it reuses the kept sibling's
-        // result and swaps the hand indices. On a monotone flop this saves two
-        // of the three off-suits on every turn and river. AGPL-3.0: reimplement
-        // the idea, do not copy the code. EPIC-133 tracks it for pkcore.
         let mut chance_children: Vec<(Card, NodeId)> = Vec::with_capacity(runout_cards.len());
         for &card in runout_cards {
             // Each runout gets its own river action subtree; showdown terminals

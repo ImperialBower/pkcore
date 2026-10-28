@@ -90,16 +90,10 @@ use std::collections::HashMap;
 /// let acc = RegretAccumulator::new(&tree, &oop, &ip);
 /// assert!(!acc.is_empty());
 /// ```
+///
+/// TODO: Can `regrets` be refactored as a slice?
 #[derive(Clone, Debug)]
 pub struct RegretAccumulator {
-    // Alternative: postflop-solver (https://github.com/b-inary/postflop-solver)
-    // gives each node one contiguous slice, `[f32; actions × hands]` in
-    // action-major order, instead of a map of maps. Regret matching becomes a
-    // slice operation. An optional compressed mode stores regrets as `i16` and
-    // strategy sums as `u16`, with one `f32` scale per node. Those helpers are
-    // `encode_signed_slice` and `encode_unsigned_slice` in src/utility.rs; they
-    // cut memory by about half. AGPL-3.0: reimplement the idea, do not copy
-    // the code.
     regrets: HashMap<NodeId, HashMap<Two, Vec<f64>>>,
     floor: bool,
 }

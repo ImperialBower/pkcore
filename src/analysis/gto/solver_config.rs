@@ -117,15 +117,6 @@ impl Default for CfrVariant {
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct BetSize {
-    // Alternative: postflop-solver's `BetSize` (src/bet_size.rs,
-    // https://github.com/b-inary/postflop-solver) has more kinds than a pot
-    // fraction. `PrevBetRelative` raises to a multiple of the last bet ("2.5x").
-    // `Additive` is a fixed chip amount with an optional raise cap ("100c",
-    // "20c3r"). `Geometric` reaches all-in in equal pot-relative steps over the
-    // streets left ("2e", "3e200%"). `AllIn` is "a". `BetSizeOptions` parses a
-    // comma-separated list of these, such as "60%, e, a". wasm-postflop's UI
-    // takes the same strings. AGPL-3.0: reimplement the idea, do not copy the
-    // code.
     numerator: u32,
     denominator: u32,
 }

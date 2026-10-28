@@ -566,14 +566,6 @@ impl Discounts {
     /// the end of iteration `t`. Here that runs at the start of iteration
     /// `t + 1`, so the exponents see `t = iteration - 1`.
     fn for_iteration(variant: &CfrVariant, iteration: usize) -> Self {
-        // Alternative: postflop-solver's `DiscountParams::new` (src/solver.rs,
-        // https://github.com/b-inary/postflop-solver; wasm-postflop runs it in
-        // the browser) fixes α = 1.5 on `t - 1`, as `Discounted` does here. It
-        // then makes two changes to DCFR. β is a constant 0.5 rather than
-        // `t^β / (t^β + 1)`. γ = 3 counts only the iterations since the last
-        // power of 4, so the factor is 0 at 4, 16, 64, ... and the strategy sum
-        // is cleared there. Early strategies stop weighing on the average.
-        // AGPL-3.0: reimplement the idea, do not copy the code.
         #[allow(clippy::cast_precision_loss)]
         let finished = iteration.saturating_sub(1) as f64;
         match variant {
@@ -828,16 +820,6 @@ impl Solver {
             Solver::scale_strategy_sum(&mut self.strategy_sum, discounts.strategy_sum);
         }
 
-        // Alternative: postflop-solver (https://github.com/b-inary/postflop-solver,
-        // src/solver.rs) walks the tree once per iteration rather than once
-        // per hand pair. It carries one reach probability per hand of each
-        // player, so a pass costs O(H_oop + H_ip) per node, not
-        // O(H_oop × H_ip). Children are visited in parallel with rayon. In the
-        // browser, wasm-postflop builds that engine twice:
-        // rust/solver-mt uses wasm-bindgen-rayon and rust/solver-st is
-        // single-threaded. EPIC-131 and EPIC-136 plan the same design for
-        // pkcore. AGPL-3.0: reimplement the idea, do not copy the code.
-        //
         // Clone the pair list so we can mutably borrow `self.regrets` and
         // `self.strategy_sum` inside the loop without hitting borrow-check
         // conflicts with `self.hand_pairs`.
@@ -1542,16 +1524,6 @@ impl Solver {
     /// The board is fixed for the entire river solve, so the matchup result is a
     /// pure function of the two hands and never changes across iterations.
     fn build_showdown_map(hand_pairs: &[(Two, Two)], board: &Board) -> ShowdownMap {
-        // Alternative: postflop-solver stores no matchups. For each runout,
-        // `hand_strength` (src/card.rs, https://github.com/b-inary/postflop-solver)
-        // keeps each player's hands sorted by strength. `evaluate_internal`
-        // (src/game/evaluation.rs) then settles every showdown in two sweeps
-        // over the sorted lists, adding up the opponent's reach below and above
-        // each strength. Hands that share a card are removed with a 52-entry
-        // per-card reach total, by inclusion-exclusion. Folds use the same
-        // per-card correction. Memory is O(H) per runout rather than
-        // O(H_oop × H_ip), and no HashMap is read on the hot path.
-        // AGPL-3.0: reimplement the idea, do not copy the code.
         hand_pairs
             .iter()
             .map(|&(oop, ip)| {
