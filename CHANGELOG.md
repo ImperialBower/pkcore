@@ -29,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Each comment names the upstream file. The AGPL-3.0 ones say to reimplement
   the idea, not copy the code. There is no change in behaviour.
 
+### Fixed
+
+- **`make lint` and `cargo doc` pass again.** The new `Seven::hand_rank_value`
+  comment had a bare type name and a bare URL. Clippy (`doc_markdown`) and
+  rustdoc (`bare_urls`) both reject those under `-D warnings`. The name is
+  now in backticks and the URL is in `<` `>`. There is no change in
+  behaviour.
+
 ## [0.20.2] - 2026-10-26
 
 ### Fixed

@@ -178,8 +178,8 @@ impl HandRanker for Seven {
 
     /// TODO: Alternatives to evaluating all 21 five-card subsets. This is the hot
     /// path for equity and for the solver's showdown maps.
-    /// - PokerHandEvaluator's `evaluate_7cards` (cpp/src/evaluator7.c,
-    ///   https://github.com/HenryRLee/PokerHandEvaluator) does one suit-hash
+    /// - `PokerHandEvaluator`'s `evaluate_7cards` (cpp/src/evaluator7.c,
+    ///   <https://github.com/HenryRLee/PokerHandEvaluator>) does one suit-hash
     ///   test, then one `flush` or `noflush7` lookup. It returns the same
     ///   1..=7462 classes as `HandRankValue`, so it would be a drop-in change.
     fn hand_rank_value(&self) -> HandRankValue {
