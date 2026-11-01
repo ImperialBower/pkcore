@@ -38,7 +38,7 @@ jobs:
         with:
           toolchain: ${{matrix.rust}}
           components: rust-src
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # `full` is the 0.14.0 default set; the lean builds are covered by
       # the no-default-features job and `make check-purity`.
       - run: cargo test --all --features full
@@ -53,7 +53,7 @@ jobs:
       - uses: ./.github/actions/rust-toolchain
         with:
           components: clippy, rust-src
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo clippy --features full -- -Dclippy::all -Dclippy::pedantic
 
   # Semver posture (AUDIT_Fable_5.md P6): compares the crate's public API against
@@ -92,7 +92,7 @@ jobs:
         with:
           toolchain: stable
           components: rust-src
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo doc --no-deps --features full
         env:
           RUSTDOCFLAGS: -Dwarnings
@@ -107,7 +107,7 @@ jobs:
         with:
           # clippy: `make check-purity` runs `check-purity-fs`.
           components: rust-src,clippy
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # Full test run with default features off: compiles lib, tests, AND
       # examples (which `--lib --tests` skips) and runs the non-gated suite.
       # Building examples is what surfaces one that uses a feature-gated API
@@ -156,7 +156,7 @@ jobs:
       - uses: ./.github/actions/rust-toolchain
         with:
           components: llvm-tools-preview, rust-src
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
           tool: cargo-llvm-cov
@@ -205,7 +205,7 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
           components: rust-src
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       # Production WASM apps (pkgto-web, pkkuhn-web, pkarena0-web, and bowery)
       # depend on pkcore building for wasm32; nothing else in CI checked it
       # (audit VI.4). The store/terminal deps are target-gated off on wasm.
