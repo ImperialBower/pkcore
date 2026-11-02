@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.7] - 2026-11-01
+
+### Changed
+
+- **CI actions are bumped to their newest pinned releases.** This folds the
+  Dependabot PRs #160–#164 into one change. `astral-sh/setup-uv` goes from
+  v7.6.0 to v10.3.3, `dtolnay/rust-toolchain` moves to a newer `v1` commit,
+  `taiki-e/install-action` goes from v2.87.28 to v2.88.0, `Swatinem/rust-cache`
+  goes from v2.9.2 to v2.9.3, and `github/codeql-action` goes from v4.38.3 to
+  v4.39.1. Every action stays pinned to a full commit SHA. Dependabot missed
+  three uses of the same pins, so this change also updates them: the
+  `dtolnay/rust-toolchain` step in `.github/actions/rust-toolchain/action.yml`
+  and the CodeQL `init` and `analyze` steps in `.github/workflows/codeql.yml`.
+  No library code or public API changed.
+
 ## [0.20.6] - 2026-10-28
 
 ### Changed
