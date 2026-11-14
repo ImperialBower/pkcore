@@ -7,8 +7,17 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> **Last refreshed 2026-10-26** against `main` @ `6d1bfac9`, pkcore `0.20.1`
-> (working tree clean). Since the `af91076b` pass (`0.15.5`): `0.16.0` fixed
+> **Last refreshed 2026-11-13** against `main` @ `de253982`, pkcore `0.20.6`
+> (working tree clean). Since the `6d1bfac9` pass (`0.20.1`): `0.20.2` fixed
+> `DEFECT_044`; `0.20.3` fixed `DEFECT_048`–`050` (found by EPIC-124 Phase 6;
+> `DEFECT_049` closes the 🤖 `SevenEval` `Ord` finding); `0.20.5` removed the
+> `TODO: Add logging` in `Combo::from_str`. `DEFECT_045` (game tree ignores
+> the effective stack) is **open**. Two new markers: `regret.rs:94`,
+> `seven.rs:179`. `fn test_` count in `src/` is still **344**. Automated
+> review not re-run this pass.
+>
+> Previous header (2026-10-26, `6d1bfac9`, `0.20.1`) kept for history:
+> Since the `af91076b` pass (`0.15.5`): `0.16.0` fixed
 > the six headline defects of the 2026-10-17 review plus `DEFECT_033`–`039`
 > and moved every free function into an `impl`; `0.17.0` shipped EPIC-93
 > (`HandHistory::validate`, `DEFECT_040`); `0.17.3` fixed `DEFECT_041`;
@@ -63,6 +72,11 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   all-in seats back into `YetToAct`; plus no run-out driver in `Nubificus`
   replay. The stall count in `tests/heavy_tests.rs` is now asserted at `0`.
   ([`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md#resolution))
+- [ ] **DEFECT_045 — the game tree ignores the effective stack** — open
+  since 2026-10-28. `SolverConfig::effective_stack` is hashed into the cache
+  key but no tree builder caps bets by it, so the solver plays lines nobody
+  could afford and inflates those payoffs. Medium.
+  ([`DEFECT_045`](defects/DEFECT_045_game_tree_ignores_the_effective_stack.md))
 - [ ] **`Seats::reset_state_in_hand` still clobbers all-in seats** — the
   `DEFECT_025` trap. Library code no longer calls it, but it is public and
   tests use it. Consider making it skip all-in seats, like the crate-private
@@ -226,8 +240,8 @@ that looks true._
 - [ ] **`Rank`/`Suit` char round-trip** — `TODO NOTE: I wonder if there is a
   better way to go back and forth from chars?` (`src/rank.rs:98`); a `TODO
   Early` tag with no body (`src/suit.rs:5`).
-- [ ] **GTO layer stubs** — `TODO: Add logging`
-  (`src/analysis/gto/combo.rs:3690`); a vague aspirational note about future
+- [ ] **GTO layer stubs** — ~~`TODO: Add logging`
+  (`src/analysis/gto/combo.rs:3690`)~~ removed in `0.20.5`; a vague aspirational note about future
   gameplay work (`src/analysis/gto/mod.rs:2417`).
 - [ ] **`arrays/mod.rs` open questions** — `TODO: How can we make this work?`
   (`:73`) and `TODO ¿Is there a way to do this directly from the trait?`
@@ -263,6 +277,15 @@ that looks true._
   this work. I am too befuddled to dive into it now. Need to get preflop
   done.` Dates from 2023-07-27 (`2b32dd80`); missed by earlier passes. It
   says something does not work, so read it before deleting it.
+
+### Newly found, 2026-11-13 — untracked comment TODOs
+
+- [ ] **`analysis/gto/regret.rs:94`** — ``TODO: Can `regrets` be refactored
+  as a slice?`` Added with the solver-epic notes (`53bc8118`). Refactor.
+- [ ] **`arrays/seven.rs:179`** — `TODO: Alternatives to evaluating all 21
+  five-card subsets.` The hot path; `0.20.3` points to PokerHandEvaluator's
+  perfect hash as the alternative. Perf; overlaps the pksolver block
+  (EPIC-131 Vectorised Engine).
 
 ## 🤖 Automated review findings
 
@@ -336,7 +359,8 @@ _The 2026-08-18 line "Solver and equity math … traced sound" is withdrawn for 
 - [ ] 🤖 **`SevenFiveBCM::load_rank_map` truncates silently** — `while read_exact().is_ok()` ends on any error and caches the partial map process-wide. (`src/analysis/store/bcm/binary_card_map.rs:58-67`, `:253-267`)
 - [ ] 🤖 **The 0.7.0 `select_all` fix swapped a panic for silent truncation** — `prepare`/`query` failure returns an empty `Vec`, every column read is `unwrap_or_default()`, so `db_count`/`db_is_valid` report a missing table as valid. Stale `#[allow(clippy::unwrap_used)]` at `hup.rs:582`; `read_db` documents a `# Panics` that no longer exists. (`src/analysis/store/db/hup.rs:43-57`, `:264-267`, `:582-617`; `src/analysis/store/bcm/binary_card_map.rs:367-387`)
 - [x] ~~🤖 ✔ **`Eval` violates the Hash/Eq contract**~~ — **FIXED 2026-10-18** in `0.16.0`, recorded as [`DEFECT_036`](defects/DEFECT_036_eval_hash_disagrees_with_eq.md). Original finding: `PartialEq` on `hand_rank` only, `Hash` also hashes `hand`; two royal flushes in different suits are `==` with different hashes. `CaseEval` inherits it. (`src/analysis/eval.rs:338-343` vs `:361-365`)
-- [ ] 🤖 ✔ **`SevenEval` derives `Ord` on field order (cards first) with a hand-written `PartialEq` on `hand_rank`** — `max()` picks the biggest bitset, not the best hand. (`src/analysis/eval.rs:468-489`)
+- [x] ~~🤖 ✔ **`SevenEval` derives `Ord` on field order~~ — **FIXED** in
+  `0.20.3` as [`DEFECT_049`](defects/DEFECT_049_seven_eval_ord_disagrees_with_eq.md). Original: **`SevenEval` derives `Ord` on field order (cards first) with a hand-written `PartialEq` on `hand_rank`** — `max()` picks the biggest bitset, not the best hand. (`src/analysis/eval.rs:468-489`)
 - [ ] 🤖 **`EightOrBetter::from(Five)` recognises 6 of 57 lows**; every 7- and 8-high low falls to `NoLow`. (`src/analysis/omaha.rs:109-126`)
 - [ ] 🤖 **`Ev` and `PotOdds::is_profitable` treat a chop as zero EV** — a heads-up chop nets `(pot − call)/2`; `test_ev_draws_do_not_affect_decision` pins the wrong behaviour. (`src/analysis/ev.rs:9-13`, `:84-90`; `src/analysis/pot_odds.rs:106-108`)
 - [ ] 🤖 **Lenient Pluribus parsing** — unknown chars skipped, dangling `r` dropped, unparseable payoff → 0, bad cards → empty via `unwrap_or_default()`, no player/payoff/card count cross-check, `read_in_log` returns `Ok(vec![])` on an unreadable file; `parse_cards` compiles and `unwrap()`s a `Regex` per hand (house-rule violation, `split_once('/')` suffices). (`src/analysis/nubibus.rs:799-811`, `:854-920`, `:1353-1370`)
