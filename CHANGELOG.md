@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.7] - 2026-11-14
+
+### Fixed
+
+- **The GTO game tree is now capped by the effective stack**
+  ([`DEFECT_045`](docs/defects/DEFECT_045_game_tree_ignores_the_effective_stack.md)).
+  `GameTree::build_river` and `GameTree::build_turn` never read
+  `SolverConfig::effective_stack`, so a bet could be bigger than the stack
+  and the solver paid out pots no player could build. With pot 500 and stack
+  100, a 2x-pot bet made a 2,500 pot; it is now an all-in of 100 and a 700
+  pot. Each bet is capped at what the players have left, and money called
+  on the turn comes off the river stack. A bet that comes to zero chips is
+  dropped. Sizes that cap to the same all-in keep one `Bet` action, labelled
+  with the smallest size. A stack of `0` means check down. Trees with deep
+  stacks do not change. There is no change to the public API.
+
 ## [0.20.6] - 2026-10-28
 
 ### Changed
