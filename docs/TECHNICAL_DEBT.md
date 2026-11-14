@@ -72,8 +72,9 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
   all-in seats back into `YetToAct`; plus no run-out driver in `Nubificus`
   replay. The stall count in `tests/heavy_tests.rs` is now asserted at `0`.
   ([`DEFECT_025`](defects/DEFECT_025_all_in_run_out_never_completes.md#resolution))
-- [ ] **DEFECT_045 — the game tree ignores the effective stack** — open
-  since 2026-10-28. `SolverConfig::effective_stack` is hashed into the cache
+- [x] ~~**DEFECT_045 — the game tree ignores the effective stack**~~ —
+  **FIXED 2026-11-14** in `0.20.7`: bets capped by the remaining stack.
+  Original: open since 2026-10-28. `SolverConfig::effective_stack` is hashed into the cache
   key but no tree builder caps bets by it, so the solver plays lines nobody
   could afford and inflates those payoffs. Medium.
   ([`DEFECT_045`](defects/DEFECT_045_game_tree_ignores_the_effective_stack.md))

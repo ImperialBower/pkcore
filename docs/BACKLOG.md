@@ -30,7 +30,8 @@
 
 Ranked by risk first, then by how cheap the fix is.
 
-1. **`DEFECT_045` — the solver ignores the effective stack.** Open, Medium.
+1. ~~**`DEFECT_045` — the solver ignores the effective stack.**~~ —
+   **done 2026-11-14** in `0.20.7`. Was: Open, Medium.
    Wrong payoffs on short stacks. It also sits under EPIC-130, which
    times this solver as the baseline — fix it first, or the baseline is
    wrong. ([`DEFECT_045`](defects/DEFECT_045_game_tree_ignores_the_effective_stack.md))
@@ -136,7 +137,7 @@ TODO marked done; two new markers (`regret.rs:94`, `seven.rs:179`).
 
 The ones that read as more than cleanup:
 
-- **`DEFECT_045`** — see **Do next** #1.
+- ~~**`DEFECT_045`**~~ — fixed in `0.20.7`.
 - **EPIC-93 follow-ups**, all open: two readings of a recorded `call`;
   `validate()` rough edges; no cursor for partial records; fixed-limit
   replay posts no ante; Omaha results not checked.
@@ -173,7 +174,7 @@ close them.
 
 Not authored by the user. Keep, edit, or delete.
 
-- 🤖 **Fix `DEFECT_045` before EPIC-130 times the solver.** New this pass.
+- ~~🤖 **Fix `DEFECT_045` before EPIC-130 times the solver.**~~ — done, `0.20.7`.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.x` with a real
   `cargo check`.** The `0.20.5` audit skipped every check.
 - 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`.**
