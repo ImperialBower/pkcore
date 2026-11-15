@@ -91,8 +91,9 @@ pub fn cache_key(config: &SolverConfig) -> u64 {
 
 /// A directory-backed cache of solved GTO spots.
 ///
-/// Each entry is stored as `{key:016x}.bin` inside `dir`. Files are
-/// independent postcard-serialized [`SolverResult`] values.
+/// Each entry is stored as `{key:016x}.bin` inside `dir`: the bytes `PKSC`,
+/// a little-endian `u32` format version, then a postcard-serialized
+/// [`SolverResult`]. An entry with another version is a miss.
 ///
 /// # Examples
 ///
@@ -107,6 +108,16 @@ pub struct SolverCache {
 }
 
 impl SolverCache {
+    /// Every entry file starts with these bytes.
+    const MAGIC: [u8; 4] = *b"PKSC";
+
+    /// Format of the solver's output. Bump it whenever a change to the
+    /// solver changes what it returns for the same config, so old entries
+    /// miss instead of coming back as current.
+    ///
+    /// `1`: `0.20.9` — after the `0.20.7` effective-stack cap (`DEFECT_045`).
+    const FORMAT_VERSION: u32 = 1;
+
     /// Opens a cache backed by `dir`, creating the directory if it does not
     /// exist.
     ///
@@ -150,9 +161,9 @@ impl SolverCache {
     /// ```
     #[must_use]
     pub fn get(&self, config: &SolverConfig) -> Option<SolverResult> {
-        let path = self.entry_path(config);
-        let bytes = fs::read(path).ok()?;
-        SolverResult::from_binary_bytes(&bytes).ok()
+        let bytes = fs::read(self.entry_path(config)).ok()?;
+        let payload = Self::strip_header(&bytes)?;
+        SolverResult::from_binary_bytes(payload).ok()
     }
 
     /// Stores `result` under the key derived from `config`.
@@ -182,7 +193,9 @@ impl SolverCache {
     /// assert!(cache.contains(&config));
     /// ```
     pub fn put(&self, config: &SolverConfig, result: &SolverResult) -> Result<(), SolverError> {
-        let bytes = result.to_binary_bytes()?;
+        let mut bytes = Self::MAGIC.to_vec();
+        bytes.extend_from_slice(&Self::FORMAT_VERSION.to_le_bytes());
+        bytes.extend_from_slice(&result.to_binary_bytes()?);
         fs::write(self.entry_path(config), bytes)?;
         Ok(())
     }
@@ -205,7 +218,7 @@ impl SolverCache {
     /// ```
     #[must_use]
     pub fn contains(&self, config: &SolverConfig) -> bool {
-        self.entry_path(config).exists()
+        self.get(config).is_some()
     }
 
     /// Returns the number of cached entries (`.bin` files) in the cache
@@ -379,6 +392,14 @@ impl SolverCache {
     }
 
     /// Returns the full path for the entry file of `config`.
+    /// The result bytes after the header, or `None` when the magic or the
+    /// format version does not match.
+    fn strip_header(bytes: &[u8]) -> Option<&[u8]> {
+        let rest = bytes.strip_prefix(&Self::MAGIC)?;
+        let (version, payload) = rest.split_first_chunk::<4>()?;
+        (u32::from_le_bytes(*version) == Self::FORMAT_VERSION).then_some(payload)
+    }
+
     fn entry_path(&self, config: &SolverConfig) -> PathBuf {
         self.dir.join(format!("{:016x}.bin", Self::cache_key(config)))
     }
@@ -657,6 +678,30 @@ mod tests {
         assert!(!cache.is_empty());
         cache.clear().unwrap();
         assert!(cache.is_empty());
+        assert!(!cache.contains(&config));
+    }
+
+    #[test]
+    fn solver_cache_misses_an_entry_without_the_format_header() {
+        // An entry written before the format header existed: bare result bytes.
+        let cache = temp_cache();
+        let config = river_config();
+        let result = Solver::new(config.clone()).solve();
+        fs::write(cache.entry_path(&config), result.to_binary_bytes().unwrap()).unwrap();
+        assert!(cache.get(&config).is_none());
+        assert!(!cache.contains(&config));
+    }
+
+    #[test]
+    fn solver_cache_misses_an_entry_from_another_format_version() {
+        let cache = temp_cache();
+        let config = river_config();
+        let result = Solver::new(config.clone()).solve();
+        let mut bytes = SolverCache::MAGIC.to_vec();
+        bytes.extend_from_slice(&(SolverCache::FORMAT_VERSION + 1).to_le_bytes());
+        bytes.extend_from_slice(&result.to_binary_bytes().unwrap());
+        fs::write(cache.entry_path(&config), bytes).unwrap();
+        assert!(cache.get(&config).is_none());
         assert!(!cache.contains(&config));
     }
 

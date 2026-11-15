@@ -32,10 +32,8 @@ Ranked by risk first, then by how cheap the fix is.
 2. **Remove the 25 `#[deprecated(since = "0.16.0")]` wrappers.** Still all
    25 (plus 5 older ones from `0.0.2`, `0.0.3`, `0.8.0`). Breaking; do it
    with #1 so consumers take one hit.
-3. **🤖 Make `solve()` reproducible before EPIC-130 records fixtures.** Now
-   that `DEFECT_045` is fixed, the next thing that skews the EPIC-130
-   baseline is `HashSet<Combo>` iteration order
-   ([`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md), `src/analysis/gto/solver.rs`).
+3. ~~**🤖 Make `solve()` reproducible before EPIC-130 records fixtures.**~~ —
+   **done** in `0.20.9`, with the `SolverCache` format version.
 4. **EPIC-124a — TableAction Event Log** (8 rows Planned). It clears the 25
    HARD ontology findings, which unblocks the EPIC-124 CI gate and
    `docs/PKCORE_LEDGER.md`.
@@ -137,9 +135,8 @@ markers this pass; the `0.20.7` fix added none. **🤖 Review re-run
 
 The ones that read as more than cleanup:
 
-- **🤖 `SolverCache` serves stale results** — the key has no solver
-  version, so entries written before `0.20.7` come back as current. Do this
-  with **Do next** #3.
+- ~~**🤖 `SolverCache` serves stale results**~~ — fixed in `0.20.9`
+  (format version in each entry).
 - **🤖 `EquityEngine::compute` can panic** when dead cards use up the deck
   (`src/analysis/equity/engine.rs:333-340`).
 

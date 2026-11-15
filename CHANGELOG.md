@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.9] - 2026-11-15
+
+### Fixed
+
+- **`Solver::solve` now gives the same result every run.** Ranges are hash
+  sets, so the order of hand pairs changed between runs and between two
+  separately parsed copies of the same range. CFR updates regrets pair by
+  pair, so the order changed the equilibrium and the exploitability. The
+  solver now sorts each side's hands (and drops duplicates) before it pairs
+  them, and sums the best response in a fixed order. EPIC-130 needs this to
+  record fixtures.
+- **`SolverCache` no longer serves results from older solver code.** Entry
+  files now start with a `PKSC` header and a format version. An entry with
+  no header or another version is a miss, so results cached before the
+  `0.20.7` effective-stack fix are solved again. Existing cache files all
+  become misses once. `contains` now agrees with `get`: it is `true` only
+  for an entry that `get` can read.
+
 ## [0.20.8] - 2026-11-15
 
 ### Changed

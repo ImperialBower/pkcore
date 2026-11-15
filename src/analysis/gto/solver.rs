@@ -67,6 +67,7 @@ use crate::card::Card;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -1128,16 +1129,8 @@ impl Solver {
     /// `board_cards` is a slice so the same function works for 5-card boards
     /// (river trees) and 4-card boards (turn trees where the river is unknown).
     fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board_cards: &[Card]) -> Vec<(Two, Two)> {
-        let oop_hands: Vec<Two> = oop_range
-            .iter()
-            .flat_map(|combo| Twos::from(*combo).to_vec())
-            .filter(|&h| !Solver::conflicts_with_board(h, board_cards))
-            .collect();
-        let ip_hands: Vec<Two> = ip_range
-            .iter()
-            .flat_map(|combo| Twos::from(*combo).to_vec())
-            .filter(|&h| !Solver::conflicts_with_board(h, board_cards))
-            .collect();
+        let oop_hands = Solver::sorted_hands(oop_range, board_cards);
+        let ip_hands = Solver::sorted_hands(ip_range, board_cards);
 
         oop_hands
             .iter()
@@ -1148,6 +1141,21 @@ impl Solver {
                     .map(move |&ip| (oop, ip))
             })
             .collect()
+    }
+
+    /// The range's hands that miss the board, sorted and without duplicates.
+    ///
+    /// `Combos` and `Twos` are hash sets, so their order changes from run to
+    /// run. CFR updates regrets pair by pair, so the order changes the result.
+    fn sorted_hands(range: &Combos, board_cards: &[Card]) -> Vec<Two> {
+        let mut hands: Vec<Two> = range
+            .iter()
+            .flat_map(|combo| Twos::from(*combo).to_vec())
+            .filter(|&h| !Solver::conflicts_with_board(h, board_cards))
+            .collect();
+        hands.sort_unstable();
+        hands.dedup();
+        hands
     }
 
     /// Returns `true` if either card in `hand` appears among the given board cards.
@@ -1381,14 +1389,15 @@ impl Solver {
         if self.hand_pairs.is_empty() {
             return (0.0, 0.0);
         }
-        let mut oop_opponents: HashMap<Two, Vec<Two>> = HashMap::new();
-        let mut ip_opponents: HashMap<Two, Vec<Two>> = HashMap::new();
+        // BTreeMap, not HashMap: the float sum below must run in a fixed order.
+        let mut oop_opponents: BTreeMap<Two, Vec<Two>> = BTreeMap::new();
+        let mut ip_opponents: BTreeMap<Two, Vec<Two>> = BTreeMap::new();
         for &(oop_hand, ip_hand) in &self.hand_pairs {
             oop_opponents.entry(oop_hand).or_default().push(ip_hand);
             ip_opponents.entry(ip_hand).or_default().push(oop_hand);
         }
         let root = self.tree.root_id();
-        let total = |responder: Player, opponents_of: &HashMap<Two, Vec<Two>>| -> f64 {
+        let total = |responder: Player, opponents_of: &BTreeMap<Two, Vec<Two>>| -> f64 {
             opponents_of
                 .iter()
                 .map(|(&hand, opponents)| {
@@ -1581,6 +1590,34 @@ mod analysis__gto__solver__tests {
         let ip = Combos::from_str("QQ,JJ").unwrap_or_default();
         let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
         Solver::new(SolverConfig::new(oop, ip, board, 1_000, 200))
+    }
+
+    #[test]
+    fn solve_is_reproducible_across_freshly_parsed_ranges() {
+        // Each `Combos::from_str` builds a new `HashSet` with its own random
+        // hasher, so iteration order differs between the two solvers.
+        let solve = || {
+            let config = SolverConfig::new(
+                Combos::from_str("AA,KK,QQ,AKs,AQs").unwrap_or_default(),
+                Combos::from_str("JJ,TT,99,AJs,KQs").unwrap_or_default(),
+                Board::from_str("Jd 8c 5h 3s 2d").unwrap_or_default(),
+                1_000,
+                200,
+            )
+            .with_max_iterations(20);
+            let mut solver = Solver::new(config);
+            let result = solver.solve();
+            let nodes: Vec<NodeId> = solver.strategy_sum.keys().copied().collect();
+            (result, nodes)
+        };
+        let (first, nodes) = solve();
+        for _ in 0..4 {
+            let (next, _) = solve();
+            assert_eq!(next.exploitability.to_bits(), first.exploitability.to_bits());
+            for &node in &nodes {
+                assert_eq!(next.equilibrium.get_map(node), first.equilibrium.get_map(node));
+            }
+        }
     }
 
     #[test]
