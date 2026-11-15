@@ -1,28 +1,22 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-11-13** against `main` @
-> `de253982`, pkcore **`0.20.6`**. Working tree clean. `CHANGELOG.md` has no
+> Refreshed by the `/backlog` skill on **2026-11-15** against `main` @
+> `0d715059`, pkcore **`0.20.8`**. Working tree clean. `CHANGELOG.md` has no
 > `[Unreleased]` section (house rule). Items tagged 🤖 are machine-proposed —
 > review before adopting. Tech-debt detail lives in
 > [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the `6d1bfac9` pass (2026-10-26, `0.20.1`).** Five
-> releases, all on 2026-10-26 to 10-28; nothing merged since 10-28:
+> **What changed since the `de253982` pass (2026-11-13, `0.20.6`):**
 >
-> - **`0.20.2`** — `DEFECT_044` fixed (big blind skips players past empty
->   chairs).
-> - **`0.20.3`** — `DEFECT_048`–`050` fixed; source comments point to
->   PokerHandEvaluator.
-> - **`0.20.4`** — **EPIC-124 Kernel Ontology**, Phases 0–7:
->   `pkcore.ontology.toml`, 49 invariants, 48 pinned. CI gate and ledger wait
->   on 25 HARD findings (event cases), which **EPIC-124a** plans to fix.
-> - **`0.20.5`** — fuzz targets (EPIC-94); `RELEASE_AUDIT_0.20.5`.
-> - **`0.20.6`** — `docs/` sorted into subfolders.
-> - **New: the pksolver block, EPIC-130–139** — ten Planned EPICs for a
->   sibling `pksolver` crate. EPIC-130 (Reference Spot) gates the rest.
-> - **New open defect: `DEFECT_045`** — the game tree ignores the effective
->   stack.
-> - Six Dependabot PRs opened 2026-11-01 (#160–#165).
+> - **`0.20.7`** — `DEFECT_045` fixed: the GTO game tree is capped at the
+>   effective stack (PR #166). Tagged `v0.20.7`; on crates.io.
+> - **`0.20.8`** — Dependabot PRs #160–#164 folded into PR #165 and merged.
+>   CI only. Not tagged, not published.
+> - **New: [EPIC-125 Dioxus Spike](epics/EPIC-125_Dioxus_Spike.md)** —
+>   Planned. Six throwaway Dioxus apps in `spikes/dioxus/`; go / no-go
+>   verdict for EPIC-137 Decision 1. Next free pkcore number: `EPIC-126`.
+> - **PR #144 (Gherkin suite) closed** 2026-11-15, not merged.
+> - Marker census unchanged: 54 markers, 344 `fn test_` names in `src/`.
 
 ---
 
@@ -30,51 +24,54 @@
 
 Ranked by risk first, then by how cheap the fix is.
 
-1. ~~**`DEFECT_045` — the solver ignores the effective stack.**~~ —
-   **done 2026-11-14** in `0.20.7`. Was: Open, Medium.
-   Wrong payoffs on short stacks. It also sits under EPIC-130, which
-   times this solver as the baseline — fix it first, or the baseline is
-   wrong. ([`DEFECT_045`](defects/DEFECT_045_game_tree_ignores_the_effective_stack.md))
-2. **Merge or close the Dependabot PRs.** #165 consolidates #160–#164
-   (`0.20.7`). Twelve days old. Cheap.
-3. **Release audit for the breaking releases — still not done.**
+1. **Release audit for the breaking releases — still not done.**
    [`RELEASE_AUDIT_0.20.5`](audits/RELEASE_AUDIT_0.20.5.md) audited only
    `0.20.5`, and every `cargo check` was SKIP. The breaking changes in
    `0.15.0`, `0.18.0` and `0.19.0` are still unchecked downstream. Eight
    consumers still pin `0.11.0`.
-4. **Remove the 25 `#[deprecated(since = "0.16.0")]` wrappers.** Still all
-   25. Breaking; do it with #3 so consumers take one hit.
-5. **EPIC-124a — TableAction Event Log** (8 rows Planned). It clears the 25
+2. **Remove the 25 `#[deprecated(since = "0.16.0")]` wrappers.** Still all
+   25 (plus 5 older ones from `0.0.2`, `0.0.3`, `0.8.0`). Breaking; do it
+   with #1 so consumers take one hit.
+3. **🤖 Make `solve()` reproducible before EPIC-130 records fixtures.** Now
+   that `DEFECT_045` is fixed, the next thing that skews the EPIC-130
+   baseline is `HashSet<Combo>` iteration order
+   ([`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md), `src/analysis/gto/solver.rs`).
+4. **EPIC-124a — TableAction Event Log** (8 rows Planned). It clears the 25
    HARD ontology findings, which unblocks the EPIC-124 CI gate and
    `docs/PKCORE_LEDGER.md`.
-6. **Fourth-block EPICs** — all still Planned, asked for by bowery:
+5. **Fourth-block EPICs** — all still Planned, asked for by bowery:
    [EPIC-120](epics/EPIC-120_Suit_Specific_Ranges.md),
    [EPIC-121](epics/EPIC-121_Hand_Categories.md),
    [EPIC-122](epics/EPIC-122_Exact_Equity.md). EPIC-122 Phase 4 is the
    same issue as the 🤖 "sequential seat sampling is not uniform" finding.
-7. **pksolver block start: [EPIC-130 Reference Spot](epics/EPIC-130_Reference_Spot.md)** —
+6. **pksolver block start: [EPIC-130 Reference Spot](epics/EPIC-130_Reference_Spot.md)** —
    measure the existing solver. Needs the `pksolver` repo (Work Item 0a).
-8. **Open PR [#144](https://github.com/ImperialBower/pkcore/pull/144) —
-   Gherkin suite.** Now six weeks old, `0.15.4` base. Merge or close.
-9. **EPIC-81 — ckc-rs** — 16 rows Planned; blocker row still says
-   *"blocker"* though unblocked 2026-09-19. Third pass unchanged.
-10. **Kernel-purity fixes** #5, #6, #7, #13, and batch #9–#12
-    ([`audits/KERNEL_PURITY_AUDIT.md`](audits/KERNEL_PURITY_AUDIT.md#ranked-fixes)).
-11. **Carried, no movement:** EPIC-89 Phase 0, EPIC-84 Phase 1, EPIC-92
-    Phase 0, EPIC-86.
+   [EPIC-125](epics/EPIC-125_Dioxus_Spike.md) can run beside it; it answers
+   EPIC-137's UI question.
+7. **EPIC-81 — ckc-rs** — 16 rows Planned; blocker row still says
+   *"blocker"* though unblocked 2026-09-19. Fourth pass unchanged.
+8. **Kernel-purity fixes** #5, #6, #7, #13, and batch #9–#12
+   ([`audits/KERNEL_PURITY_AUDIT.md`](audits/KERNEL_PURITY_AUDIT.md#ranked-fixes)).
+9. **Carried, no movement:** EPIC-89 Phase 0, EPIC-84 Phase 1, EPIC-92
+   Phase 0, EPIC-86.
+
+Done since last pass: ~~`DEFECT_045`~~ (`0.20.7`), ~~Dependabot PRs~~
+(`0.20.8`), ~~PR #144~~ (closed).
 
 ---
 
 ## Release follow-through
 
-- **crates.io is at `0.20.5`; the repo is at `0.20.6`** (docs only, so
+- **crates.io is at `0.20.7`; the repo is at `0.20.8`** (CI only, so
   publishing is optional).
-- **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`. All others from
-  `v0.17.0` up are tagged.
+- **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`. All others
+  from `v0.17.0` up are tagged.
 - **Consumer pins** (per `RELEASE_AUDIT_0.20.5`): bowery `0.20.0`;
   pkarena0-web `0.12.1`; pkdealer, pkgto-web, pkkuhn-web, pktui, pkcore.py,
   pkcore.js, pkwasm `0.11.0`; pkodds `0.1.4`. The pkodds `Method::Hup`
   `cargo check` failure is still unchecked.
+- **`0.20.7` changes solver output** for any spot where a bet tops the
+  stack. Consumers that cache solver results (pkgto-web) get new numbers.
 - **pkgto-web / pkkuhn-web** still build with default features on; the audit
   says switch to `default-features = false`. pkgto-web becomes the pksolver
   app (EPIC-137).
@@ -87,8 +84,10 @@ Ranked by risk first, then by how cheap the fix is.
 
 Read each EPIC before trusting it as a plan.
 
-- **EPIC-120 / 121 / 122** — fourth block, see **Do next** #6.
-- **EPIC-124a — TableAction Event Log** — 8 rows Planned; see **Do next** #5.
+- **EPIC-120 / 121 / 122** — fourth block, see **Do next** #5.
+- **EPIC-124a — TableAction Event Log** — 8 rows Planned; see **Do next** #4.
+- **EPIC-125 — Dioxus Spike** — Planned, nothing built. Spike: example apps
+  and a verdict, no pkcore API.
 - **EPIC-130–139 — the pksolver block** — Reference Spot, Vectorised
   Engine, Trees, Isomorphism and Memory, Solve API, Browser Facade, Threads
   in the Browser, The App, Solve from a Hand, Bunching from Data. All
@@ -131,13 +130,11 @@ documentation. **EPIC-19a** is an exploratory note.
 
 ## Tech debt
 
-Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md), refreshed this
-pass: `DEFECT_045` added as open; `SevenEval` `Ord` and the `Combo` logging
-TODO marked done; two new markers (`regret.rs:94`, `seven.rs:179`).
+Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). No new
+markers this pass; the `0.20.7` fix added none.
 
 The ones that read as more than cleanup:
 
-- ~~**`DEFECT_045`**~~ — fixed in `0.20.7`.
 - **EPIC-93 follow-ups**, all open: two readings of a recorded `call`;
   `validate()` rough edges; no cursor for partial records; fixed-limit
   replay posts no ante; Omaha results not checked.
@@ -149,7 +146,7 @@ The ones that read as more than cleanup:
   seats stay in the hand; `EightOrBetter` sees 6 of 57 lows; chop counted as
   zero EV; PLO bots get 0.0 preflop equity; dead button turns off every
   bot's position; the solver's `HashSet` order makes `solve()`
-  non-reproducible (matters for EPIC-130 fixtures).
+  non-reproducible (see **Do next** #3).
 - **344 `fn test_` names** in `src/` against the no-prefix house rule.
 
 ---
@@ -160,10 +157,7 @@ The ones that read as more than cleanup:
   (`enhancement`, 2026-03-11).
 - [#49 — Client Event Shorthand Message](https://github.com/ImperialBower/pkcore/issues/49)
   (2026-02-25).
-- [PR #165](https://github.com/ImperialBower/pkcore/pull/165) — consolidates
-  Dependabot #160–#164 (2026-11-01).
-- [PR #144 — Gherkin acceptance suite](https://github.com/ImperialBower/pkcore/pull/144)
-  (2026-10-04).
+- No open PRs.
 
 Neither issue is referenced by any EPIC. Confirm they are still wanted, or
 close them.
@@ -174,15 +168,18 @@ close them.
 
 Not authored by the user. Keep, edit, or delete.
 
-- ~~🤖 **Fix `DEFECT_045` before EPIC-130 times the solver.**~~ — done, `0.20.7`.
+- 🤖 **Make `solve()` deterministic** (sort combos or use `BTreeSet`) before
+  EPIC-130 records fixtures. See **Do next** #3.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.x` with a real
   `cargo check`.** The `0.20.5` audit skipped every check.
-- 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`.**
+- 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`.**
+- 🤖 **Remove the 5 pre-`0.16.0` deprecations** (`0.0.2`, `0.0.3`, `0.8.0`)
+  in the same breaking release as the 25.
 - 🤖 **Rename `EPIC-93` and `EPIC-123` with `-CLOSED`.**
 - 🤖 **Flip EPIC-81's blocker row**
-  (`docs/epics/EPIC-81_Ckc_Rs_Dependency.md:15`). Third pass open.
+  (`docs/epics/EPIC-81_Ckc_Rs_Dependency.md:15`). Fourth pass open.
 - 🤖 **Add the missing rows to `ROADMAP.md`'s pkcore Epics table** — 83, 84,
-  85, 88, 90, 91, 93, 94, 124, 124a, and the 130–139 block.
+  85, 88, 90, 91, 93, 94, 124, 124a, 125, and the 130–139 block.
 - 🤖 **Fix EPIC-85's stale npm row.**
 - 🤖 **Mark `EPIC-79b_Sealed_Deck.md` as superseded.**
 - 🤖 **`docs/sidequests/SQ_graphify_comments.md` looks like stray tool

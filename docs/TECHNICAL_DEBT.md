@@ -7,8 +7,13 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> **Last refreshed 2026-11-13** against `main` @ `de253982`, pkcore `0.20.6`
-> (working tree clean). Since the `6d1bfac9` pass (`0.20.1`): `0.20.2` fixed
+> **Last refreshed 2026-11-15** against `main` @ `0d715059`, pkcore `0.20.8`
+> (working tree clean). Since the `de253982` pass: `0.20.7` fixed
+> `DEFECT_045` (already marked done below); `0.20.8` is CI only. No new
+> markers (54), `fn test_` count still **344**. Automated review not re-run.
+>
+> Previous header (2026-11-13, `de253982`, `0.20.6`) kept for history:
+> Since the `6d1bfac9` pass (`0.20.1`): `0.20.2` fixed
 > `DEFECT_044`; `0.20.3` fixed `DEFECT_048`–`050` (found by EPIC-124 Phase 6;
 > `DEFECT_049` closes the 🤖 `SevenEval` `Ord` finding); `0.20.5` removed the
 > `TODO: Add logging` in `Combo::from_str`. `DEFECT_045` (game tree ignores
