@@ -413,7 +413,8 @@ pub struct SolverConfig {
     pub villain_range: Combos,
     /// The board at the start of the solve (3–5 cards).
     pub board: Board,
-    /// Effective stack depth in chips (the smaller of the two stacks).
+    /// Effective stack depth in chips (the smaller of the two stacks). The
+    /// game tree caps every bet at what is left of it; `0` means check down.
     pub effective_stack: u64,
     /// Chips already in the pot at the start of the solve.
     pub pot: u64,

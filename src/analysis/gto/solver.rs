@@ -1584,6 +1584,26 @@ mod analysis__gto__solver__tests {
     }
 
     #[test]
+    fn short_stack_payoff_never_exceeds_the_stack() {
+        // DEFECT_045: pot 500, stack 100. The most OOP can win is pot / 2 + stack.
+        let config = SolverConfig::new(
+            Combos::from_str("AA").unwrap_or_default(),
+            Combos::from_str("KK").unwrap_or_default(),
+            Board::from_str("Jd 8c 5h 3s 2d").unwrap_or_default(),
+            100,
+            500,
+        )
+        .with_bet_sizings(BetSizings::uniform(vec![BetSize::two_pot()]));
+        let solver = Solver::new(config);
+        let (oop_best, _) = solver.best_response_values(&solver.equilibrium());
+        assert!(oop_best > 0.0);
+        assert!(
+            oop_best <= 350.0,
+            "OOP best response {oop_best} is above pot / 2 + stack"
+        );
+    }
+
+    #[test]
     fn test_solver_new_starts_at_iteration_zero() {
         assert_eq!(make_solver().iteration(), 0);
     }

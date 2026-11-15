@@ -623,7 +623,24 @@ impl GameTree {
     ///     assert_eq!(root.player, Player::Oop);
     ///     assert_eq!(root.actions.len(), 2); // Check + Bet(1/2)
     /// }
+    ///
+    /// // A bet is capped by the effective stack: stack 100, pot 500, 2x pot.
+    /// let short = SolverConfig::new(
+    ///     Combos::default(), Combos::default(),
+    ///     Board::default(), 100, 500,
+    /// ).with_bet_sizings(BetSizings::uniform(vec![BetSize::two_pot()]));
+    /// let tree = GameTree::build_river(&short);
+    /// if let Node::Action(root) = tree.root() {
+    ///     if let Some(Node::Action(facing)) = tree.get(root.children[1]) {
+    ///         assert_eq!(facing.pot, 600); // 500 + an all-in of 100
+    ///     }
+    /// }
     /// ```
+    ///
+    /// Every bet is capped at the chips the players have left
+    /// (`effective_stack` less what earlier streets put in). A bet that comes
+    /// to zero chips is dropped, and sizes that cap to the same all-in keep one
+    /// `Bet` action, labelled with the smallest size.
     #[must_use]
     pub fn build_river(config: &SolverConfig) -> Self {
         let mut nodes: Vec<Node> = Vec::new();
@@ -635,6 +652,7 @@ impl GameTree {
             &mut nodes,
             Player::Oop,
             config.pot,
+            config.effective_stack,
             &config.bet_sizings.river,
             false,
             None,
@@ -703,6 +721,7 @@ impl GameTree {
             &mut nodes,
             Player::Oop,
             config.pot,
+            config.effective_stack,
             &config.bet_sizings.turn,
             false,
             Some((&runout_cards, &config.bet_sizings.river)),
@@ -751,6 +770,7 @@ impl GameTree {
         nodes: &mut Vec<Node>,
         player: Player,
         pot: u64,
+        remaining: u64,
         bet_sizes: &[BetSize],
         oop_checked: bool,
         runout: Option<(&[Card], &[BetSize])>,
@@ -761,17 +781,17 @@ impl GameTree {
         // ── Check branch ──────────────────────────────────────────────────
         actions.push(Action::Check);
         let check_child = if oop_checked {
-            Self::build_showdown_cont(nodes, pot, runout)
+            Self::build_showdown_cont(nodes, pot, remaining, runout)
         } else {
-            Self::build_open_node(nodes, player.other(), pot, bet_sizes, true, runout)
+            Self::build_open_node(nodes, player.other(), pot, remaining, bet_sizes, true, runout)
         };
         children.push(check_child);
 
         // ── Bet branches ──────────────────────────────────────────────────
-        for &size in bet_sizes {
-            let bet_chips = size.chips(pot);
+        for (size, bet_chips) in Self::capped_bets(pot, remaining, bet_sizes) {
             actions.push(Action::Bet(size));
-            let bet_child = Self::build_facing_bet_node(nodes, player.other(), pot, bet_chips, player, runout);
+            let bet_child =
+                Self::build_facing_bet_node(nodes, player.other(), pot, remaining, bet_chips, player, runout);
             children.push(bet_child);
         }
 
@@ -796,6 +816,7 @@ impl GameTree {
         nodes: &mut Vec<Node>,
         player: Player,
         pot: u64,
+        remaining: u64,
         bet_chips: u64,
         aggressor: Player,
         runout: Option<(&[Card], &[BetSize])>,
@@ -803,7 +824,7 @@ impl GameTree {
         // DEFECT_029: the uncalled bet goes back, so the fold pot is `pot`.
         let call_pot = pot + 2 * bet_chips;
         let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, pot, None);
-        let call_id = Self::build_showdown_cont(nodes, call_pot, runout);
+        let call_id = Self::build_showdown_cont(nodes, call_pot, remaining.saturating_sub(bet_chips), runout);
 
         let id = NodeId::new(nodes.len());
         nodes.push(Node::Action(ActionNode {
@@ -820,10 +841,17 @@ impl GameTree {
     /// - `runout = None` → `Terminal(Showdown)` (river-only tree, board is fixed).
     /// - `runout = Some((cards, river_sizes))` → `Chance` node with one river
     ///   action subtree per runout card.
-    fn build_showdown_cont(nodes: &mut Vec<Node>, pot: u64, runout: Option<(&[Card], &[BetSize])>) -> NodeId {
+    fn build_showdown_cont(
+        nodes: &mut Vec<Node>,
+        pot: u64,
+        remaining: u64,
+        runout: Option<(&[Card], &[BetSize])>,
+    ) -> NodeId {
         match runout {
             None => Self::push_terminal(nodes, TerminalOutcome::Showdown, pot, None),
-            Some((runout_cards, river_sizes)) => Self::build_river_chance_node(nodes, pot, runout_cards, river_sizes),
+            Some((runout_cards, river_sizes)) => {
+                Self::build_river_chance_node(nodes, pot, remaining, runout_cards, river_sizes)
+            }
         }
     }
 
@@ -842,6 +870,7 @@ impl GameTree {
     fn build_river_chance_node(
         nodes: &mut Vec<Node>,
         pot: u64,
+        remaining: u64,
         runout_cards: &[Card],
         river_sizes: &[BetSize],
     ) -> NodeId {
@@ -850,7 +879,7 @@ impl GameTree {
             // Each runout gets its own river action subtree; showdown terminals
             // in this subtree carry `runout_river: Some(card)` so the solver can
             // look up the correct hand comparison in the showdown map.
-            let river_root = Self::build_river_subtree_for_runout(nodes, pot, river_sizes, card);
+            let river_root = Self::build_river_subtree_for_runout(nodes, pot, remaining, river_sizes, card);
             chance_children.push((card, river_root));
         }
         let id = NodeId::new(nodes.len());
@@ -865,8 +894,14 @@ impl GameTree {
     ///
     /// Identical to `build_open_node` for a river tree, except that showdown
     /// terminals carry `runout_river: Some(card)`.
-    fn build_river_subtree_for_runout(nodes: &mut Vec<Node>, pot: u64, river_sizes: &[BetSize], card: Card) -> NodeId {
-        Self::build_open_node_with_card(nodes, Player::Oop, pot, river_sizes, false, card)
+    fn build_river_subtree_for_runout(
+        nodes: &mut Vec<Node>,
+        pot: u64,
+        remaining: u64,
+        river_sizes: &[BetSize],
+        card: Card,
+    ) -> NodeId {
+        Self::build_open_node_with_card(nodes, Player::Oop, pot, remaining, river_sizes, false, card)
     }
 
     /// Like `build_open_node` but records `runout_river = Some(card)` on
@@ -875,6 +910,7 @@ impl GameTree {
         nodes: &mut Vec<Node>,
         player: Player,
         pot: u64,
+        remaining: u64,
         bet_sizes: &[BetSize],
         oop_checked: bool,
         card: Card,
@@ -886,12 +922,11 @@ impl GameTree {
         let check_child = if oop_checked {
             Self::push_terminal(nodes, TerminalOutcome::Showdown, pot, Some(card))
         } else {
-            Self::build_open_node_with_card(nodes, player.other(), pot, bet_sizes, true, card)
+            Self::build_open_node_with_card(nodes, player.other(), pot, remaining, bet_sizes, true, card)
         };
         children.push(check_child);
 
-        for &size in bet_sizes {
-            let bet_chips = size.chips(pot);
+        for (size, bet_chips) in Self::capped_bets(pot, remaining, bet_sizes) {
             actions.push(Action::Bet(size));
             let bet_child = Self::build_facing_bet_node_with_card(nodes, player.other(), pot, bet_chips, player, card);
             children.push(bet_child);
@@ -929,6 +964,25 @@ impl GameTree {
             children: vec![fold_id, call_id],
         }));
         id
+    }
+
+    /// The legal bets at an open node: each size in chips, capped at
+    /// `remaining` (`DEFECT_045`). A bet of zero chips is dropped. Sizes that cap
+    /// to the same all-in keep one action, labelled with the smallest size.
+    fn capped_bets(pot: u64, remaining: u64, bet_sizes: &[BetSize]) -> Vec<(BetSize, u64)> {
+        let mut bets: Vec<(BetSize, u64)> = Vec::with_capacity(bet_sizes.len());
+        for &size in bet_sizes {
+            let chips = size.chips(pot).min(remaining);
+            if chips == 0 {
+                continue;
+            }
+            match bets.iter_mut().find(|(_, kept)| *kept == chips) {
+                Some(kept) if size.chips(pot) < kept.0.chips(pot) => kept.0 = size,
+                Some(_) => {}
+                None => bets.push((size, chips)),
+            }
+        }
+        bets
     }
 
     /// Pushes a terminal node and returns its id.
@@ -1301,5 +1355,108 @@ mod tests {
     fn turn_tree_river_fold_terminals_hold_the_pot_before_the_uncalled_bet() {
         let tree = GameTree::build_turn(&turn_config());
         assert!(assert_fold_pots_exclude_the_uncalled_bet(&tree) > 0);
+    }
+
+    // ── DEFECT_045: the tree is capped by the effective stack ────────────────
+
+    struct StackProbe;
+
+    impl StackProbe {
+        const SIZES: [fn() -> BetSize; 4] = [BetSize::third_pot, BetSize::half_pot, BetSize::pot, BetSize::two_pot];
+
+        fn config(effective_stack: u64, pot: u64, sizes: Vec<BetSize>) -> SolverConfig {
+            SolverConfig::new(
+                Combos::default(),
+                Combos::default(),
+                Board::from_str("2h 3d 4c 5s 6h").unwrap(),
+                effective_stack,
+                pot,
+            )
+            .with_bet_sizings(BetSizings::uniform(sizes))
+        }
+
+        fn action(tree: &GameTree, id: NodeId) -> &ActionNode {
+            match tree.get(id) {
+                Some(Node::Action(node)) => node,
+                other => panic!("expected an action node at {id}, got {other:?}"),
+            }
+        }
+
+        fn terminal(tree: &GameTree, id: NodeId) -> &TerminalNode {
+            match tree.get(id) {
+                Some(Node::Terminal(node)) => node,
+                other => panic!("expected a terminal node at {id}, got {other:?}"),
+            }
+        }
+
+        fn max_terminal_pot(tree: &GameTree) -> u64 {
+            (0..tree.len())
+                .filter_map(|i| match tree.get(NodeId::new(i)) {
+                    Some(Node::Terminal(node)) => Some(node.pot),
+                    _ => None,
+                })
+                .max()
+                .unwrap_or(0)
+        }
+    }
+
+    use std::str::FromStr;
+
+    #[test]
+    fn build_river_caps_a_bet_at_the_effective_stack() {
+        let tree = GameTree::build_river(&StackProbe::config(100, 500, vec![BetSize::two_pot()]));
+        let root = StackProbe::action(&tree, tree.root_id());
+        let facing = StackProbe::action(&tree, root.children[1]);
+        assert_eq!(facing.pot, 600);
+        assert_eq!(StackProbe::terminal(&tree, facing.children[1]).pot, 700);
+    }
+
+    #[test]
+    fn build_river_merges_sizes_that_cap_to_the_same_all_in() {
+        let tree = GameTree::build_river(&StackProbe::config(100, 500, vec![BetSize::pot(), BetSize::two_pot()]));
+        let root = StackProbe::action(&tree, tree.root_id());
+        assert_eq!(root.actions, vec![Action::Check, Action::Bet(BetSize::pot())]);
+    }
+
+    #[test]
+    fn build_river_drops_a_bet_that_rounds_to_zero() {
+        let tree = GameTree::build_river(&StackProbe::config(100, 2, vec![BetSize::third_pot()]));
+        let root = StackProbe::action(&tree, tree.root_id());
+        assert_eq!(root.actions, vec![Action::Check]);
+    }
+
+    #[test]
+    fn build_river_with_no_stack_only_checks() {
+        let tree = GameTree::build_river(&StackProbe::config(0, 100, vec![BetSize::pot()]));
+        assert_eq!(tree.count_terminals(), 1);
+    }
+
+    #[test]
+    fn build_turn_takes_turn_money_out_of_the_river_stack() {
+        let tree = GameTree::build_turn(&StackProbe::config(100, 100, vec![BetSize::pot()]));
+        let root = StackProbe::action(&tree, tree.root_id());
+        let facing = StackProbe::action(&tree, root.children[1]);
+        let Some(Node::Chance(chance)) = tree.get(facing.children[1]) else {
+            panic!("expected a chance node after the turn call");
+        };
+        for &(_, river_root) in &chance.children {
+            let river = StackProbe::action(&tree, river_root);
+            assert_eq!(river.actions, vec![Action::Check], "both players are all-in");
+        }
+    }
+
+    #[test]
+    fn no_terminal_pot_exceeds_starting_pot_plus_twice_the_stack() {
+        let sizes: Vec<BetSize> = StackProbe::SIZES.iter().map(|size| size()).collect();
+        for (stack, pot) in [(100, 500), (100, 100), (1, 2), (900, 200), (1, 1), (0, 100), (250, 100)] {
+            let config = StackProbe::config(stack, pot, sizes.clone());
+            for tree in [GameTree::build_river(&config), GameTree::build_turn(&config)] {
+                assert!(
+                    StackProbe::max_terminal_pot(&tree) <= pot + 2 * stack,
+                    "stack {stack}, pot {pot}: terminal pot {}",
+                    StackProbe::max_terminal_pot(&tree)
+                );
+            }
+        }
     }
 }

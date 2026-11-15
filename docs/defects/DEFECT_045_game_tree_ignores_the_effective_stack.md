@@ -5,7 +5,7 @@
 **Severity:** Medium — the solver plays lines no player could afford, and
 the payoffs at those terminals are inflated; quiet at deep stacks, wrong
 whenever the stack is short against the pot  
-**Status:** Open  
+**Status:** Fixed in `0.20.7` (2026-11-14)  
 **Introduced in:** the first `GameTree` builders (`e9b85ef6`, 2026-03-31);
 widened to two streets by `build_turn` (`bccd9894`, 2026-04-01)  
 **Found by:** reading the postflop-solver comment on
@@ -79,7 +79,23 @@ the tree's pot is one both players could have built.
 
 ---
 
-## Proposed Fix
+## Fix
+
+Shipped in `0.20.7` as proposed, with `Action` unchanged (a patch):
+
+- Every builder takes `remaining: u64`, which starts at
+  `config.effective_stack`. A call passes `remaining - bet_chips` on to the
+  showdown continuation, so a turn tree's river starts from what is left.
+- A new private `GameTree::capped_bets` gives the legal bets at an open
+  node: `size.chips(pot).min(remaining)`, zero dropped, and sizes that cap
+  to the same all-in merged into one `Bet`, labelled with the smallest size.
+- `remaining == 0` leaves only `Check`, so a stack of `0` checks down.
+- No caller relied on an unlimited stack: every `SolverConfig::new` in
+  `src`, `examples` and `tests` uses a stack of at least 5× the pot, and
+  no existing test or doc test had to be re-pinned.
+
+### Proposed fix (as written before the change)
+
 
 1. **Carry the remaining stack.** The builders take `remaining: u64`
    (starting at `config.effective_stack`) alongside `pot`. A call takes
@@ -104,7 +120,7 @@ existing tests and doc tests are expected and should be re-pinned.
 
 ---
 
-## Tests to Add
+## Tests Added
 
 | File | Test name | What it verifies |
 |------|-----------|-----------------|
@@ -112,10 +128,13 @@ existing tests and doc tests are expected and should be re-pinned.
 | `src/analysis/gto/game_tree.rs` | `build_river_merges_sizes_that_cap_to_the_same_all_in` | Pot 500, stack 100, `pot()` + `two_pot()`: one bet action |
 | `src/analysis/gto/game_tree.rs` | `build_river_drops_a_bet_that_rounds_to_zero` | Pot 2, `third_pot()`: root offers only `Check` |
 | `src/analysis/gto/game_tree.rs` | `build_turn_takes_turn_money_out_of_the_river_stack` | Pot 100, stack 100, `pot()`: river under the turn call has no bet action |
+| `src/analysis/gto/game_tree.rs` | `build_river_with_no_stack_only_checks` | Stack 0: one terminal, check-check |
 | `src/analysis/gto/game_tree.rs` | `no_terminal_pot_exceeds_starting_pot_plus_twice_the_stack` | Invariant over river and turn trees for several pot/stack pairs |
 | `src/analysis/gto/solver.rs` | `short_stack_payoff_never_exceeds_the_stack` | A solve with stack < pot reports no terminal value above `pot / 2 + stack` |
 
-A doc test on `GameTree::build_river` should show the capped bet.
+A doc test on `GameTree::build_river` shows the capped bet. Before the fix,
+all seven tests failed; the solver test reported an OOP best response of
+750 against a bound of 350.
 
 ---
 
