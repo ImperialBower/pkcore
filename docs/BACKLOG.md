@@ -137,8 +137,8 @@ The ones that read as more than cleanup:
 
 - ~~**🤖 `SolverCache` serves stale results**~~ — fixed in `0.20.9`
   (format version in each entry).
-- **🤖 `EquityEngine::compute` can panic** when dead cards use up the deck
-  (`src/analysis/equity/engine.rs:333-340`).
+- ~~**🤖 `EquityEngine::compute` can panic**~~ — fixed in `0.20.9`
+  (returns `NotEnoughCards`).
 
 - **EPIC-93 follow-ups**, all open: two readings of a recorded `call`;
   `validate()` rough edges; no cursor for partial records; fixed-limit

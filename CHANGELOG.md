@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `0.20.7` effective-stack fix are solved again. Existing cache files all
   become misses once. `contains` now agrees with `get`: it is `true` only
   for an entry that `get` can read.
+- **`EquityEngine::compute` no longer panics when dead cards use up the
+  deck.** If the dead cards, the board and the exact hands left no cards and
+  a random seat still needed two, the Monte Carlo draw picked from an empty
+  range and `rand` panicked. `compute` now counts the cards that random and
+  range seats and the rest of the board need, and returns
+  `PKError::NotEnoughCards` when too few are left. An exact spot with too
+  few runout cards used to return `InvalidHand`; it now returns
+  `NotEnoughCards` too.
 
 ## [0.20.8] - 2026-11-15
 
