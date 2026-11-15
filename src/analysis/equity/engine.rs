@@ -77,6 +77,8 @@ impl EquityEngine {
     /// - [`PKError::InvalidCardCount`] if the board already holds more than five cards.
     /// - [`PKError::DuplicateCard`] if any known card (hole, board or dead) is repeated.
     /// - [`PKError::InvalidHand`] if a range seat has no holding compatible with the dead cards.
+    /// - [`PKError::NotEnoughCards`] if the cards left after the dead cards cannot
+    ///   fill every random or range seat and the rest of the board.
     ///
     /// # Examples
     ///
@@ -170,6 +172,13 @@ impl EquityEngine {
                 }
             })
             .collect::<Result<Vec<_>, _>>()?;
+
+        // Each random or range seat takes two of the remaining cards, then the
+        // runout takes the rest. Too few cards would leave `draw` an empty deck.
+        let dealt_seats = resolved.iter().filter(|r| !matches!(r, Resolved::Exact(_))).count();
+        if remaining.len() < 2 * dealt_seats + unknown_board {
+            return Err(PKError::NotEnoughCards);
+        }
 
         let all_exact = resolved.iter().all(|r| matches!(r, Resolved::Exact(_)));
         let runouts = Self::n_choose_k(remaining.len() as u64, unknown_board as u64);
@@ -472,6 +481,26 @@ mod analysis__equity__engine_tests {
         assert_eq!(engine, copy);
         assert_eq!(EquityEngine::default(), engine);
         assert_eq!(format!("{engine:?}"), "EquityEngine");
+    }
+
+    #[test]
+    fn compute_errors_when_dead_cards_leave_no_cards_to_deal() {
+        // AA + a full board + 45 dead cards = all 52. The random seat needs two.
+        let known = Cards::from_str("As Ah 2c 3d 4h 5s 7c").unwrap();
+        let mut req =
+            EquityRequest::new(vec![exact(Two::HAND_AS_AH), PlayerSpec::Random]).with_dead(Cards::deck_minus(&known));
+        req.board = Board::from_str("2c 3d 4h 5s 7c").unwrap();
+        assert_eq!(EquityEngine::compute(&req).unwrap_err(), PKError::NotEnoughCards);
+    }
+
+    #[test]
+    fn compute_errors_when_dead_cards_leave_too_few_cards_for_the_runout() {
+        // Flop + AA + KK + 44 dead = 51 known: one card left, two runout cards needed.
+        let known = Cards::from_str("As Ah Ks Kh 2c 3d 4h 5s").unwrap();
+        let mut req = EquityRequest::new(vec![exact(Two::HAND_AS_AH), exact(Two::HAND_KS_KH)])
+            .with_dead(Cards::deck_minus(&known));
+        req.board = Board::from_str("2c 3d 4h").unwrap();
+        assert_eq!(EquityEngine::compute(&req).unwrap_err(), PKError::NotEnoughCards);
     }
 
     #[test]
