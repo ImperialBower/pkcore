@@ -131,9 +131,17 @@ documentation. **EPIC-19a** is an exploratory note.
 ## Tech debt
 
 Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). No new
-markers this pass; the `0.20.7` fix added none.
+markers this pass; the `0.20.7` fix added none. **🤖 Review re-run
+2026-11-15:** of 69 open findings, 1 fixed, 3 partly fixed, 65 still open;
+7 new.
 
 The ones that read as more than cleanup:
+
+- **🤖 `SolverCache` serves stale results** — the key has no solver
+  version, so entries written before `0.20.7` come back as current. Do this
+  with **Do next** #3.
+- **🤖 `EquityEngine::compute` can panic** when dead cards use up the deck
+  (`src/analysis/equity/engine.rs:333-340`).
 
 - **EPIC-93 follow-ups**, all open: two readings of a recorded `call`;
   `validate()` rough edges; no cursor for partial records; fixed-limit
