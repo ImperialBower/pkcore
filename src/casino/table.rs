@@ -1642,8 +1642,7 @@ impl Table {
     pub fn get_seat_handle(&self, seat_number: u8) -> String {
         self.seats
             .get_seat(seat_number)
-            .map(|seat| seat.player.handle.clone())
-            .unwrap_or_default()
+            .map_or_default(|seat| seat.player.handle.clone())
     }
 
     /// True once any player still in the hand has chips committed this street.
@@ -1842,10 +1841,7 @@ impl Table {
     /// ```
     #[must_use]
     pub fn commentary_last(&self) -> String {
-        self.event_log
-            .last()
-            .map(|event| self.render_event(event))
-            .unwrap_or_default()
+        self.event_log.last().map_or_default(|event| self.render_event(event))
     }
 
     /// The most recent event that was a *player* action, as

@@ -136,7 +136,8 @@ documentation. **EPIC-19a** is an exploratory note.
 
 ## Tech debt
 
-Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). No new
+Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). **New 2026-11-17:** remove the `RUSTSEC-2026-0543` (`chrono`) ignore in
+`deny.toml` by dropping the `clap-repl` dev-dependency. No new
 markers this pass; the `0.20.7` fix added none. **🤖 Review re-run
 2026-11-15:** of 69 open findings, 1 fixed, 3 partly fixed, 65 still open;
 7 new.
@@ -159,7 +160,7 @@ The ones that read as more than cleanup:
   seats stay in the hand; `EightOrBetter` sees 6 of 57 lows; chop counted as
   zero EV; PLO bots get 0.0 preflop equity; dead button turns off every
   bot's position. (The `HashSet` order issue is fixed in `0.20.9`.)
-- **344 `fn test_` names** in `src/` against the no-prefix house rule.
+- **329 `fn test_` names** in `src/` (15 fixed in `0.20.10`) against the no-prefix house rule.
 
 ---
 
@@ -181,9 +182,7 @@ close them.
 Not authored by the user. Keep, edit, or delete.
 
 - ~~🤖 **Make `solve()` deterministic**~~ — done in `0.20.9`.
-- 🤖 **Finish the `SolverCache` finding:** bet-size order mislabel, no
-  river/turn tag in the key, non-atomic `put`
-  (`src/analysis/gto/solver_cache.rs`). Do before EPIC-130 trusts the cache.
+- ~~🤖 **Finish the `SolverCache` finding**~~ — done in `0.20.10`.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.x` with a real
   `cargo check`.** The `0.20.5` audit skipped every check.
 - 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`.**
