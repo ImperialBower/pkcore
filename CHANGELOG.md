@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The `SolverCache` tests follow the house test rules.** The module is
   `analysis__gto__solver_cache_tests`, no test name starts with `test_`, and
   the two fixture helpers are associated fns on a `Fixture` struct.
+- **`cargo deny` ignores `RUSTSEC-2026-0543` (chrono unmaintained).** No
+  fixed version exists. `chrono` reaches pkcore only through the
+  dev-dependency `clap-repl 0.3.2` → `reedline 0.38`, used by the REPL
+  examples; the published crate does not depend on it. The ignore goes when
+  `clap-repl` is replaced.
 
 ## [0.20.9] - 2026-11-15
 

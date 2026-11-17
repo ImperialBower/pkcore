@@ -77,6 +77,8 @@
 _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
 `docs/defects/` records._
 
+- [ ] **Remove the `RUSTSEC-2026-0543` ignore in `deny.toml`** — `chrono` is unmaintained and comes in only via the dev-dependency `clap-repl 0.3.2` → `reedline 0.38`. `reedline 0.53` uses `jiff`, but `clap-repl` pins `0.38`. Fix: drop `clap-repl`, move to `reedline 0.53`, and parse each line with `clap`'s `try_parse_from` in `examples/kuhn_repl.rs`, `examples/dealer_repl.rs`, `examples/table0.rs`. Added 2026-11-17 (`0.20.10`).
+
 - [x] ~~**DEFECT_025 — all-in run-out never completes**~~ — **FIXED 2026-09-12**
   in `0.12.4`. The cause was a redundant `reset_state_in_hand()` after each
   street deal in `Table::act()` and `Dealer::advance_street`, which turned
