@@ -1,12 +1,19 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-11-15** against `main` @
-> `0d715059`, pkcore **`0.20.8`**. Working tree clean. `CHANGELOG.md` has no
+> Refreshed by the `/backlog` skill on **2026-11-16** against `main` @
+> `3f21dd06`, pkcore **`0.20.9`**. Working tree clean. `CHANGELOG.md` has no
 > `[Unreleased]` section (house rule). Items tagged 🤖 are machine-proposed —
 > review before adopting. Tech-debt detail lives in
 > [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the `de253982` pass (2026-11-13, `0.20.6`):**
+> **What changed since the `0d715059` pass (2026-11-15, `0.20.8`):**
+>
+> - **`0.20.9`** — PR #167 merged. `solve()` is reproducible; `SolverCache`
+>   entries carry a format version; `EquityEngine::compute` returns
+>   `NotEnoughCards` in place of a panic. Tagged `v0.20.9`; on crates.io.
+> - No new markers. No new EPICs. Issues and PRs unchanged.
+>
+> **What changed in the `0d715059` pass (vs `de253982`, 2026-11-13, `0.20.6`):**
 >
 > - **`0.20.7`** — `DEFECT_045` fixed: the GTO game tree is capped at the
 >   effective stack (PR #166). Tagged `v0.20.7`; on crates.io.
@@ -60,10 +67,11 @@ Done since last pass: ~~`DEFECT_045`~~ (`0.20.7`), ~~Dependabot PRs~~
 
 ## Release follow-through
 
-- **crates.io is at `0.20.7`; the repo is at `0.20.8`** (CI only, so
-  publishing is optional).
+- **crates.io and the repo are both at `0.20.9`.**
 - **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`. All others
-  from `v0.17.0` up are tagged.
+  from `v0.17.0` up are tagged, `v0.20.9` included.
+- **`0.20.9` changes solver output order** (hands sorted) and orphans every
+  old `SolverCache` entry (a miss and a re-solve, not a wrong answer).
 - **Consumer pins** (per `RELEASE_AUDIT_0.20.5`): bowery `0.20.0`;
   pkarena0-web `0.12.1`; pkdealer, pkgto-web, pkkuhn-web, pktui, pkcore.py,
   pkcore.js, pkwasm `0.11.0`; pkodds `0.1.4`. The pkodds `Method::Hup`
@@ -150,8 +158,7 @@ The ones that read as more than cleanup:
   change results: `Table::act()` posts no blinds after hand one; busted
   seats stay in the hand; `EightOrBetter` sees 6 of 57 lows; chop counted as
   zero EV; PLO bots get 0.0 preflop equity; dead button turns off every
-  bot's position; the solver's `HashSet` order makes `solve()`
-  non-reproducible (see **Do next** #3).
+  bot's position. (The `HashSet` order issue is fixed in `0.20.9`.)
 - **344 `fn test_` names** in `src/` against the no-prefix house rule.
 
 ---
@@ -173,8 +180,10 @@ close them.
 
 Not authored by the user. Keep, edit, or delete.
 
-- 🤖 **Make `solve()` deterministic** (sort combos or use `BTreeSet`) before
-  EPIC-130 records fixtures. See **Do next** #3.
+- ~~🤖 **Make `solve()` deterministic**~~ — done in `0.20.9`.
+- 🤖 **Finish the `SolverCache` finding:** bet-size order mislabel, no
+  river/turn tag in the key, non-atomic `put`
+  (`src/analysis/gto/solver_cache.rs`). Do before EPIC-130 trusts the cache.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.x` with a real
   `cargo check`.** The `0.20.5` audit skipped every check.
 - 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`.**

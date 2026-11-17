@@ -7,8 +7,12 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> **Last refreshed 2026-11-15** against `main` @ `0d715059`, pkcore `0.20.8`
-> (working tree clean). Since the `de253982` pass: `0.20.7` fixed
+> **Last refreshed 2026-11-16** against `main` @ `3f21dd06`, pkcore `0.20.9`
+> (working tree clean). `0.20.9` fixed the `EquityEngine::compute` panic and
+> the reproducibility and version parts of two solver findings (marked
+> below). No new markers; `fn test_` count still 344. Review not re-run.
+>
+> Previous header (2026-11-15, `0d715059`, `0.20.8`) kept for history: Since the `de253982` pass: `0.20.7` fixed
 > `DEFECT_045` (already marked done below); `0.20.8` is CI only. No new
 > markers (54), `fn test_` count still **344**. **Automated review re-run**
 > (two reviewers): 69 open 🤖 items re-checked — 1 fixed, 3 partly fixed, 65
