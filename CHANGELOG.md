@@ -5,6 +5,33 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.10] - 2026-11-17
+
+### Fixed
+
+- **`SolverCache` no longer serves one bet-size order for another.** The
+  cache key sorted each street's bet sizes, but the game tree builds its bet
+  actions in the order given. A result solved for `[pot, half]` was served
+  for `[half, pot]`, with every bet frequency under the other size's label.
+  Sizes are now keyed in input order. The format version goes to `2`, so
+  every older entry is a miss once and is solved again.
+- **`SolverCache::put` no longer leaves half an entry on disk.** It wrote the
+  entry file in place, so a crash or a concurrent `get` could see a partial
+  file. It now writes a `.tmp` file and renames it over the entry. `len` and
+  `clear` ignore `.tmp` files.
+- A new test pins that a turn spot and a river spot get different keys (the
+  blank river card already keeps them apart).
+
+### Changed
+
+- **`make lint` passes again on Rust 1.100.** Its clippy flags
+  `map(..).unwrap_or_default()` (`map_unwrap_or`). Four call sites now use
+  `map_or_default`: `Pluribus::read_in_log`, `TableSnapshot::from_table`,
+  `Table::get_seat_handle` and `Table::commentary_last`. Same behaviour.
+- **The `SolverCache` tests follow the house test rules.** The module is
+  `analysis__gto__solver_cache_tests`, no test name starts with `test_`, and
+  the two fixture helpers are associated fns on a `Fixture` struct.
+
 ## [0.20.9] - 2026-11-15
 
 ### Fixed

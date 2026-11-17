@@ -10,7 +10,8 @@
 //! villain range, board, bet sizings, effective stack, pot, and the convergence
 //! controls (max iterations, target exploitability, CFR variant). [`crate::analysis::gto::combos::Combos`] is backed by a
 //! `HashSet`, so its contents are sorted before hashing to guarantee the same
-//! key regardless of iteration order.
+//! key regardless of iteration order. Bet sizings are hashed in the order
+//! given, because the game tree emits its actions in that order.
 //!
 //! The key uses [`std::collections::hash_map::DefaultHasher`], which is stable
 //! within a single Rust build but not guaranteed stable across compiler
@@ -21,7 +22,9 @@
 //!
 //! Each entry is stored as `{key:016x}.bin` — a 16-character hex filename
 //! containing a postcard-serialized [`SolverResult`]. Files are independent so
-//! the cache is safe for concurrent reads.
+//! the cache is safe for concurrent reads. [`SolverCache::put`] writes a
+//! temporary file and renames it into place, so a reader never sees half an
+//! entry.
 //!
 //! # Examples
 //!
@@ -58,6 +61,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Makes each temporary file name in [`SolverCache::put`] unique within a
+/// process.
+static NEXT_TEMP_ID: AtomicU64 = AtomicU64::new(0);
 
 // ── cache_key ─────────────────────────────────────────────────────────────────
 
@@ -116,7 +124,9 @@ impl SolverCache {
     /// miss instead of coming back as current.
     ///
     /// `1`: `0.20.9` — after the `0.20.7` effective-stack cap (`DEFECT_045`).
-    const FORMAT_VERSION: u32 = 1;
+    /// `2`: `0.20.10` — bet sizings keyed in input order. A version-1 entry
+    /// can hold actions in the other order, so it must miss.
+    const FORMAT_VERSION: u32 = 2;
 
     /// Opens a cache backed by `dir`, creating the directory if it does not
     /// exist.
@@ -168,7 +178,10 @@ impl SolverCache {
 
     /// Stores `result` under the key derived from `config`.
     ///
-    /// Overwrites any existing entry for the same key.
+    /// Overwrites any existing entry for the same key. The bytes go to a
+    /// temporary file first, which is then renamed over the entry, so a
+    /// concurrent [`SolverCache::get`] sees the old entry or the new one,
+    /// never a partial write.
     ///
     /// # Errors
     ///
@@ -196,8 +209,15 @@ impl SolverCache {
         let mut bytes = Self::MAGIC.to_vec();
         bytes.extend_from_slice(&Self::FORMAT_VERSION.to_le_bytes());
         bytes.extend_from_slice(&result.to_binary_bytes()?);
-        fs::write(self.entry_path(config), bytes)?;
-        Ok(())
+
+        let entry = self.entry_path(config);
+        let temp = self.temp_path(config);
+        let written = fs::write(&temp, bytes).and_then(|()| fs::rename(&temp, &entry));
+        if written.is_err() {
+            // Best effort: a leftover temp file is ignored by `len` and `clear`.
+            let _ = fs::remove_file(&temp);
+        }
+        Ok(written?)
     }
 
     /// Returns `true` if a cached entry exists for `config`.
@@ -283,7 +303,9 @@ impl SolverCache {
     /// - Hero range — sorted `Vec<Combo>` (removes `HashSet` non-determinism)
     /// - Villain range — sorted `Vec<Combo>`
     /// - Board cards — flop (3 cards), turn, river, in field order
-    /// - Bet sizings — each street's sizes sorted independently
+    /// - Bet sizings — each street's sizes in the order given; the tree emits
+    ///   its bet actions in that order, so `[half, pot]` and `[pot, half]` are
+    ///   different keys
     /// - Effective stack
     /// - Pot
     /// - Max iterations
@@ -340,18 +362,12 @@ impl SolverCache {
         config.board.turn.hash(&mut hasher);
         config.board.river.hash(&mut hasher);
 
-        // Bet sizings — sort each street so {half, pot} and {pot, half} are equal.
-        let mut flop_sizes = config.bet_sizings.flop.clone();
-        flop_sizes.sort();
-        flop_sizes.hash(&mut hasher);
-
-        let mut turn_sizes = config.bet_sizings.turn.clone();
-        turn_sizes.sort();
-        turn_sizes.hash(&mut hasher);
-
-        let mut river_sizes = config.bet_sizings.river.clone();
-        river_sizes.sort();
-        river_sizes.hash(&mut hasher);
+        // Bet sizings — in input order. The tree's action indices follow this
+        // order, so sorting here would serve `[pot, half]`'s strategy, with its
+        // actions mislabelled, to a caller who asked for `[half, pot]`.
+        config.bet_sizings.flop.hash(&mut hasher);
+        config.bet_sizings.turn.hash(&mut hasher);
+        config.bet_sizings.river.hash(&mut hasher);
 
         config.effective_stack.hash(&mut hasher);
         config.pot.hash(&mut hasher);
@@ -391,7 +407,6 @@ impl SolverCache {
         }
     }
 
-    /// Returns the full path for the entry file of `config`.
     /// The result bytes after the header, or `None` when the magic or the
     /// format version does not match.
     fn strip_header(bytes: &[u8]) -> Option<&[u8]> {
@@ -400,8 +415,21 @@ impl SolverCache {
         (u32::from_le_bytes(*version) == Self::FORMAT_VERSION).then_some(payload)
     }
 
+    /// Returns the full path for the entry file of `config`.
     fn entry_path(&self, config: &SolverConfig) -> PathBuf {
         self.dir.join(format!("{:016x}.bin", Self::cache_key(config)))
+    }
+
+    /// Returns a temporary path, unique to this process and call, beside the
+    /// entry for `config`. Its `.tmp` extension keeps it out of
+    /// [`SolverCache::len`] and [`SolverCache::clear`].
+    fn temp_path(&self, config: &SolverConfig) -> PathBuf {
+        let id = NEXT_TEMP_ID.fetch_add(1, Ordering::Relaxed);
+        self.dir.join(format!(
+            "{:016x}.{}.{id}.tmp",
+            Self::cache_key(config),
+            std::process::id()
+        ))
     }
 
     /// Iterates over all `.bin` file paths in the cache directory.
@@ -418,7 +446,8 @@ impl SolverCache {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod analysis__gto__solver_cache_tests {
     use super::*;
     use crate::analysis::gto::combos::Combos;
     use crate::analysis::gto::solver::Solver;
@@ -426,33 +455,38 @@ mod tests {
     use crate::play::board::Board;
     use std::str::FromStr;
 
-    fn river_config() -> SolverConfig {
-        SolverConfig::new(
-            Combos::from_str("AA,KK").unwrap_or_default(),
-            Combos::from_str("QQ,JJ").unwrap_or_default(),
-            Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
-            1_000,
-            200,
-        )
-        .with_max_iterations(3)
-    }
+    /// Shared fixtures for the cache tests.
+    struct Fixture;
 
-    fn temp_cache() -> SolverCache {
-        use std::hash::{Hash, Hasher};
-        use std::time::{SystemTime, UNIX_EPOCH};
+    impl Fixture {
+        fn river_config() -> SolverConfig {
+            SolverConfig::new(
+                Combos::from_str("AA,KK").unwrap_or_default(),
+                Combos::from_str("QQ,JJ").unwrap_or_default(),
+                Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+                1_000,
+                200,
+            )
+            .with_max_iterations(3)
+        }
 
-        // Unique per call: mix process id, thread id, and subsecond clock so
-        // parallel tests each get an isolated directory.
-        let mut h = DefaultHasher::new();
-        std::process::id().hash(&mut h);
-        std::thread::current().id().hash(&mut h);
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .subsec_nanos()
-            .hash(&mut h);
-        let dir = std::env::temp_dir().join(format!("pkcore_cache_test_{:016x}", h.finish()));
-        SolverCache::new(&dir).unwrap()
+        fn temp_cache() -> SolverCache {
+            use std::hash::{Hash, Hasher};
+            use std::time::{SystemTime, UNIX_EPOCH};
+
+            // Unique per call: mix process id, thread id, and subsecond clock so
+            // parallel tests each get an isolated directory.
+            let mut h = DefaultHasher::new();
+            std::process::id().hash(&mut h);
+            std::thread::current().id().hash(&mut h);
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .subsec_nanos()
+                .hash(&mut h);
+            let dir = std::env::temp_dir().join(format!("pkcore_cache_test_{:016x}", h.finish()));
+            SolverCache::new(&dir).unwrap()
+        }
     }
 
     // ── cache_key ─────────────────────────────────────────────────────────────
@@ -460,19 +494,19 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn deprecated_cache_key_matches_the_method() {
-        let config = river_config();
+        let config = Fixture::river_config();
         assert_eq!(cache_key(&config), SolverCache::cache_key(&config));
     }
 
     #[test]
-    fn test_cache_key_same_config_is_deterministic() {
-        let config = river_config();
+    fn cache_key_same_config_is_deterministic() {
+        let config = Fixture::river_config();
         assert_eq!(SolverCache::cache_key(&config), SolverCache::cache_key(&config));
     }
 
     #[test]
-    fn test_cache_key_different_hero_range_differs() {
-        let config1 = river_config();
+    fn cache_key_different_hero_range_differs() {
+        let config1 = Fixture::river_config();
         let config2 = SolverConfig::new(
             Combos::from_str("QQ,JJ").unwrap_or_default(),
             Combos::from_str("QQ,JJ").unwrap_or_default(),
@@ -484,8 +518,8 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_key_different_villain_range_differs() {
-        let config1 = river_config();
+    fn cache_key_different_villain_range_differs() {
+        let config1 = Fixture::river_config();
         let config2 = SolverConfig::new(
             Combos::from_str("AA,KK").unwrap_or_default(),
             Combos::from_str("AA,KK").unwrap_or_default(),
@@ -497,8 +531,8 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_key_different_board_differs() {
-        let config1 = river_config();
+    fn cache_key_different_board_differs() {
+        let config1 = Fixture::river_config();
         let config2 = SolverConfig::new(
             Combos::from_str("AA,KK").unwrap_or_default(),
             Combos::from_str("QQ,JJ").unwrap_or_default(),
@@ -510,15 +544,32 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_key_different_sizings_differs() {
-        let config1 = river_config();
-        let config2 = river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::pot()]));
+    fn cache_key_different_sizings_differs() {
+        let config1 = Fixture::river_config();
+        let config2 = Fixture::river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::pot()]));
         assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
-    fn test_cache_key_different_stack_differs() {
-        let config1 = river_config();
+    fn cache_key_differs_when_bet_sizes_are_reordered() {
+        let half_pot =
+            Fixture::river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::half_pot(), BetSize::pot()]));
+        let pot_half =
+            Fixture::river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::pot(), BetSize::half_pot()]));
+        assert_ne!(SolverCache::cache_key(&half_pot), SolverCache::cache_key(&pot_half));
+    }
+
+    #[test]
+    fn cache_key_differs_between_a_turn_spot_and_a_river_spot() {
+        let river = Fixture::river_config();
+        let mut turn = Fixture::river_config();
+        turn.board.river = crate::card::Card::BLANK;
+        assert_ne!(SolverCache::cache_key(&turn), SolverCache::cache_key(&river));
+    }
+
+    #[test]
+    fn cache_key_different_stack_differs() {
+        let config1 = Fixture::river_config();
         let config2 = SolverConfig::new(
             Combos::from_str("AA,KK").unwrap_or_default(),
             Combos::from_str("QQ,JJ").unwrap_or_default(),
@@ -530,8 +581,8 @@ mod tests {
     }
 
     #[test]
-    fn test_cache_key_different_pot_differs() {
-        let config1 = river_config();
+    fn cache_key_different_pot_differs() {
+        let config1 = Fixture::river_config();
         let config2 = SolverConfig::new(
             Combos::from_str("AA,KK").unwrap_or_default(),
             Combos::from_str("QQ,JJ").unwrap_or_default(),
@@ -548,26 +599,26 @@ mod tests {
 
     #[test]
     fn cache_key_different_max_iterations_differs() {
-        let config1 = river_config().with_max_iterations(3);
-        let config2 = river_config().with_max_iterations(100_000);
+        let config1 = Fixture::river_config().with_max_iterations(3);
+        let config2 = Fixture::river_config().with_max_iterations(100_000);
         assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_different_cfr_variant_differs() {
-        let config1 = river_config().with_cfr_variant(CfrVariant::Vanilla);
-        let config2 = river_config().with_cfr_variant(CfrVariant::CfrPlus);
+        let config1 = Fixture::river_config().with_cfr_variant(CfrVariant::Vanilla);
+        let config2 = Fixture::river_config().with_cfr_variant(CfrVariant::CfrPlus);
         assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_different_discount_exponents_differ() {
-        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted {
+        let config1 = Fixture::river_config().with_cfr_variant(CfrVariant::Discounted {
             alpha: 1.5,
             beta: 0.0,
             gamma: 2.0,
         });
-        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted {
+        let config2 = Fixture::river_config().with_cfr_variant(CfrVariant::Discounted {
             alpha: 3.0,
             beta: 0.0,
             gamma: 2.0,
@@ -577,14 +628,14 @@ mod tests {
 
     #[test]
     fn cache_key_different_target_exploitability_differs() {
-        let config1 = river_config().with_target_exploitability(0.1);
-        let config2 = river_config().with_target_exploitability(0.000_1);
+        let config1 = Fixture::river_config().with_target_exploitability(0.1);
+        let config2 = Fixture::river_config().with_target_exploitability(0.000_1);
         assert_ne!(SolverCache::cache_key(&config1), SolverCache::cache_key(&config2));
     }
 
     #[test]
     fn cache_key_same_cfr_variant_is_deterministic() {
-        let config = river_config().with_cfr_variant(CfrVariant::Discounted {
+        let config = Fixture::river_config().with_cfr_variant(CfrVariant::Discounted {
             alpha: 1.5,
             beta: 0.0,
             gamma: 2.0,
@@ -596,9 +647,9 @@ mod tests {
 
     #[test]
     fn solver_cache_does_not_serve_a_short_solve_for_a_long_one() {
-        let cache = temp_cache();
-        let short = river_config().with_max_iterations(3);
-        let long = river_config().with_max_iterations(100_000);
+        let cache = Fixture::temp_cache();
+        let short = Fixture::river_config().with_max_iterations(3);
+        let long = Fixture::river_config().with_max_iterations(100_000);
 
         cache.put(&short, &Solver::new(short.clone()).solve()).unwrap();
 
@@ -610,9 +661,9 @@ mod tests {
 
     #[test]
     fn solver_cache_does_not_serve_one_cfr_variant_for_another() {
-        let cache = temp_cache();
-        let vanilla = river_config().with_cfr_variant(CfrVariant::Vanilla);
-        let plus = river_config().with_cfr_variant(CfrVariant::CfrPlus);
+        let cache = Fixture::temp_cache();
+        let vanilla = Fixture::river_config().with_cfr_variant(CfrVariant::Vanilla);
+        let plus = Fixture::river_config().with_cfr_variant(CfrVariant::CfrPlus);
 
         cache.put(&vanilla, &Solver::new(vanilla.clone()).solve()).unwrap();
 
@@ -621,37 +672,75 @@ mod tests {
     }
 
     #[test]
-    fn test_solver_cache_miss_returns_none() {
-        let cache = temp_cache();
-        assert!(cache.get(&river_config()).is_none());
+    fn solver_cache_does_not_serve_one_bet_order_for_another() {
+        let cache = Fixture::temp_cache();
+        let half_pot =
+            Fixture::river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::half_pot(), BetSize::pot()]));
+        let pot_half =
+            Fixture::river_config().with_bet_sizings(BetSizings::uniform(vec![BetSize::pot(), BetSize::half_pot()]));
+
+        cache.put(&half_pot, &Solver::new(half_pot.clone()).solve()).unwrap();
+
+        // The stored strategy's action indices follow `[half, pot]`. Served for
+        // `[pot, half]`, every bet frequency would carry the other size's label.
+        assert!(cache.get(&pot_half).is_none());
+        assert!(cache.get(&half_pot).is_some());
     }
 
     #[test]
-    fn test_solver_cache_is_empty_on_fresh_dir() {
-        let cache = temp_cache();
+    fn solver_cache_put_leaves_no_temp_file() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
+        cache.put(&config, &Solver::new(config.clone()).solve()).unwrap();
+        let names: Vec<_> = fs::read_dir(&cache.dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|entry| entry.file_name())
+            .collect();
+        assert_eq!(names.len(), 1, "expected only the entry, found {names:?}");
+    }
+
+    #[test]
+    fn solver_cache_ignores_a_leftover_temp_file() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
+        fs::write(cache.temp_path(&config), b"partial").unwrap();
+        assert!(cache.is_empty());
+        assert!(cache.get(&config).is_none());
+    }
+
+    #[test]
+    fn solver_cache_miss_returns_none() {
+        let cache = Fixture::temp_cache();
+        assert!(cache.get(&Fixture::river_config()).is_none());
+    }
+
+    #[test]
+    fn solver_cache_is_empty_on_fresh_dir() {
+        let cache = Fixture::temp_cache();
         assert!(cache.is_empty());
         assert_eq!(cache.len(), 0);
     }
 
     #[test]
-    fn test_solver_cache_contains_false_before_put() {
-        let cache = temp_cache();
-        assert!(!cache.contains(&river_config()));
+    fn solver_cache_contains_false_before_put() {
+        let cache = Fixture::temp_cache();
+        assert!(!cache.contains(&Fixture::river_config()));
     }
 
     #[test]
-    fn test_solver_cache_put_then_contains() {
-        let cache = temp_cache();
-        let config = river_config();
+    fn solver_cache_put_then_contains() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         cache.put(&config, &result).unwrap();
         assert!(cache.contains(&config));
     }
 
     #[test]
-    fn test_solver_cache_put_then_get_round_trips() {
-        let cache = temp_cache();
-        let config = river_config();
+    fn solver_cache_put_then_get_round_trips() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         cache.put(&config, &result).unwrap();
         let loaded = cache.get(&config).expect("should be a cache hit");
@@ -660,9 +749,9 @@ mod tests {
     }
 
     #[test]
-    fn test_solver_cache_len_increments_on_put() {
-        let cache = temp_cache();
-        let config = river_config();
+    fn solver_cache_len_increments_on_put() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         assert_eq!(cache.len(), 0);
         cache.put(&config, &result).unwrap();
@@ -670,9 +759,9 @@ mod tests {
     }
 
     #[test]
-    fn test_solver_cache_clear_removes_entries() {
-        let cache = temp_cache();
-        let config = river_config();
+    fn solver_cache_clear_removes_entries() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         cache.put(&config, &result).unwrap();
         assert!(!cache.is_empty());
@@ -684,8 +773,8 @@ mod tests {
     #[test]
     fn solver_cache_misses_an_entry_without_the_format_header() {
         // An entry written before the format header existed: bare result bytes.
-        let cache = temp_cache();
-        let config = river_config();
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         fs::write(cache.entry_path(&config), result.to_binary_bytes().unwrap()).unwrap();
         assert!(cache.get(&config).is_none());
@@ -694,8 +783,8 @@ mod tests {
 
     #[test]
     fn solver_cache_misses_an_entry_from_another_format_version() {
-        let cache = temp_cache();
-        let config = river_config();
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let result = Solver::new(config.clone()).solve();
         let mut bytes = SolverCache::MAGIC.to_vec();
         bytes.extend_from_slice(&(SolverCache::FORMAT_VERSION + 1).to_le_bytes());
@@ -706,9 +795,9 @@ mod tests {
     }
 
     #[test]
-    fn test_solver_cache_put_overwrites_existing() {
-        let cache = temp_cache();
-        let config = river_config();
+    fn solver_cache_put_overwrites_existing() {
+        let cache = Fixture::temp_cache();
+        let config = Fixture::river_config();
         let r1 = Solver::new(config.clone()).solve();
         cache.put(&config, &r1).unwrap();
         let r2 = Solver::new(config.clone()).solve();

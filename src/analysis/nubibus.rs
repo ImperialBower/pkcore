@@ -1364,9 +1364,7 @@ impl Pluribus {
     // itself: `Util::read_lines`, which put a path in a public signature, is gone.
     #[cfg(feature = "persistence")]
     pub fn read_in_log(filename: &str) -> Result<Vec<Pluribus>, PKError> {
-        Ok(std::fs::read_to_string(filename)
-            .map(|text| Pluribus::parse_log(&text))
-            .unwrap_or_default())
+        Ok(std::fs::read_to_string(filename).map_or_default(|text| Pluribus::parse_log(&text)))
     }
 }
 

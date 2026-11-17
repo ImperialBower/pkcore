@@ -234,8 +234,7 @@ impl<'a> TableSnapshot<'a> {
             .seats
             .get_seat(seat)
             .filter(|s| s.cards.has_cards())
-            .map(|s| s.cards.cards())
-            .unwrap_or_default();
+            .map_or_default(|s| s.cards.cards());
 
         let committed: usize = table.seats.0.iter().map(|s| s.player.bet).sum();
         let pot = table.pot + committed;
