@@ -475,7 +475,7 @@ fn read_human_action(
         let trimmed = match editor.read_line(&prompt) {
             Ok(Signal::Success(buf)) => buf.trim().to_lowercase(),
             // Ctrl+C / Ctrl+D — fold or check and exit gracefully
-            Ok(Signal::CtrlC | Signal::CtrlD) => {
+            Ok(Signal::CtrlC(_) | Signal::CtrlD) => {
                 let action = if to_call > 0 {
                     let _ = table.act_fold(seat);
                     "folds".to_string()

@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.11] - 2026-11-17
+
+### Removed
+
+- **The `clap-repl` dev-dependency.** It pinned `reedline 0.38`, which pulls
+  in the unmaintained `chrono` (`RUSTSEC-2026-0543`). The `kuhn_repl`,
+  `dealer_repl` and `table0` examples now share a small `reedline` loop in
+  `examples/common/clap_reedline.rs` that parses each line with clap. Tab
+  still completes command names. The `RUSTSEC-2026-0543` ignore is gone from
+  `deny.toml`. Dev-only: the published crate never depended on either.
+
+### Changed
+
+- **The REPL examples use `reedline 0.53`** (was `0.38`). `interactive_play`
+  matches the new `Signal::CtrlC(_)` shape. The `table0` history file is now
+  `generated/table0-repl-history`.
+
 ## [0.20.10] - 2026-11-17
 
 ### Fixed

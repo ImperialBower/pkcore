@@ -26,12 +26,14 @@
 //! kuhn❯ quit
 //! ```
 
+#[path = "common/clap_reedline.rs"]
+mod clap_reedline;
+
 use clap::Parser;
-use clap_repl::ClapEditor;
+use clap_reedline::ClapReedline;
 use pkcore::games::kuhn::{KuhnAction, KuhnCard, KuhnState, KuhnStrategy};
 use rand::Rng;
 use rand::prelude::IndexedRandom;
-use reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory};
 
 // ── All possible Kuhn deals (ordered pairs of distinct cards) ─────────────────
 
@@ -211,19 +213,7 @@ fn main() {
 
     let mut session = Session::new();
 
-    let prompt = DefaultPrompt {
-        left_prompt: DefaultPromptSegment::Basic("kuhn".to_owned()),
-        ..DefaultPrompt::default()
-    };
-
-    let rl = ClapEditor::<Command>::builder()
-        .with_prompt(Box::new(prompt))
-        .with_editor_hook(|reed| {
-            reed.with_history(Box::new(
-                FileBackedHistory::with_file(1_000, "./generated/kuhn-repl-history".into()).unwrap_or_default(),
-            ))
-        })
-        .build();
+    let rl = ClapReedline::<Command>::new("kuhn", "./generated/kuhn-repl-history", 1_000);
 
     rl.repl(|cmd| handle(&mut session, cmd));
 }

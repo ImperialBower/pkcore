@@ -147,8 +147,8 @@ documentation. **EPIC-19a** is an exploratory note.
 
 ## Tech debt
 
-Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). **New 2026-11-17:** remove the `RUSTSEC-2026-0543` (`chrono`) ignore in
-`deny.toml` by dropping the `clap-repl` dev-dependency. No new
+Full detail in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). ~~Remove the `RUSTSEC-2026-0543` (`chrono`) ignore in
+`deny.toml` by dropping the `clap-repl` dev-dependency~~ — done in `0.20.11`. No new
 markers this pass; the `0.20.7` fix added none. **🤖 Review re-run
 2026-11-15:** of 69 open findings, 1 fixed, 3 partly fixed, 65 still open;
 7 new.

@@ -15,13 +15,9 @@ yanked = "deny"
 # (RUSTSEC-2023-0089 / atomic-polyfill was removed by disabling postcard's default
 # `heapless-cas` feature — see the postcard dependency in Cargo.toml — so no ignore
 # is needed for it anymore.)
-ignore = [
-    # chrono is unmaintained; no fixed version exists. It reaches us only through
-    # the dev-dependency clap-repl 0.3.2 -> reedline 0.38 (REPL examples), never the
-    # published crate. reedline 0.53 drops chrono for jiff, but clap-repl still pins
-    # 0.38. Remove this once clap-repl is replaced or updated. Added 2026-11-17.
-    { id = "RUSTSEC-2026-0543", reason = "dev-only via clap-repl -> reedline 0.38; see docs/BACKLOG.md" },
-]
+ignore = []
+# (RUSTSEC-2026-0543 / chrono was removed in 0.20.11 by dropping the clap-repl
+# dev-dependency and moving the REPL examples to reedline 0.53, which uses jiff.)
 
 [licenses]
 # List of explicitly allowed licenses
