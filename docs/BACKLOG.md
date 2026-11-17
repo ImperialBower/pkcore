@@ -1,12 +1,21 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-11-16** against `main` @
-> `3f21dd06`, pkcore **`0.20.9`**. Working tree clean. `CHANGELOG.md` has no
+> Refreshed by the `/backlog` skill on **2026-11-17** against `main` @
+> `68551da4`, pkcore **`0.20.10`**. Working tree clean. `CHANGELOG.md` has no
 > `[Unreleased]` section (house rule). Items tagged 🤖 are machine-proposed —
 > review before adopting. Tech-debt detail lives in
 > [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the `0d715059` pass (2026-11-15, `0.20.8`):**
+> **What changed since the `3f21dd06` pass (2026-11-16, `0.20.9`):**
+>
+> - **`0.20.10`** — PR #168 merged. `SolverCache` keys bet sizes in input
+>   order (format version `2`) and writes entries atomically. Clippy fixes
+>   for Rust 1.100. Tagged `v0.20.10`; on crates.io.
+> - **`RUSTSEC-2026-0543`** (`chrono`, dev-only via `clap-repl`) ignored in
+>   `deny.toml`. Removal tracked in `TECHNICAL_DEBT.md`.
+> - No new markers. No new EPICs. Issues and PRs unchanged.
+>
+> **What changed in the `3f21dd06` pass (vs `0d715059`, 2026-11-15, `0.20.8`):**
 >
 > - **`0.20.9`** — PR #167 merged. `solve()` is reproducible; `SolverCache`
 >   entries carry a format version; `EquityEngine::compute` returns
@@ -67,9 +76,11 @@ Done since last pass: ~~`DEFECT_045`~~ (`0.20.7`), ~~Dependabot PRs~~
 
 ## Release follow-through
 
-- **crates.io and the repo are both at `0.20.9`.**
+- **crates.io and the repo are both at `0.20.10`.**
 - **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`. All others
-  from `v0.17.0` up are tagged, `v0.20.9` included.
+  from `v0.17.0` up are tagged, `v0.20.10` included.
+- **`0.20.10` orphans every `SolverCache` entry again** (format version `2`).
+  A miss and a re-solve, not a wrong answer.
 - **`0.20.9` changes solver output order** (hands sorted) and orphans every
   old `SolverCache` entry (a miss and a re-solve, not a wrong answer).
 - **Consumer pins** (per `RELEASE_AUDIT_0.20.5`): bowery `0.20.0`;
