@@ -1,12 +1,22 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-11-17** against `main` @
-> `68551da4`, pkcore **`0.20.10`**. Working tree clean. `CHANGELOG.md` has no
+> Refreshed by the `/backlog` skill on **2026-11-18** against `main` @
+> `f0a7d4ec`, pkcore **`0.20.11`**. Working tree clean. `CHANGELOG.md` has no
 > `[Unreleased]` section (house rule). Items tagged 🤖 are machine-proposed —
 > review before adopting. Tech-debt detail lives in
 > [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the `3f21dd06` pass (2026-11-16, `0.20.9`):**
+> **What changed since the `68551da4` pass (2026-11-17, `0.20.10`):**
+>
+> - **`0.20.11`** — PR #169 merged. `clap-repl` dropped; the three REPL
+>   examples share `examples/common/clap_reedline.rs` on `reedline 0.53`.
+>   The `RUSTSEC-2026-0543` ignore is gone from `deny.toml`. Dev-only; no
+>   public API change. **Not tagged, not on crates.io** (crates.io is at
+>   `0.20.10`).
+> - No new markers (58 in `src/`). No new EPICs. Issues and PRs unchanged.
+>   329 `fn test_` names in `src/`, unchanged.
+>
+> **What changed in the `e874d77b` pass (vs `3f21dd06`, 2026-11-16, `0.20.9`):**
 >
 > - **`0.20.10`** — PR #168 merged. `SolverCache` keys bet sizes in input
 >   order (format version `2`) and writes entries atomically. Clippy fixes
@@ -76,9 +86,11 @@ Done since last pass: ~~`DEFECT_045`~~ (`0.20.7`), ~~Dependabot PRs~~
 
 ## Release follow-through
 
-- **crates.io and the repo are both at `0.20.10`.**
-- **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`. All others
-  from `v0.17.0` up are tagged, `v0.20.10` included.
+- **The repo is at `0.20.11`; crates.io is at `0.20.10`.** `0.20.11` is
+  dev-only (examples, `deny.toml`), so publishing it is optional. Tag it
+  either way.
+- **Missing tags:** `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`, `v0.20.11`.
+  All others from `v0.17.0` up are tagged, `v0.20.10` included.
 - **`0.20.10` orphans every `SolverCache` entry again** (format version `2`).
   A miss and a re-solve, not a wrong answer.
 - **`0.20.9` changes solver output order** (hands sorted) and orphans every
@@ -196,7 +208,7 @@ Not authored by the user. Keep, edit, or delete.
 - ~~🤖 **Finish the `SolverCache` finding**~~ — done in `0.20.10`.
 - 🤖 **Write one `RELEASE_AUDIT` covering `0.15.0`–`0.20.x` with a real
   `cargo check`.** The `0.20.5` audit skipped every check.
-- 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`.**
+- 🤖 **Tag `v0.17.4`, `v0.20.3`, `v0.20.6`, `v0.20.8`, `v0.20.11`.**
 - 🤖 **Remove the 5 pre-`0.16.0` deprecations** (`0.0.2`, `0.0.3`, `0.8.0`)
   in the same breaking release as the 25.
 - 🤖 **Rename `EPIC-93` and `EPIC-123` with `-CLOSED`.**
