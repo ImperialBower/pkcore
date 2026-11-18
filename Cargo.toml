@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.20.10"
+version = "0.20.11"
 rust-version = "1.99.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -405,7 +405,6 @@ required-features = ["bot-training"]
 
 [dev-dependencies]
 clap = { version = "4.6", features = ["derive", "unicode"] }
-clap-repl = "0.3.2"
 criterion = "0.5"
 elr_primes = "0.1.2"
 env_logger = "0.11.9"
@@ -416,7 +415,7 @@ env_logger = "0.11.9"
 # and `check-purity` reads `cargo tree -e no-dev`, so this does not weaken the
 # purity gate.
 rayon = "1.11.0"
-reedline = "0.38"
+reedline = "0.53"
 serde_yaml_bw = "2.5"
 # Optional for the library (`json` / `csv`) but unconditional here, for the
 # round-trip tests that exercise serde derives through JSON and the pokerbench

@@ -29,12 +29,14 @@
 //! dealer❯ quit
 //! ```
 
+#[path = "common/clap_reedline.rs"]
+mod clap_reedline;
+
 use clap::Parser;
-use clap_repl::ClapEditor;
+use clap_reedline::ClapReedline;
 use pkcore::casino::dealer::{Dealer, DealerAction, DealerError};
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::Player;
-use reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory};
 
 // ── Commands ─────────────────────────────────────────────────────────────────
 
@@ -198,19 +200,7 @@ fn main() {
 
     let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
 
-    let prompt = DefaultPrompt {
-        left_prompt: DefaultPromptSegment::Basic("dealer".to_owned()),
-        ..DefaultPrompt::default()
-    };
-
-    let rl = ClapEditor::<Command>::builder()
-        .with_prompt(Box::new(prompt))
-        .with_editor_hook(|reed| {
-            reed.with_history(Box::new(
-                FileBackedHistory::with_file(1_000, "./generated/dealer-repl-history".into()).unwrap_or_default(),
-            ))
-        })
-        .build();
+    let rl = ClapReedline::<Command>::new("dealer", "./generated/dealer-repl-history", 1_000);
 
     rl.repl(|command| handle(&mut dealer, command));
 }

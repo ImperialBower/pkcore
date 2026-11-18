@@ -1,10 +1,13 @@
+#[path = "common/clap_reedline.rs"]
+mod clap_reedline;
+
 use clap::{Parser, ValueEnum};
-use clap_repl::ClapEditor;
-use clap_repl::reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory, Reedline, Signal};
+use clap_reedline::ClapReedline;
 use pkcore::prelude::*;
+use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use std::path::PathBuf;
 
-/// A simple example of using `clap_repl` to create a REPL for a poker table.
+/// A simple example of using `clap` and `reedline` to create a REPL for a poker table.
 ///
 /// -
 /// - [Writing a CLI Tool in Rust with Clap](https://www.shuttle.dev/blog/2023/12/08/clap-rust)
@@ -59,19 +62,7 @@ fn main() {
     // let forced = ForcedBets::new(50, 100);
     let mut table = TestData::the_hand_table();
 
-    let prompt = DefaultPrompt {
-        left_prompt: DefaultPromptSegment::Basic("table".to_owned()),
-        ..DefaultPrompt::default()
-    };
-    let rl = ClapEditor::<SampleCommand>::builder()
-        .with_prompt(Box::new(prompt))
-        .with_editor_hook(|reed| {
-            // Do custom things with `Reedline` instance here
-            reed.with_history(Box::new(
-                FileBackedHistory::with_file(10000, "./generated/clap-repl-simple-example-history".into()).unwrap(),
-            ))
-        })
-        .build();
+    let rl = ClapReedline::<SampleCommand>::new("table", "./generated/table0-repl-history", 10_000);
     rl.repl(|command| {
         match command {
             SampleCommand::Status => {
