@@ -36,8 +36,11 @@ only for the checks that read files.
   `toolchain: stable`, `taiki-e/install-action` takes `tool: cargo-deny`.
 * **Top-level `permissions: contents: read`** in every workflow. A job that
   needs more declares it at job level — `release.yml` grants `contents: write`
-  and, for signing, `id-token: write` and `attestations: write` to the release
-  job only; `codeql.yml` and `scorecard.yml` grant
+  and, for signing, `id-token: write` and `attestations: write` to its
+  `publish` job only. That job runs no repository code (no checkout, no
+  scripts); the tagged code — build scripts, tests, `release_notes.sh` — runs
+  in a separate read-only `build` job with `persist-credentials: false`, and
+  hands its outputs over as an artifact; `codeql.yml` and `scorecard.yml` grant
   `security-events: write` to their analysis jobs.
 * `scorecard.yml` has extra rules because it publishes: no top-level write
   permissions, no top-level `env`/`defaults`, and only the approved actions.

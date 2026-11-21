@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.13] - 2026-11-21
+
+### Security
+
+- **The release workflow no longer runs tagged code with release
+  privileges.** `release.yml` was one job that both ran the tag's code (build
+  scripts, proc macros, the test suite under `cargo llvm-cov`, and
+  `scripts/release_notes.sh`) and held `contents: write` plus `id-token:
+  write`. The checkout also left the write token in `.git/config`, so code in
+  a pushed tag could read it, or get an OIDC token and sign arbitrary files as
+  this workflow. The workflow is now split in two. A read-only `build` job
+  checks out with `persist-credentials: false` and uploads the coverage files
+  and release notes as an artifact. A `publish` job holds the write and
+  signing permissions, never checks out or runs repository code, and only
+  signs and uploads those files. Flagged by an Aikido scan ("untrusted
+  release-tag contents execute in the privileged publication job"). CI only:
+  no API change.
+
 ## [0.20.12] - 2026-11-21
 
 ### Security
