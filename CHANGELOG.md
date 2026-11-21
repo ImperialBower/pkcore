@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.12] - 2026-11-21
+
+### Security
+
+- **`zerocopy` and `zerocopy-derive` move from 0.8.50 to 0.8.58** in
+  `Cargo.lock` (and from 0.8.55 in `perf/Cargo.lock`). Older
+  `zerocopy-derive` misread a raw-identifier `#[r#repr(...)]` attribute and
+  could emit an unsound `FromBytes`/`FromZeros` impl. pkcore never writes
+  such an attribute; `zerocopy` comes in only through `rand` (via
+  `ppv-lite86`) and the `criterion` dev-dependency. Lockfile-only: no API
+  change.
+
 ## [0.20.11] - 2026-11-17
 
 ### Removed
