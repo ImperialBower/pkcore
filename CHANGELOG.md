@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   such an attribute; `zerocopy` comes in only through `rand` (via
   `ppv-lite86`) and the `criterion` dev-dependency. Lockfile-only: no API
   change.
+- **`rand` minimum raised from 0.9 to 0.9.5.** Older `rand` let a
+  deserialized `UniformChar` carry an out-of-range sampler and build an
+  invalid `char`. 0.9.5 validates the range on deserialize (the same fix as
+  0.10.2). pkcore does not turn on `rand`'s `serde` feature, so it was never
+  reachable here; the floor keeps downstream lockfiles off the bad versions.
 
 ## [0.20.11] - 2026-11-17
 
