@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.14] - 2026-11-22
+
+### Security
+
+- **No workflow leaves the GitHub token in `.git/config` any more.** Every
+  `actions/checkout` step in `audit.yml`, `basic.yaml`, `ci.yml` and
+  `codeql.yml` now sets `persist-credentials: false`. No job pushes back to
+  the repository, so no job needs the token after checkout, and build
+  scripts or tests can no longer read it. Flagged by an Aikido scan.
+- **The `table0` example no longer prints the credentials it reads.** The
+  `login` command echoed the username and password to stdout, which Aikido
+  and CodeQL (`rust/cleartext-logging`) flag. It now prints only the mode.
+
 ## [0.20.13] - 2026-11-21
 
 ### Security

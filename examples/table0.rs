@@ -92,9 +92,10 @@ fn main() {
             SampleCommand::Login { username, mode } => {
                 // You can use another `reedline::Reedline` inside the loop.
                 let mut rl = Reedline::create();
-                let username = username.unwrap_or_else(|| read_line_with_reedline(&mut rl, "What is your username? "));
-                let password = read_line_with_reedline(&mut rl, "What is your password? ");
-                println!("Logged in with {username} and {password} in mode {mode:?}");
+                // Never echo credentials back.
+                let _username = username.unwrap_or_else(|| read_line_with_reedline(&mut rl, "What is your username? "));
+                let _password = read_line_with_reedline(&mut rl, "What is your password? ");
+                println!("Logged in in mode {mode:?}");
             }
             SampleCommand::Exit => {
                 println!("Goodbye! 👋");
