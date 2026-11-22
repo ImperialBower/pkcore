@@ -14,9 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `codeql.yml` now sets `persist-credentials: false`. No job pushes back to
   the repository, so no job needs the token after checkout, and build
   scripts or tests can no longer read it. Flagged by an Aikido scan.
-- **The `table0` example no longer prints the password it reads.** The
-  `login` command echoed the password to stdout. It now prints only the
-  username and mode.
+- **The `table0` example no longer prints the credentials it reads.** The
+  `login` command echoed the username and password to stdout, which Aikido
+  and CodeQL (`rust/cleartext-logging`) flag. It now prints only the mode.
 
 ## [0.20.13] - 2026-11-21
 
