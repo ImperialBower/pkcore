@@ -8,28 +8,30 @@ on:
   push:
     tags: ['v[0-9]*']
 
-# Read-only by default; only the release job is granted write.
+# Read-only by default; only the publish job is granted write.
 permissions:
   contents: read
 
+# Two jobs, split by trust. `build` runs the tagged code — build scripts, proc
+# macros, the test suite, scripts/release_notes.sh — and so holds NO write
+# token and NO OIDC token: code in the tag cannot push, create releases, or
+# mint a Sigstore identity for this workflow. `publish` holds those privileges
+# and never checks out or executes anything from the repository; it only
+# signs and uploads the files `build` produced.
 jobs:
-  release:
-    name: Publish GitHub Release
-    # Least privilege that can create a release. The job never writes to the
-    # repo: no CHANGELOG mutation, no commits, no pushes. id-token and
-    # attestations are for signing the assets (see "Sign release assets").
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
+  build:
+    name: Build release assets
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       # fetch-depth: 0 is REQUIRED. The default shallow checkout (depth 1) makes
       # `git describe` and `git log <prev>..<tag>` fail outright.
+      # persist-credentials: false keeps the token out of .git/config, where
+      # any build script or test could otherwise read it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # Cheap validation BEFORE the ~10-minute coverage run. A missing CHANGELOG
       # entry is the likeliest failure (it depends on a human renaming
@@ -74,6 +76,34 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: ./scripts/release_notes.sh "$TAG" coverage-summary.txt > release-body.md
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          path: |
+            coverage-html.tar.gz
+            lcov.info
+            release-body.md
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    # Least privilege that can create a release. id-token and attestations are
+    # for signing the assets (see "Sign release assets"). This job runs no code
+    # from the repository: no checkout, no scripts — only pinned actions and
+    # `gh`, operating on the files `build` uploaded.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-assets
+
       # Keyless Sigstore signature with SLSA build provenance over both assets
       # (OpenSSF Scorecard "Signed-Releases"). The bundle ships as a release
       # asset because Scorecard only looks at asset names (*.sigstore.json).
@@ -92,18 +122,22 @@ jobs:
           BUNDLE: ${{ steps.attest.outputs.bundle-path }}
         run: cp "$BUNDLE" "pkcore-$TAG.sigstore.json"
 
+      # No checkout here, so `gh` is pointed at the repo explicitly, and the
+      # prerelease test is inlined rather than sourced from the repo. It must
+      # match is_prerelease in scripts/release_notes.sh: a '-' in the tag.
       - name: Create release
         env:
           TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          source ./scripts/release_notes.sh
           prerelease=""
-          if is_prerelease "$TAG"; then prerelease="--prerelease"; fi
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
           # gh release create has no overwrite flag: if a release already exists
           # for this tag, it errors rather than overwriting. Deleting a release
           # stays a deliberate act.
           gh release create "$TAG" \
+            --verify-tag \
             --title "$TAG" \
             --notes-file release-body.md \
             $prerelease \
