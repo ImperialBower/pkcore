@@ -32,7 +32,7 @@ mod clap_reedline;
 use clap::Parser;
 use clap_reedline::ClapReedline;
 use pkcore::games::kuhn::{KuhnAction, KuhnCard, KuhnState, KuhnStrategy};
-use rand::Rng;
+use rand::RngExt;
 use rand::prelude::IndexedRandom;
 
 // ── All possible Kuhn deals (ordered pairs of distinct cards) ─────────────────

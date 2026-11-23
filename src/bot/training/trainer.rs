@@ -11,6 +11,7 @@
 //! The Box-Muller transform is used to generate N(0,1) samples from the
 //! `rand` crate's uniform RNG, keeping the implementation dependency-free.
 
+use rand::RngExt as _;
 use std::f64::consts::PI;
 
 use rand::SeedableRng;

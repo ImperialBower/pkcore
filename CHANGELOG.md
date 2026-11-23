@@ -5,6 +5,30 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-11-22
+
+### Security
+
+- **`rand` 0.9.5 → 0.10.2.** Aikido flags `rand` 0.9.5 as
+  `AIKIDO-2026-875754`, patched in 0.10.2. Phase 6 of
+  [`DEFECT_051`](docs/defects/DEFECT_051_aikido_pentest_table_guards.md).
+  `perf/Cargo.lock` now pins 0.10.2 too.
+
+### Changed
+
+- **Breaking: `rand` types in the public API are now `rand` 0.10.** Every
+  `R: rand::Rng` bound (`Cards::shuffle_in_place_with`,
+  `PokerSession::start_hand_with`, `Table::act_shuffle_deck_with`,
+  `BotProfile::decide`, `preflop_equity`, ...) and `SimTable::with_rng(SmallRng)`
+  now take `rand` 0.10 types. Callers must move to `rand` 0.10 as well.
+- **Breaking: `BotDecider::decide_seeded` and `on_new_hand_with_rng` take
+  `&mut dyn rand::Rng`, not `&mut dyn rand::RngCore`.** `rand` 0.10 renamed
+  `RngCore` to `Rng`. To call `random`, `random_range` and the like, import
+  `rand::RngExt`, the new name of the old `Rng` extension trait.
+- The `entropy` feature enables `rand/sys_rng` (was `rand/os_rng`) and a
+  `getrandom` 0.4 WASM switch next to the 0.3 one that `cardpack` still needs.
+  Seeded results are unchanged: every seeded test passes as before.
+
 ## [0.21.0] - 2026-11-22
 
 The table now refuses moves its rules forbid. An Aikido pentest found six ways

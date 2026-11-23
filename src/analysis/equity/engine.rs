@@ -18,7 +18,7 @@ use crate::play::board::Board;
 use crate::{Cards, PKError};
 use itertools::Itertools;
 use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 #[cfg(feature = "parallel")]
 use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
 use std::collections::HashSet;
