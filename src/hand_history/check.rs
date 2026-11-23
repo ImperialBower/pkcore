@@ -1534,9 +1534,13 @@ mod passes {
 
     // ── Money ────────────────────────────────────────────────────────────────
 
-    /// Money rule, on the record alone (no walk): a seat loses no more than
-    /// its starting stack, and when `results` gives a net for every seat that
-    /// put chips in, the nets sum to zero.
+    /// Money rule, on the record alone (no walk): every `net` and `pot_won`
+    /// is a finite number, a seat loses no more than its starting stack, and
+    /// when `results` gives a net for every seat that put chips in, the nets
+    /// sum to zero.
+    ///
+    /// The finite check comes first: `NaN` fails every comparison, so without
+    /// it a `NaN` net passed all the others (`DEFECT_051` F6).
     ///
     /// The seats that put chips in are every listed seat when there is an
     /// ante, the blinds the engine posts, and every seat that calls, bets,
@@ -1546,6 +1550,17 @@ mod passes {
             return;
         };
         for (index, entry) in results.iter().enumerate() {
+            for (field, value) in [("net", entry.net), ("pot_won", entry.pot_won)] {
+                if let Some(value) = value
+                    && !value.is_finite()
+                {
+                    findings.push(Finding {
+                        path: format!("results[{index}].{field}"),
+                        rule: Rule::Money,
+                        message: format!("records {value}, which is not a number of chips"),
+                    });
+                }
+            }
             if let Some(net) = entry.net
                 && let Some(player) = hand.players.iter().find(|player| player.seat == entry.seat)
                 && -net > player.stack
@@ -1567,8 +1582,9 @@ mod passes {
                 .and_then(|entry| entry.net)
         };
         let covered = contributors(hand).into_iter().all(|seat| net_of(seat).is_some());
+        let all_finite = results.iter().filter_map(|entry| entry.net).all(f64::is_finite);
         let sum: f64 = results.iter().filter_map(|entry| entry.net).sum();
-        if covered && sum.abs() >= 0.005 {
+        if covered && all_finite && sum.abs() >= 0.005 {
             findings.push(Finding {
                 path: "results".to_string(),
                 rule: Rule::Money,
@@ -2700,6 +2716,31 @@ results:
         assert_eq!(Rule::Money, findings[0].rule);
         assert_eq!("results", findings[0].path);
         assert!(findings[0].message.contains("-100"), "{}", findings[0].message);
+    }
+
+    /// `CLEAN` with a `results` block whose two entries are spliced in.
+    #[cfg(feature = "hand-histories")]
+    fn clean_with_results(seat_0: &str, seat_1: &str) -> String {
+        format!(
+            "{CLEAN}results:\n  - {{ seat: 0, outcome: win, {seat_0} }}\n  - {{ seat: 1, outcome: fold, {seat_1} }}\n"
+        )
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__nan_net_is_a_money_finding() {
+        // DEFECT_051 F6: NaN fails every comparison, so it slipped past all of them.
+        let findings = hand(&clean_with_results("net: 100.0", "net: .nan")).validate();
+        let money = with_rule(&findings, Rule::Money);
+        assert!(money.iter().any(|f| f.path == "results[1].net"), "{findings:?}");
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn validate__infinite_pot_won_is_a_money_finding() {
+        let findings = hand(&clean_with_results("net: 100.0, pot_won: .inf", "net: -100.0")).validate();
+        let money = with_rule(&findings, Rule::Money);
+        assert!(money.iter().any(|f| f.path == "results[0].pot_won"), "{findings:?}");
     }
 
     #[cfg(feature = "hand-histories")]

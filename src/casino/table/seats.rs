@@ -406,9 +406,15 @@ impl Seats {
         // from under the gun. The two agree until a re-raise leaves owing seats
         // on both sides of the raiser; from there a scan rooted at `utg` hands
         // the action to a seat that has already acted. See `DEFECT_022`.
+        //
+        // A posted blind is not a voluntary aggressor: while only blinds are
+        // in, start at `utg`. With unequal blinds that is the seat after the
+        // big blind either way. With equal blinds `last_aggressor` cannot
+        // tell the two blinds apart and could name the small blind, which
+        // handed the action to the big blind before UTG (`DEFECT_051` F5).
         let start = match self.last_aggressor() {
-            Some(aggressor) => (aggressor as usize + 1) % size,
-            None => utg as usize,
+            Some(aggressor) if !self.0[aggressor as usize].player.state.is_blind() => (aggressor as usize + 1) % size,
+            _ => utg as usize,
         };
 
         // First pass: find the next seat needing to act.

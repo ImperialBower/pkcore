@@ -691,6 +691,12 @@ pub enum PKError {
         recorded: usize,
         engine: usize,
     },
+    /// `DEFECT_051`: a voluntary action was tried when no seat owes one: no hand
+    /// is in a betting phase, or the street's betting is already complete.
+    NoActionPending,
+    /// `DEFECT_051`: TDA 2024 Rule 47-A. The seat already acted and faces only a
+    /// short all-in, so the betting is not re-opened for it: call or fold only.
+    BettingNotReopened,
 }
 
 impl Display for PKError {
@@ -762,6 +768,8 @@ impl Display for PKError {
             PKError::ReplayAmountMismatch { seat, recorded, engine } => {
                 &*format!("Replay amount mismatch: seat {seat} records {recorded}, the engine's amount is {engine}")
             }
+            PKError::NoActionPending => "No seat owes an action now",
+            PKError::BettingNotReopened => "Betting is not re-opened for this seat: call or fold only",
         };
         write!(f, "{msg}")
     }
@@ -1568,6 +1576,15 @@ mod lib_tests {
         assert_eq!(
             "Invalid frequency: must be in [0.0, 1.0]",
             PKError::InvalidFrequency.to_string()
+        );
+    }
+
+    #[test]
+    fn pkerror_display_defect_051_variants() {
+        assert_eq!("No seat owes an action now", PKError::NoActionPending.to_string());
+        assert_eq!(
+            "Betting is not re-opened for this seat: call or fold only",
+            PKError::BettingNotReopened.to_string()
         );
     }
 

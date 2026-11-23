@@ -284,11 +284,7 @@ impl Table {
     /// assert_eq!(PlayerState::Fold, t.seats.get_seat(utg).unwrap().player.state);
     /// ```
     pub fn act_fold(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Fold);
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        self.ensure_can_act(seat_number, PlayerState::Fold)?;
         let folded_chips = self.seats.act_fold(seat_number)?;
         self.record_voluntary_action(seat_number, ChipCommitment::NoChips);
         self.pot += folded_chips;
@@ -298,6 +294,26 @@ impl Table {
         self.player_mucks_cards(seat_number);
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(folded_chips)
+    }
+
+    /// The one check every voluntary action passes before it changes the
+    /// table: a hand is in a betting phase, the street is still open, and
+    /// `seat_number` is the seat that owes the action (`DEFECT_051`).
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::NoActionPending` if no seat owes an action.
+    /// - `PKError::TableActionOutOfOrder` if another seat does.
+    fn ensure_can_act(&mut self, seat_number: u8, attempted: PlayerState) -> Result<(), PKError> {
+        let Some(next) = self.try_next_to_act() else {
+            return Err(PKError::NoActionPending);
+        };
+        if seat_number != next {
+            let err = TableAction::InvalidPlayerAction(seat_number, attempted);
+            self.log(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+        Ok(())
     }
 
     /// The maximum legal raise-to `amount` for `seat` under the current betting
@@ -336,10 +352,16 @@ impl Table {
     ///
     /// # Errors
     ///
+    /// - `PKError::BettingNotReopened` if TDA 47-A bars this seat from raising.
     /// - `PKError::InsufficientIncrement` if `amount` is below `min_raise_to()`.
     /// - `PKError::RaiseCapReached` if the per-street cap is hit.
     /// - `PKError::ExceedsBettingCap` if `amount` exceeds the structure ceiling.
     fn validate_raise(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+        // TDA 2024 Rule 47-A (DEFECT_010). Here, not only in `raise_bounds`, so
+        // `act_bet` and `act_raise` ask it too (DEFECT_051 F1).
+        if self.is_reopen_gated(seat_number) {
+            return Err(PKError::BettingNotReopened);
+        }
         if amount < self.min_raise_to() {
             return Err(PKError::InsufficientIncrement);
         }
@@ -363,13 +385,9 @@ impl Table {
     /// not a raise and is not represented here.
     #[must_use]
     pub fn raise_bounds(&self, seat_number: u8) -> Option<(usize, usize)> {
-        // TDA 2024 Rule 47-A rights gate (DEFECT_010) — see `is_reopen_gated`.
-        if self.is_reopen_gated(seat_number) {
-            return None;
-        }
-        // validate_raise(min) folds in the remaining reasons a raise could be
-        // illegal (cap reached, min above the structure ceiling because the
-        // stack is short).
+        // validate_raise(min) folds in every reason a raise could be illegal:
+        // the TDA 47-A gate, the cap, and a min above the structure ceiling
+        // because the stack is short.
         let min = self.min_raise_to();
         if self.validate_raise(seat_number, min).is_err() {
             return None;
@@ -467,21 +485,14 @@ impl Table {
     /// assert_eq!(200, t.bet);
     /// ```
     pub fn act_bet(&mut self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Bet(amount));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        self.ensure_can_act(seat_number, PlayerState::Bet(amount))?;
         // Pre-validate BEFORE any mutation (mirror act_raise; audit P9d). An
         // opening bet is a raise-from-zero: it must clear the minimum and the
         // structure ceiling unless the player is betting their whole stack
         // (all-in for less). Without this guard `seats.act_bet` mutated the seat
         // and then `set_raise_increment` rejected, stranding a live Bet with
         // `table.bet` still 0 and the seat no longer next to act.
-        let would_be_all_in = self
-            .seats
-            .get_seat(seat_number)
-            .is_some_and(|seat| amount >= seat.player.total_chip_count());
+        let would_be_all_in = self.is_legal_all_in(seat_number, amount);
         if !would_be_all_in {
             self.validate_raise(seat_number, amount)?;
         }
@@ -542,11 +553,7 @@ impl Table {
     /// assert_eq!(PlayerState::Call(100), t.seats.get_seat(utg).unwrap().player.state);
     /// ```
     pub fn act_call(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Call(0));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        self.ensure_can_act(seat_number, PlayerState::Call(0))?;
         let call_target = self.bet;
         let seat_bet = self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet);
         let to_call = call_target.saturating_sub(seat_bet);
@@ -594,11 +601,7 @@ impl Table {
     /// let _ = t; // just verify it compiles
     /// ```
     pub fn act_check(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Check);
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        self.ensure_can_act(seat_number, PlayerState::Check)?;
         let remaining = self.seats.act_check(seat_number)?;
         self.record_voluntary_action(seat_number, ChipCommitment::NoChips);
         self.log(TableAction::Check(seat_number));
@@ -645,23 +648,15 @@ impl Table {
     /// assert_eq!(utg2, t.next_to_act());
     /// ```
     pub fn act_raise(&mut self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Raise(amount));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        self.ensure_can_act(seat_number, PlayerState::Raise(amount))?;
         // Pre-validate the raise BEFORE any state is modified. Without this
         // guard, act_bet_internal deducts chips for an under-sized raise and
         // sets the seat to Raise(_); then the seat is corrupt and no longer
         // "next to act". Validation is delegated to `validate_raise` — the same
         // check `legal_actions`/`raise_bounds` query, so the advisory and
-        // mutating surfaces cannot drift (audit P9b/P9j.1). All-in bypasses it
-        // (a short stack can always shove for less; NoLimit's max_raise == stack,
-        // so oversized amounts route through the all-in branch above anyway).
-        let would_be_all_in = self
-            .seats
-            .get_seat(seat_number)
-            .is_some_and(|seat| amount >= seat.player.total_chip_count());
+        // mutating surfaces cannot drift (audit P9b/P9j.1). Only a legal all-in
+        // bypasses it — see `is_legal_all_in`.
+        let would_be_all_in = self.is_legal_all_in(seat_number, amount);
         if !would_be_all_in {
             self.validate_raise(seat_number, amount)?;
         }
@@ -727,15 +722,11 @@ impl Table {
     /// assert!(t.seats.get_seat(utg).unwrap().player.is_all_in());
     /// ```
     pub fn act_all_in(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let available = self
-                .seats
-                .get_seat(seat_number)
-                .map_or(0, |s| s.player.total_chip_count());
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::AllIn(available));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
+        let available = self
+            .seats
+            .get_seat(seat_number)
+            .map_or(0, |s| s.player.total_chip_count());
+        self.ensure_can_act(seat_number, PlayerState::AllIn(available))?;
 
         // DEFECT_028: TDA 47-A. A player who already acted and now faces only a
         // short all-in may call or fold, so a shove that would raise is a call.
@@ -792,6 +783,35 @@ impl Table {
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(amount)
+    }
+
+    /// Is a `Bet`/`Raise` of `amount` a whole-stack shove that may skip
+    /// [`Self::validate_raise`]? Only when the shove is legal as it stands:
+    ///
+    /// - a stack that cannot cover the call is always a call for less;
+    /// - otherwise the seat must not be TDA 47-A gated, the per-street cap
+    ///   must not be reached, and the stack must fit under the structure
+    ///   ceiling.
+    ///
+    /// A deep-stack shove in Pot-Limit or Fixed-Limit is therefore checked
+    /// like any raise, and refused when it is over the ceiling (`DEFECT_051`
+    /// F2). [`Self::act_all_in`] instead turns such a shove into the largest
+    /// legal action, because `AllIn` names no amount. No-Limit is unchanged:
+    /// there the ceiling is the stack.
+    fn is_legal_all_in(&self, seat_number: u8, amount: usize) -> bool {
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return false;
+        };
+        let stack = seat.player.total_chip_count();
+        if amount < stack {
+            return false;
+        }
+        if seat.player.chips <= self.to_call(seat_number) {
+            return true;
+        }
+        !self.is_reopen_gated(seat_number)
+            && !self.betting.cap_reached(self.raises_this_street)
+            && stack <= self.max_raise_for(seat_number)
     }
 
     /// Applies an all-in of `amount` (the seat's street total) against
@@ -920,4 +940,226 @@ impl Table {
 enum ChipCommitment {
     Chips,
     NoChips,
+}
+
+// ── DEFECT_051: guards the Aikido pentest found missing ──────────────────────
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod casino__table__actions_tests {
+    use super::*;
+    use crate::casino::game::ForcedBets;
+    use crate::casino::table::{Player, Seats};
+
+    /// One voluntary action, as a plain fn pointer so a test can run all six.
+    type Act = fn(&mut Table, u8) -> Result<usize, PKError>;
+
+    struct Fixture;
+
+    impl Fixture {
+        const ACTS: [(&'static str, Act); 6] = [
+            ("fold", |t, s| t.act_fold(s)),
+            ("check", |t, s| t.act_check(s)),
+            ("call", |t, s| t.act_call(s)),
+            ("bet", |t, s| t.act_bet(s, 200)),
+            ("raise", |t, s| t.act_raise(s, 300)),
+            ("all_in", |t, s| t.act_all_in(s)),
+        ];
+
+        fn seats(stacks: &[usize]) -> Seats {
+            Seats::new(
+                stacks
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &chips)| Seat::new(Player::new_with_chips(format!("P{i}"), chips)))
+                    .collect(),
+            )
+        }
+
+        fn dealt(mut table: Table) -> Table {
+            table.act_forced_bets().unwrap();
+            table.deal_cards_to_seats().unwrap();
+            table
+        }
+
+        /// The `is_reopen_gated` doc-test hand: A raises to 300, B shoves 400
+        /// (100 short of a full raise), C calls. A is back to act, gated.
+        fn gated() -> (Table, u8) {
+            let seats = Self::seats(&[50_000, 400, 50_000]);
+            let mut t = Self::dealt(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+            let a = t.next_to_act();
+            t.act_raise(a, 300).unwrap();
+            let b = t.next_to_act();
+            t.act_all_in(b).unwrap();
+            let c = t.next_to_act();
+            t.act_call(c).unwrap();
+            assert_eq!(a, t.next_to_act());
+            assert!(t.is_reopen_gated(a));
+            (t, a)
+        }
+    }
+
+    // ── F1: the reopen gate ──────────────────────────────────────────────────
+
+    #[test]
+    fn act_raise__gated_seat_is_refused_and_changes_nothing() {
+        // pins: INV-51
+        let (mut t, a) = Fixture::gated();
+        let before = t.clone();
+        assert_eq!(Err(PKError::BettingNotReopened), t.act_raise(a, 600));
+        assert_eq!(before, t);
+    }
+
+    #[test]
+    fn act_bet__gated_seat_is_refused_and_changes_nothing() {
+        // pins: INV-51
+        let (mut t, a) = Fixture::gated();
+        let before = t.clone();
+        assert_eq!(Err(PKError::BettingNotReopened), t.act_bet(a, 600));
+        assert_eq!(before, t);
+    }
+
+    // ── F2: the structure ceiling for a full-stack wager ─────────────────────
+
+    #[test]
+    fn act_raise__full_stack_over_the_pot_limit_is_refused() {
+        // pins: INV-52
+        let mut t = Fixture::dealt(Table::plo_from_seats(Fixture::seats(&[100_000, 100_000]), (50, 100)));
+        let actor = t.next_to_act();
+        let before = t.clone();
+        assert_eq!(Err(PKError::ExceedsBettingCap), t.act_raise(actor, 100_000));
+        assert_eq!(before, t);
+    }
+
+    #[test]
+    fn act_bet__full_stack_over_the_fixed_limit_is_refused() {
+        // pins: INV-52
+        let mut t = Fixture::dealt(Table::limit_holdem_from_seats(
+            Fixture::seats(&[100_000, 100_000]),
+            50,
+            100,
+            4,
+        ));
+        let actor = t.next_to_act();
+        let before = t.clone();
+        assert_eq!(Err(PKError::ExceedsBettingCap), t.act_bet(actor, 100_000));
+        assert_eq!(before, t);
+    }
+
+    #[test]
+    fn act_raise__full_stack_after_the_fixed_limit_cap_is_refused() {
+        // pins: INV-52
+        let mut t = Fixture::dealt(Table::limit_holdem_from_seats(
+            Fixture::seats(&[100_000, 100_000]),
+            50,
+            100,
+            2,
+        ));
+        t.act_raise(t.next_to_act(), t.min_raise_to()).unwrap();
+        t.act_raise(t.next_to_act(), t.min_raise_to()).unwrap();
+        let actor = t.next_to_act();
+        let before = t.clone();
+        assert_eq!(Err(PKError::RaiseCapReached), t.act_raise(actor, 100_000));
+        assert_eq!(before, t);
+    }
+
+    #[test]
+    fn act_raise__short_stack_all_in_under_the_pot_limit_still_works() {
+        // Preflop pot-limit max is 300; a 250 stack shoving is a real all-in.
+        let mut t = Fixture::dealt(Table::plo_from_seats(Fixture::seats(&[250, 250]), (50, 100)));
+        let actor = t.next_to_act();
+        assert!(t.act_raise(actor, 250).is_ok());
+        assert!(t.seats.get_seat(actor).unwrap().player.is_all_in());
+    }
+
+    // ── F3: the street is closed ─────────────────────────────────────────────
+
+    #[test]
+    fn act_raise__after_the_street_is_complete_is_refused() {
+        // pins: INV-50
+        let mut t = Fixture::dealt(Table::nlh_from_seats(
+            Fixture::seats(&[10_000, 10_000]),
+            ForcedBets::new(50, 100),
+        ));
+        t.act_call(t.next_to_act()).unwrap();
+        t.act_check(t.next_to_act()).unwrap();
+        assert!(t.seats.is_betting_complete());
+        let before = t.clone();
+        assert_eq!(None, t.try_next_to_act());
+        assert_eq!(Err(PKError::NoActionPending), t.act_raise(t.next_to_act(), 300));
+        assert_eq!(before, t);
+    }
+
+    #[test]
+    fn act_bet__by_the_last_player_left_is_refused() {
+        // pins: INV-50
+        let mut t = Fixture::dealt(Table::nlh_from_seats(
+            Fixture::seats(&[10_000, 10_000, 10_000]),
+            ForcedBets::new(50, 100),
+        ));
+        t.act_fold(t.next_to_act()).unwrap();
+        t.act_fold(t.next_to_act()).unwrap();
+        assert!(t.seats.is_betting_complete());
+        let before = t.clone();
+        assert_eq!(Err(PKError::NoActionPending), t.act_bet(t.next_to_act(), 300));
+        assert_eq!(before, t);
+    }
+
+    // ── F4: no hand is running ───────────────────────────────────────────────
+
+    #[test]
+    fn every_act_method__is_refused_before_the_hand_starts() {
+        // pins: INV-50
+        for (name, act) in Fixture::ACTS {
+            let mut t = Table::nlh_from_seats(Fixture::seats(&[10_000, 10_000, 10_000]), ForcedBets::new(50, 100));
+            let seat = t.next_to_act();
+            let before = t.clone();
+            assert_eq!(Err(PKError::NoActionPending), act(&mut t, seat), "{name}");
+            assert_eq!(before, t, "{name} changed the table in NewHand");
+        }
+    }
+
+    #[test]
+    fn try_next_to_act__names_the_seat_while_the_street_is_open() {
+        let t = Fixture::dealt(Table::nlh_from_seats(
+            Fixture::seats(&[10_000, 10_000, 10_000]),
+            ForcedBets::new(50, 100),
+        ));
+        assert_eq!(Some(t.determine_utg()), t.try_next_to_act());
+    }
+
+    #[test]
+    fn try_next_to_act__is_none_before_the_hand_starts() {
+        let t = Table::nlh_from_seats(Fixture::seats(&[10_000, 10_000]), ForcedBets::new(50, 100));
+        assert_eq!(None, t.try_next_to_act());
+    }
+
+    // ── F5: equal blinds ─────────────────────────────────────────────────────
+
+    #[test]
+    fn next_to_act__equal_blinds_starts_at_utg() {
+        let t = Fixture::dealt(Table::nlh_from_seats(
+            Fixture::seats(&[10_000, 10_000, 10_000]),
+            ForcedBets::new(100, 100),
+        ));
+        assert_eq!(t.determine_utg(), t.next_to_act());
+    }
+
+    #[test]
+    fn next_to_act__equal_blinds_still_gives_both_blinds_their_turn() {
+        let mut t = Fixture::dealt(Table::nlh_from_seats(
+            Fixture::seats(&[10_000, 10_000, 10_000]),
+            ForcedBets::new(100, 100),
+        ));
+        let utg = t.determine_utg();
+        let bb = t.determine_big_blind();
+        assert!(matches!(t.act_check(bb), Err(PKError::TableActionOutOfOrder(_))));
+
+        t.act_call(utg).unwrap();
+        let sb = t.next_to_act();
+        assert_ne!(sb, bb);
+        t.act_check(sb).unwrap();
+        assert_eq!(bb, t.next_to_act());
+        t.act_check(bb).unwrap();
+        assert_eq!(None, t.try_next_to_act());
+    }
 }

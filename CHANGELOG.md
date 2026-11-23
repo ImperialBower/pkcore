@@ -5,6 +5,49 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-11-22
+
+The table now refuses moves its rules forbid. An Aikido pentest found six ways
+to get an illegal move past `Table`; all six are fixed here. See
+[`DEFECT_051`](docs/defects/DEFECT_051_aikido_pentest_table_guards.md).
+
+### Added
+
+- `Table::try_next_to_act` returns `None` when no seat owes an action. The old
+  `next_to_act` always names a seat, even after the street is over, and is
+  unchanged.
+- `GamePhase::is_betting`: the forced bets are posted, so a hand is running.
+- `PKError::NoActionPending` and `PKError::BettingNotReopened`.
+- Invariants `INV-50`–`INV-52` in `pkcore.ontology.toml`.
+
+### Fixed
+
+- **No action is accepted when nobody owes one.** Every `act_*` method, and so
+  `apply_action`, `PokerSession` and `Dealer`, first checks that the forced
+  bets are posted, the street is still open, and it is this seat's turn. Before,
+  a seat could act before the blinds, raise after the street closed, or bet
+  when it was the last player left. These now return `NoActionPending`.
+- **A seat gated by TDA 47-A can no longer raise.** The gate was only in
+  `raise_bounds`, so `act_raise` and `act_bet` let a gated seat raise. They now
+  return `BettingNotReopened`. `AllIn` still becomes a call, as in `0.16.0`.
+- **A full-stack `Bet` or `Raise` obeys Pot-Limit and Fixed-Limit.** Any amount
+  at or above the stack skipped every check, so a deep stack could shove far
+  over the ceiling or past the raise cap. Only a stack under the ceiling now
+  skips them; the rest get `ExceedsBettingCap` or `RaiseCapReached`. No-Limit
+  is unchanged.
+- **Equal blinds: UTG acts first.** With `small_blind == big_blind` the big
+  blind was handed the first preflop action. A posted blind no longer counts
+  as the last aggressor.
+- **A hand history with a `NaN` or infinite `net` or `pot_won` is a Money
+  finding**, and `replay` no longer reports it consistent. `NaN` failed every
+  comparison, so it passed every check.
+
+### Changed
+
+- Calls that used to succeed now fail: acting before the forced bets, after
+  the street is complete, a gated raise, and an over-ceiling full-stack wager.
+  Each was a bug, but a caller that relied on one will see an error.
+
 ## [0.20.14] - 2026-11-22
 
 ### Security
