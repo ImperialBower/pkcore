@@ -83,6 +83,9 @@ pub enum VisibleHandMode {
 ///   - INV-2: every action in `legal_actions` is accepted by `apply_action`
 ///   - INV-3: raise count is capped per street under fixed limit
 ///   - INV-4: street counters reset at each street
+///   - INV-50: no voluntary action is accepted when no seat owes one (`NoActionPending`)
+///   - INV-51: a seat gated by TDA 47-A cannot raise, however the raise is spelled (`BettingNotReopened`)
+///   - INV-52: a full-stack `Bet` or `Raise` obeys the structure ceiling unless the stack is under it
 ///
 /// # Examples
 ///
@@ -988,6 +991,38 @@ impl Table {
     pub fn next_to_act(&self) -> u8 {
         let utg = self.first_to_act_this_street();
         self.seats.next_to_act(utg).unwrap_or(utg)
+    }
+
+    /// The seat that owes the next voluntary action, or `None` when no seat
+    /// does: the phase is not a betting phase
+    /// ([`GamePhase::is_betting`]), or the street's betting is complete.
+    ///
+    /// Unlike [`Self::next_to_act`], which always names a seat, this is the
+    /// one every `act_*` method checks (`DEFECT_051`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// assert_eq!(None, t.try_next_to_act()); // no hand yet
+    ///
+    /// t.act_forced_bets().unwrap();
+    /// t.deal_cards_to_seats().unwrap();
+    /// assert_eq!(Some(t.next_to_act()), t.try_next_to_act());
+    /// ```
+    #[must_use]
+    pub fn try_next_to_act(&self) -> Option<u8> {
+        if !self.phase.is_betting() || self.seats.is_betting_complete() {
+            return None;
+        }
+        Some(self.next_to_act())
     }
 
     /// Returns the seat that acts first on the current street, dispatched

@@ -306,6 +306,47 @@ pub enum GamePhase {
 }
 
 impl GamePhase {
+    /// The forced bets are posted, so a hand is running and its streets can
+    /// be bet. Every `act_*` method refuses to run outside these phases
+    /// (`DEFECT_051`).
+    ///
+    /// The engine leaves the phase on its last step (`ForcedBets`,
+    /// `DealHoleCards`, `DealFlop`, ...) while a street is bet, and does not
+    /// set the `Betting*` phases. Both count, so this stays right if it ever
+    /// does. `ForcedBets` counts because callers may post the blinds before
+    /// or after dealing the hole cards.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::GamePhase;
+    ///
+    /// assert!(GamePhase::ForcedBets.is_betting());
+    /// assert!(GamePhase::DealFlop.is_betting());
+    /// assert!(!GamePhase::NewHand.is_betting());
+    /// assert!(!GamePhase::Showdown.is_betting());
+    /// ```
+    #[must_use]
+    pub fn is_betting(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::ForcedBets
+                | GamePhase::DealHoleCards
+                | GamePhase::BettingPreFlop
+                | GamePhase::DealFlop
+                | GamePhase::BettingFlop
+                | GamePhase::DealTurn
+                | GamePhase::BettingTurn
+                | GamePhase::DealRiver
+                | GamePhase::BettingRiver
+                | GamePhase::Stud3rd
+                | GamePhase::Stud4th
+                | GamePhase::Stud5th
+                | GamePhase::Stud6th
+                | GamePhase::Stud7th
+        )
+    }
+
     #[must_use]
     pub fn is_preflop(&self) -> bool {
         matches!(
@@ -469,6 +510,30 @@ impl std::fmt::Display for GamePhase {
 #[allow(non_snake_case)]
 mod games_tests {
     use super::*;
+
+    #[test]
+    fn game_phase__is_betting_once_the_forced_bets_are_posted() {
+        let betting = [
+            GamePhase::ForcedBets,
+            GamePhase::DealHoleCards,
+            GamePhase::DealFlop,
+            GamePhase::DealTurn,
+            GamePhase::DealRiver,
+            GamePhase::BettingRiver,
+            GamePhase::Stud3rd,
+            GamePhase::Stud7th,
+        ];
+        let not_betting = [
+            GamePhase::Break,
+            GamePhase::NewHand,
+            GamePhase::ShuffleNewDeck,
+            GamePhase::ConsolidateFlopBets,
+            GamePhase::Showdown,
+            GamePhase::PayWinners,
+        ];
+        assert!(betting.iter().all(GamePhase::is_betting));
+        assert!(!not_betting.iter().any(GamePhase::is_betting));
+    }
 
     #[test]
     fn cards_per_player() {

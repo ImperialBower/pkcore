@@ -804,6 +804,21 @@ scope = "Deck"
 doc = "only instance is `POKER_DECK`"
 note = "Held by the compiler: Deck's field is private and it has no public constructor. A #[test] cannot pin it; a compile-fail test (trybuild) could."
 
+[[invariants]]
+id = "INV-50"
+scope = "Table"
+doc = "no voluntary action is accepted when no seat owes one (`NoActionPending`)"
+
+[[invariants]]
+id = "INV-51"
+scope = "Table"
+doc = "a seat gated by TDA 47-A cannot raise, however the raise is spelled (`BettingNotReopened`)"
+
+[[invariants]]
+id = "INV-52"
+scope = "Table"
+doc = "a full-stack `Bet` or `Raise` obeys the structure ceiling unless the stack is under it"
+
 # ---------------------------------------------------------------------------
 # Transitions — tell. The surface is PokerSession (EPIC-124 0c), plus the
 # Table creator a session wraps. Table's own methods are concepts here.
@@ -919,8 +934,9 @@ id = "TR-apply_action"
 ref = "casino::session::PokerSession::apply_action"
 doc = "One seat acts: changes that seat, the bet and the street counters; never the board or the phase."
 emits = ["Check", "Bet", "Call", "Raise", "AllIn", "Fold", "ActionTo", "BringItIn", "PotSize", "MuckPlayerCards", "TakePlayerCards"]
-# raises: TableActionOutOfOrder, InsufficientChips, InvalidBetSize,
-# RaiseCapReached, InvalidAction, ...
+# raises: NoActionPending, TableActionOutOfOrder, BettingNotReopened,
+# InsufficientChips, InvalidBetSize, RaiseCapReached, ExceedsBettingCap,
+# InvalidAction, ...
 
 [[transitions.arguments]]
 param = "seat"

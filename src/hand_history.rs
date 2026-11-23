@@ -1141,6 +1141,11 @@ impl HandHistory {
             None => true,
             Some(entries) => entries.iter().all(|r| {
                 let Some(net) = r.net else { return true };
+                // DEFECT_051 F6: `(stack + NaN).max(0.0)` is 0.0, which would
+                // match a busted seat. A net that is not a number never matches.
+                if !net.is_finite() {
+                    return false;
+                }
                 let Some(player) = players.iter().find(|p| p.seat == r.seat) else {
                     return false;
                 };
@@ -3169,6 +3174,50 @@ impl HandCollection {
 #[allow(non_snake_case)]
 mod tests {
     use super::*;
+
+    /// Heads-up: B posts its whole 100-chip stack as the big blind, A calls,
+    /// and A's aces win. B ends on 0 chips. `{net}` is B's recorded net.
+    #[cfg(feature = "hand-histories")]
+    const B_BUSTS: &str = r"
+hand: { id: bust, game: holdem }
+table: { seats: 2, button: 0, stakes: { small_blind: 50.0, big_blind: 100.0 } }
+players:
+  - { seat: 0, name: A, stack: 1000.0, hole_cards: 'A♠ A♥' }
+  - { seat: 1, name: B, stack: 100.0, hole_cards: '7♦ 2♣' }
+streets:
+  preflop:
+    actions:
+      - { seat: 0, action: call, amount: 50.0 }
+  flop:
+    cards: 'K♠ 9♦ 4♣'
+    actions: []
+  turn:
+    card: '3♥'
+    actions: []
+  river:
+    card: 'J♣'
+    actions: []
+results:
+  - { seat: 0, outcome: win, net: 100.0 }
+  - { seat: 1, outcome: lose, net: {net} }
+";
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn replay__busted_seat_with_its_real_net_is_consistent() {
+        let hand = HandHistory::from_yaml(&B_BUSTS.replace("{net}", "-100.0")).unwrap();
+        let result = hand.replay().unwrap();
+        assert!(result.is_consistent, "{result:?}");
+        assert!(result.final_stacks.contains(&(1, 0)), "{result:?}");
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn replay__nan_net_is_not_consistent() {
+        // DEFECT_051 F6: (stack + NaN).max(0.0) is 0.0, which matched the bust.
+        let hand = HandHistory::from_yaml(&B_BUSTS.replace("{net}", ".nan")).unwrap();
+        assert!(!hand.replay().unwrap().is_consistent);
+    }
 
     #[cfg(feature = "hand-histories")]
     fn id_entry(name: &str, player_id: Option<Uuid>) -> PlayerEntry {
