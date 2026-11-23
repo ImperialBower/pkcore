@@ -18,6 +18,8 @@ use crate::bot::profile::BotProfile;
 #[cfg(feature = "hup-charts")]
 use crate::bot::range_model::RangeModel;
 use crate::bot::table_snapshot::TableSnapshot;
+#[cfg(feature = "equity")]
+use rand::RngExt as _;
 use std::str::FromStr;
 
 /// Budget for `equity: exact`, matching `decider::EXACT_EQUITY_SAMPLES`.

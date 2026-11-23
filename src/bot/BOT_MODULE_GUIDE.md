@@ -439,8 +439,8 @@ implements:
 
 ```rust,ignore
 pub trait BotDecider: Send + Sync {
-    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::RngCore) {}
-    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction;
+    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::Rng) {}
+    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::Rng) -> PlayerAction;
 
     // Conveniences with the thread-local RNG; need the `entropy` feature.
     fn on_new_hand(&self) { /* on_new_hand_with_rng(&mut rand::rng()) */ }
@@ -959,7 +959,7 @@ impl BotDecider for AlwaysCheckDecider {
         &self,
         _profile: &BotProfile,
         _state: &TableSnapshot,
-        _rng: &mut dyn rand::RngCore,
+        _rng: &mut dyn rand::Rng,
     ) -> PlayerAction {
         PlayerAction::Check
     }
@@ -985,7 +985,7 @@ pub struct JokerDecider {
 }
 
 impl BotDecider for JokerDecider {
-    fn on_new_hand_with_rng(&self, rng: &mut dyn rand::RngCore) {
+    fn on_new_hand_with_rng(&self, rng: &mut dyn rand::Rng) {
         // Replace active profile from the standard set
         let profiles = BotProfile::default_profiles();
         let idx = rng.random_range(0..profiles.len());
@@ -994,7 +994,7 @@ impl BotDecider for JokerDecider {
         }
     }
 
-    fn decide_seeded(&self, _profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
+    fn decide_seeded(&self, _profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::Rng) -> PlayerAction {
         // Note: ignores the passed profile, uses internal active profile
         let active = self.active.lock()
             .map_or_else(|e| e.into_inner().clone(), |g| g.clone());

@@ -428,13 +428,13 @@ impl SimTable {
     // `docs/audits/KERNEL_PURITY_AUDIT.md` §1a, fix 8: one RNG, always present, so the
     // kernel build has no thread-local fallback that reads OS entropy.
     fn unseeded_rng() -> rand::rngs::SmallRng {
-        use rand::SeedableRng as _;
         #[cfg(feature = "entropy")]
         {
-            rand::rngs::SmallRng::from_os_rng()
+            rand::make_rng()
         }
         #[cfg(not(feature = "entropy"))]
         {
+            use rand::SeedableRng as _;
             rand::rngs::SmallRng::seed_from_u64(Self::DEFAULT_SEED)
         }
     }
