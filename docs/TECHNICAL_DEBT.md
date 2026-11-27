@@ -7,6 +7,16 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
+> **Last refreshed 2026-11-27** against `main` @ `47d8c0bf`, pkcore `0.22.0`
+> (working tree clean). Since `f0a7d4ec` (`0.20.11`): `0.20.12`–`0.20.14`
+> were dependency and CI hardening; `0.21.0` fixed the six Aikido pentest
+> findings ([`DEFECT_051`](defects/DEFECT_051_aikido_pentest_table_guards.md));
+> `0.22.0` moved to `rand` 0.10. No new markers (58 in `src/`), `fn test_`
+> count still **329**, 31 `#[deprecated]` attributes. One new tracked item:
+> free functions in `src/hand_history/check.rs`, named by `DEFECT_051`.
+> Review not re-run.
+>
+> Previous header (2026-11-16, `3f21dd06`, `0.20.9`) kept for history:
 > **Last refreshed 2026-11-16** against `main` @ `3f21dd06`, pkcore `0.20.9`
 > (working tree clean). `0.20.9` fixed the `EquityEngine::compute` panic and
 > the reproducibility and version parts of two solver findings (marked
@@ -76,6 +86,8 @@
 
 _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase, and from open
 `docs/defects/` records._
+
+- [ ] **Free functions in `src/hand_history/check.rs`** — `amount_mismatch` (`:389`), `engine_amount` (`:416`), `is_whole_chips` (`:438`), `whole_chips` (`:445`), and every fn in `mod passes` (`:451`–`:1673`: `unsupported`, `cards`, `seats`, `chips`, `money`, `walked_money`, ...) sit outside an `impl`. This breaks the global "no free functions" Rust rule. All are private or `pub(super)`, so moving them is not a breaking change. Named as pre-existing debt in [`DEFECT_051`](defects/DEFECT_051_aikido_pentest_table_guards.md#pre-existing-debt). Added 2026-11-27 (`0.22.0`).
 
 - [x] **Remove the `RUSTSEC-2026-0543` ignore in `deny.toml`** — **FIXED** in `0.20.11`: `clap-repl` dropped; the three REPL examples share `examples/common/clap_reedline.rs` on `reedline 0.53`; ignore removed. `chrono` is unmaintained and comes in only via the dev-dependency `clap-repl 0.3.2` → `reedline 0.38`. `reedline 0.53` uses `jiff`, but `clap-repl` pins `0.38`. Fix: drop `clap-repl`, move to `reedline 0.53`, and parse each line with `clap`'s `try_parse_from` in `examples/kuhn_repl.rs`, `examples/dealer_repl.rs`, `examples/table0.rs`. Added 2026-11-17 (`0.20.10`).
 
